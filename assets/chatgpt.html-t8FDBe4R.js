@@ -1,0 +1,1 @@
+import{_ as t,r as o,o as c,c as r,a}from"./app-fB66OIa8.js";const n={};function _(s,l){const e=o("Share");return c(),r("div",null,[a(e,{colorful:""})])}const m=t(n,[["render",_],["__file","chatgpt.html.vue"]]);export{m as default};
