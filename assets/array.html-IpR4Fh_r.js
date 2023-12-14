@@ -1,1 +1,0 @@
-import{_ as r,r as o,o as a,c,a as t}from"./app-o0f-dTaX.js";const n={};function _(s,l){const e=o("Share");return a(),c("div",null,[t(e,{colorful:""})])}const m=r(n,[["render",_],["__file","array.html.vue"]]);export{m as default};
