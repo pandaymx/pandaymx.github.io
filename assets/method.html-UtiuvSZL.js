@@ -1,0 +1,1 @@
+import{_ as o,r as t,o as c,c as r,a as n}from"./app-BhhiBZJI.js";const a={};function _(s,l){const e=t("Share");return c(),r("div",null,[n(e,{colorful:""})])}const f=o(a,[["render",_],["__file","method.html.vue"]]);export{f as default};
