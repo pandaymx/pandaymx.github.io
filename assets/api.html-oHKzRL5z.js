@@ -1,1 +1,0 @@
-import{_ as o,r as c,o as r,c as t,a}from"./app-Jxw7Hq9W.js";const n={};function _(s,l){const e=c("Share");return r(),t("div",null,[a(e,{colorful:""})])}const m=o(n,[["render",_],["__file","api.html.vue"]]);export{m as default};
