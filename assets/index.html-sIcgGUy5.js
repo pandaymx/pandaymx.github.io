@@ -1,0 +1,1 @@
+import{_ as o,r as t,o as n,c as a,a as c,d as s}from"./app-fmQH9Icd.js";const _={},r=s("p",null,"该页主要是将计算机完全入门，没有将一些操作，未来会加的。",-1);function l(d,i){const e=t("AutoCatalog");return n(),a("div",null,[r,c(e)])}const u=o(_,[["render",l],["__file","index.html.vue"]]);export{u as default};

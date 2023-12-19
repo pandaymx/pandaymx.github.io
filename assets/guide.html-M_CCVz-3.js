@@ -1,0 +1,1 @@
+import{_ as o,r as t,o as a,c,a as n}from"./app-fmQH9Icd.js";const r={};function s(_,l){const e=t("AutoCatalog");return a(),c("div",null,[n(e,{base:"/"})])}const m=o(r,[["render",s],["__file","guide.html.vue"]]);export{m as default};
