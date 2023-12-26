@@ -1,1 +1,0 @@
-import{_ as o,r as t,o as n,c as a,a as c,d as s}from"./app-ALKpI3zp.js";const r={},_=s("p",null,"Spring 是",-1);function l(d,i){const e=t("AutoCatalog");return n(),a("div",null,[_,c(e)])}const p=o(r,[["render",l],["__file","index.html.vue"]]);export{p as default};
