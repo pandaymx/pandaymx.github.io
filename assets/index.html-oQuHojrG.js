@@ -1,0 +1,1 @@
+import{_ as o,r as t,o as n,c as a,a as c,d as r}from"./app-YlTYzlUi.js";const l={},s=r("p",null,"线性代数是最大学当中最简单的一种学科，这个笔记是以 Linear Algebra with Application 为基础，结合Introduction to Linear Algebra 进行讲解的。",-1);function _(i,d){const e=t("AutoCatalog");return n(),a("div",null,[s,c(e)])}const u=o(l,[["render",_],["__file","index.html.vue"]]);export{u as default};
