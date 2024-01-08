@@ -1,1 +1,0 @@
-import{_ as t,o as c,c as a,d as e,e as o}from"./app-l1UJNA4b.js";const s={},n=e("h2",{id:"服务注册和发现",tabindex:"-1"},[e("a",{class:"header-anchor",href:"#服务注册和发现","aria-hidden":"true"},"#"),o(" 服务注册和发现")],-1),r=e("p",null,"服务注册和",-1),_=[n,r];function d(i,l){return c(),a("div",null,_)}const u=t(s,[["render",d],["__file","quick.html.vue"]]);export{u as default};

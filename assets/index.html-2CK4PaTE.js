@@ -1,0 +1,1 @@
+import{_ as t,r as n,o as a,c,a as s,d as e}from"./app-i8RdFLKD.js";const _={},l=e("p",null,"前端是以 web 为基础，访问 web 资源之后会解析对应的 HTML、CSS、JavaScript 语句从而解析成页面。",-1),r=e("p",null,"不仅仅需要这些内容，还需要有一些网络的知识。",-1);function d(i,p){const o=n("AutoCatalog");return a(),c("div",null,[l,r,s(o)])}const m=t(_,[["render",d],["__file","index.html.vue"]]);export{m as default};
