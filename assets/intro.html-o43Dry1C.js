@@ -1,0 +1,1 @@
+import{_ as r,r as a,o as t,c as n,a as c,d as e}from"./app-kW6GSdXT.js";const s={},_=e("h2",{id:"",tabindex:"-1"},[e("a",{class:"header-anchor",href:"#","aria-hidden":"true"},"#")],-1);function d(l,i){const o=a("Share");return t(),n("div",null,[_,c(o,{colorful:""})])}const f=r(s,[["render",d],["__file","intro.html.vue"]]);export{f as default};
