@@ -1,0 +1,1 @@
+import{_ as a,r,o as t,c,d as n,a as e,b as s}from"./app-Km1BEDDM.js";const _={},d=e("h2",{id:"快速入门",tabindex:"-1"},[e("a",{class:"header-anchor",href:"#快速入门","aria-hidden":"true"},"#"),s(" 快速入门")],-1);function l(i,h){const o=r("Share");return t(),c("div",null,[d,n(o,{colorful:""})])}const m=a(_,[["render",l],["__file","intro.html.vue"]]);export{m as default};
