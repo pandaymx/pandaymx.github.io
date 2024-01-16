@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Markmap</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+#mindmap {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markmap-toolbar@0.15.9-alpha.6/dist/style.css">
+</head>
+<body>
+<svg id="mindmap"></svg>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.15.9-alpha.6/dist/browser/index.js"></script><script src="https://cdn.jsdelivr.net/npm/markmap-toolbar@0.15.9-alpha.6/dist/index.js"></script><script>(()=>{setTimeout(()=>{const{markmap:W,mm:ne}=window,re=new W.Toolbar;re.attach(ne);const ke=re.render();ke.setAttribute("style","position:absolute;bottom:20px;right:20px"),document.body.append(ke)})})()</script><script>((_,I,L,O)=>{const B=_();window.mm=B.Markmap.create("svg#mindmap",(I||B.deriveOptions)(O),L)})(()=>window.markmap,null,{"content":"","children":[{"content":"简介","children":[],"payload":{"lines":"0,1"}},{"content":"准备阶段","children":[{"content":"博客生成器","children":[],"payload":{"lines":"8,9"}},{"content":"Web 服务器","children":[],"payload":{"lines":"18,19"}},{"content":"Markdown 基础","children":[],"payload":{"lines":"24,25"}}],"payload":{"lines":"6,7"}},{"content":"进阶","children":[{"content":"域名和备案","children":[],"payload":{"lines":"32,33"}},{"content":"DNS 解析","children":[],"payload":{"lines":"38,39"}},{"content":"图床服务器","children":[],"payload":{"lines":"43,44"}}],"payload":{"lines":"30,31"}},{"content":"细节问题","children":[{"content":"博客排版","children":[],"payload":{"lines":"49,50"}},{"content":"博客界面","children":[],"payload":{"lines":"59,60"}}],"payload":{"lines":"47,48"}}]},null)</script>
+</body>
+</html>
