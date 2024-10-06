@@ -23,4 +23,5 @@ export const enSidebar = sidebar({
       link: "https://ecosystem.vuejs.press/plugins/markdown/revealjs/demo.html",
     },
   ],
+  "/en/technology/": "structure",
 });

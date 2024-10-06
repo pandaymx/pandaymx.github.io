@@ -45,6 +45,12 @@ export const zhNavbar = navbar([
     ],
   },
   {
+    text: "实用技术",
+    icon: "/assets/icon/technology.svg",
+    prefix: "/technology/",
+    link: "/technology/"
+  },
+  {
     text: "变更日志",
     icon: "/assets/icon/changeLog.svg",
     link: "/changeLog"

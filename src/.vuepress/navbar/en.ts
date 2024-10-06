@@ -45,6 +45,12 @@ export const enNavbar = navbar([
     ],
   },
   {
+    text: "Technology",
+    icon: "/assets/icon/technology.svg",
+    prefix: "/en/technology/",
+    link: "/en/technology/"
+  },
+  {
     text: "ChangeLog",
     icon: "/assets/icon/changeLog.svg",
     link: "/en/changeLog"
