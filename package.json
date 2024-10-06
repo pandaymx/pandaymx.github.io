@@ -2,7 +2,7 @@
   "name": "ppmb-blog",
   "description": "皮皮萌宝的博客",
   "version": "0.0.0",
-  "license": "MIT",
+  "license": "CC BY-NC-SA 4.0",
   "type": "module",
   "scripts": {
     "docs:build": "vuepress-vite build src",
