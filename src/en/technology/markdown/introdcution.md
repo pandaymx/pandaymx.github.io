@@ -26,8 +26,6 @@ Using Markdown is not the same as using a Word class editor. In an application l
 
 ## Markdown Editors
 
-### 知识库
-
 ### Knowledge Base
 
 - [Yuque]()
