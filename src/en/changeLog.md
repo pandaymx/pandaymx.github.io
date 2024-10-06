@@ -10,6 +10,7 @@ icon: /assets/icon/update.svg
 - Add Markdown chapters and optimize the navigation bar
 - Connect projects to GitHub repositories
 - Add Docker support and push to Docker Hub
+- Add the guide chapter of Markdown
 
 ## 2024-10-5
 

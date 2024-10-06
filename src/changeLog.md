@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - 添加 Markdown 章节并对导航栏进行优化
 - 将项目和 GitHub 仓库连接
 - 添加 Docker 支持并推送到 Docker Hub
+- 添加 Markdown 的导读章节
 
 
 ## 2024-10-5 
