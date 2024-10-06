@@ -7,6 +7,9 @@ icon: /assets/icon/update.svg
 
 - Modify the file license to'CC BY-NC-SA 4.0'
 - Add the utility technology chapter and add it to the navigation bar in the sidebar etc.
+- Add Markdown chapters and optimize the navigation bar
+- Connect projects to GitHub repositories
+- Add Docker support and push to Docker Hub
 
 ## 2024-10-5
 
