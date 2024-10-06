@@ -77,6 +77,6 @@ Each Markdown application implements a slightly different Markdown syntax. It is
 
 ## More Learning Resources
 
-- [VS Code supports Markdown syntax] ()
-- [Obsidian Document] ()
-- [Nation Documentation] ()
+- [VS Code supports Markdown syntax]()
+- [Obsidian Document]()
+- [Nation Documentation]()

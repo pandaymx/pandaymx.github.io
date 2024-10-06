@@ -11,6 +11,7 @@ icon: /assets/icon/changeLog.svg
 - 添加 Docker 支持并推送到 Docker Hub
 - 添加 Markdown 的导读章节
 - 添加 Markdown 基础章节
+- 修复英文 Markdown 部分错误
 
 
 ## 2024-10-5 
