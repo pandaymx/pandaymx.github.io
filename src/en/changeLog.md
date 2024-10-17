@@ -19,6 +19,7 @@ icon: /assets/icon/changeLog.svg
 - Fix GitHub Action workflow unable to specify pnpm version
 - Upgrade the blog version to `0.0.1`
 - Add homepage, sidebar, and navbar content to the Practical Techniques section
+- Add Markdown homepage
 
 
 ## 2024-10-16
