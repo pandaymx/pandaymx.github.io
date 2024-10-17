@@ -21,6 +21,7 @@ icon: /assets/icon/changeLog.svg
 - 升级博客版本为 `0.0.1`
 - 实用技术章节添加主页、侧边栏、导航栏等内容
 - 添加 Markdown 主页
+- 添加 Markdown 基础
 
 ## 2024-10-16
 

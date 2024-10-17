@@ -20,6 +20,7 @@ icon: /assets/icon/changeLog.svg
 - Upgrade the blog version to `0.0.1`
 - Add homepage, sidebar, and navbar content to the Practical Techniques section
 - Add Markdown homepage
+- Add Markdown basic
 
 
 ## 2024-10-16
