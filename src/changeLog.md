@@ -24,6 +24,7 @@ icon: /assets/icon/changeLog.svg
 - 添加 Markdown 基础
 - 添加 Markdown 简介
 - 导航栏添加更新日志
+- 将 Markdown 中的无序列表修改为 😎 
 
 ## 2024-10-16
 

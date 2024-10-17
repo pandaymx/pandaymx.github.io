@@ -24,6 +24,7 @@ icon: /assets/icon/changeLog.svg
 - Add Markdown basic
 - Add Markdown introduction
 - Add changelog to the navbar
+- Modify the unordered list in Markdown to 😎
 
 
 ## 2024-10-16
