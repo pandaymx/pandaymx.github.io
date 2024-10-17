@@ -16,6 +16,8 @@ icon: /assets/icon/changeLog.svg
 - 添加 Cookie 支持
 - 隐藏值保存在浏览器 Cookie
 - 添加赞赏码
+- 更新日志添加图标
+- 修复 GitHub Action 工作流无法指定 pnpm 版本
 
 ## 2024-10-16
 

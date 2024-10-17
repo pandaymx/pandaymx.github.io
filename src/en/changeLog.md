@@ -16,6 +16,7 @@ icon: /assets/icon/changeLog.svg
 - Store hidden values in browser cookies
 - Add a donation QR code
 - Add icons to the changelog
+- Fix GitHub Action workflow unable to specify pnpm version
 
 
 ## 2024-10-16
