@@ -17,6 +17,7 @@ icon: /assets/icon/changeLog.svg
 - Add a donation QR code
 - Add icons to the changelog
 - Fix GitHub Action workflow unable to specify pnpm version
+- Upgrade the blog version to `0.0.1`
 
 
 ## 2024-10-16

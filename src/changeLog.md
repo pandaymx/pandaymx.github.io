@@ -18,6 +18,7 @@ icon: /assets/icon/changeLog.svg
 - 添加赞赏码
 - 更新日志添加图标
 - 修复 GitHub Action 工作流无法指定 pnpm 版本
+- 升级博客版本为 `0.0.1`
 
 ## 2024-10-16
 
