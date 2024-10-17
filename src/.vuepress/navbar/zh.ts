@@ -45,6 +45,12 @@ export const zhNavbar = navbar([
     ],
   },
   {
+    text: "实用技术",
+    icon: "/assets/icon/technology.svg",
+    prefix: "/technology/",
+    link: "/technology/",
+  },
+  {
     text: "V2 文档",
     icon: "book",
     link: "https://theme-hope.vuejs.press/zh/",
