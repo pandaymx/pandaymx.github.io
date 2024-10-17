@@ -23,6 +23,7 @@ icon: /assets/icon/changeLog.svg
 - 添加 Markdown 主页
 - 添加 Markdown 基础
 - 添加 Markdown 简介
+- 导航栏添加更新日志
 
 ## 2024-10-16
 

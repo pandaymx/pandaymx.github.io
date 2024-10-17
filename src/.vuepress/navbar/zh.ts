@@ -57,6 +57,11 @@ export const zhNavbar = navbar([
     ]
   },
   {
+    text: "变更日志",
+    icon: "/assets/icon/changeLog.svg",
+    link: "/changeLog"
+  },
+  {
     text: "V2 文档",
     icon: "book",
     link: "https://theme-hope.vuejs.press/zh/",

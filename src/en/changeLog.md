@@ -2,6 +2,7 @@
 title: ChangeLog
 icon: /assets/icon/changeLog.svg
 ---
+
 ## 2024-10-17
 
 - Fix the PrismJS issue
@@ -22,6 +23,7 @@ icon: /assets/icon/changeLog.svg
 - Add Markdown homepage
 - Add Markdown basic
 - Add Markdown introduction
+- Add changelog to the navbar
 
 
 ## 2024-10-16
