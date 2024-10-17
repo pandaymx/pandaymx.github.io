@@ -21,6 +21,7 @@ icon: /assets/icon/changeLog.svg
 - Add homepage, sidebar, and navbar content to the Practical Techniques section
 - Add Markdown homepage
 - Add Markdown basic
+- Add Markdown introduction
 
 
 ## 2024-10-16
