@@ -8,11 +8,6 @@ import { getRecentUpdatedArticles } from "vuepress-theme-hope/presets/getRecentU
 export default hopeTheme({
   hostname: "https://mister-hope.github.io",
 
-  author: {
-    name: "Mr.Hope",
-    url: "https://mister-hope.com",
-  },
-
   iconAssets: "fontawesome-with-brands",
 
   logo: "https://theme-hope-assets.vuejs.press/logo.svg",
@@ -63,6 +58,11 @@ export default hopeTheme({
 
   locales: {
     "/en/": {
+      author: {
+        name: "ppmb",
+        url: "https://pandaymx.github.io",
+        email: "panda1943575780@outlook.com",
+      },
       // navbar
       navbar: enNavbar,
 
@@ -87,6 +87,11 @@ export default hopeTheme({
      * Chinese locale config
      */
     "/": {
+      author:{
+        name: "皮皮萌宝",
+        url: "https://pandaymx.github.io",
+        email: "panda1943575780@outlook.com",
+      },
       // navbar
       navbar: zhNavbar,
 

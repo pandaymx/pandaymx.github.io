@@ -12,6 +12,7 @@ icon: /assets/icon/changeLog.svg
 - Rename the Markdown extension document to Advanced, add a GFM introduction, and update the icons
 - Update the advanced Markdown document to include explanations on subscripts and superscripts, mathematical formulas, YAML Front Matter, table of contents, and callouts/GitHub style alerts
 - Update theme configuration and modify GitHub repository link
+- Update theme configuration, add new author information and links
 
 ## 2024-10-17
 
