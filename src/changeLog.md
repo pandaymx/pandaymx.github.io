@@ -7,6 +7,7 @@ icon: /assets/icon/changeLog.svg
 
 - 将编译后的页面通过 GitHub 工作流推送到 Docker Hub 中
 - 添加档案页
+- 添加英文和中文的 README 文件
 
 ## 2024-10-17
 
