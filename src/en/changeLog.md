@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - Add a portfolio page
 - Add English and Chinese README files
 - Add a Markdown document with extended syntax and corresponding icons
+- Rename the Markdown extension document to Advanced, add a GFM introduction, and update the icons
 
 ## 2024-10-17
 

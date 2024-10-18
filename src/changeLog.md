@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - 添加档案页
 - 添加英文和中文的 README 文件
 - 添加扩展语法的 Markdown 文档和对应图标
+- 重命名 Markdown 扩展文档为进阶，添加 GFM 介绍，更新图标
 
 
 ## 2024-10-17
