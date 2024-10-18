@@ -8,6 +8,7 @@ icon: /assets/icon/changeLog.svg
 - Push the compiled pages to Docker Hub through a GitHub workflow
 - Add a portfolio page
 - Add English and Chinese README files
+- Add a Markdown document with extended syntax and corresponding icons
 
 ## 2024-10-17
 
