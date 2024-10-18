@@ -3,6 +3,10 @@ title: ChangeLog
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-18
+
+- Push the compiled pages to Docker Hub through a GitHub workflow
+
 ## 2024-10-17
 
 - Fix the PrismJS issue
