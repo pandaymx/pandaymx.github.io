@@ -14,6 +14,7 @@ icon: /assets/icon/changeLog.svg
 - Update theme configuration and modify GitHub repository link
 - Update theme configuration, add new author information and links
 - Add technology section to the sidebar
+- Update the advanced document to change anchor tips to warning style
 
 ## 2024-10-17
 
