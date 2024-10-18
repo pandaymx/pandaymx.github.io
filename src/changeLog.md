@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-18
 
 - 将编译后的页面通过 GitHub 工作流推送到 Docker Hub 中
+- 添加档案页
 
 ## 2024-10-17
 

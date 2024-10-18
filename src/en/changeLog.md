@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-18
 
 - Push the compiled pages to Docker Hub through a GitHub workflow
+- Add a portfolio page
 
 ## 2024-10-17
 
