@@ -13,6 +13,7 @@ icon: /assets/icon/changeLog.svg
 - 更新 Markdown 进阶文档，添加上下标、数学公式、YAML Front Matter、目录和风险警报的说明
 - 更新主题配置，修改 GitHub 仓库链接
 - 更新主题配置，添加新作者信息及其链接
+- 添加技术部分到侧边栏
 
 
 ## 2024-10-17

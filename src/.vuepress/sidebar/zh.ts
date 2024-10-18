@@ -16,6 +16,7 @@ export const zhSidebar = sidebar({
       prefix: "posts/",
       children: "structure",
     },
+    "technology/",
     "intro",
     {
       text: "幻灯片",

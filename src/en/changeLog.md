@@ -13,6 +13,7 @@ icon: /assets/icon/changeLog.svg
 - Update the advanced Markdown document to include explanations on subscripts and superscripts, mathematical formulas, YAML Front Matter, table of contents, and callouts/GitHub style alerts
 - Update theme configuration and modify GitHub repository link
 - Update theme configuration, add new author information and links
+- Add technology section to the sidebar
 
 ## 2024-10-17
 
