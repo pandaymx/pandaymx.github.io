@@ -11,6 +11,7 @@ icon: /assets/icon/changeLog.svg
 - 添加扩展语法的 Markdown 文档和对应图标
 - 重命名 Markdown 扩展文档为进阶，添加 GFM 介绍，更新图标
 - 更新 Markdown 进阶文档，添加上下标、数学公式、YAML Front Matter、目录和风险警报的说明
+- 更新主题配置，修改 GitHub 仓库链接
 
 
 ## 2024-10-17
