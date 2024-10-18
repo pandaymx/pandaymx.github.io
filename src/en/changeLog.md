@@ -10,6 +10,7 @@ icon: /assets/icon/changeLog.svg
 - Add English and Chinese README files
 - Add a Markdown document with extended syntax and corresponding icons
 - Rename the Markdown extension document to Advanced, add a GFM introduction, and update the icons
+- Update the advanced Markdown document to include explanations on subscripts and superscripts, mathematical formulas, YAML Front Matter, table of contents, and callouts/GitHub style alerts
 
 ## 2024-10-17
 

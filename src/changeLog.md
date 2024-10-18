@@ -10,6 +10,7 @@ icon: /assets/icon/changeLog.svg
 - 添加英文和中文的 README 文件
 - 添加扩展语法的 Markdown 文档和对应图标
 - 重命名 Markdown 扩展文档为进阶，添加 GFM 介绍，更新图标
+- 更新 Markdown 进阶文档，添加上下标、数学公式、YAML Front Matter、目录和风险警报的说明
 
 
 ## 2024-10-17
