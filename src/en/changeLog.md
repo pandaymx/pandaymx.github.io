@@ -5,7 +5,8 @@ icon: /assets/icon/changeLog.svg
 
 ## 2024-10-19
 
-- Delete multiple English demo and article files, clean up project structure.
+- Delete multiple English demo and article files, clean up project structure
+- Enable the PWA plugin and update configuration to add caching and icon settings
 
 ## 2024-10-18
 
