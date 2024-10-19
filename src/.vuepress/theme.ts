@@ -125,6 +125,17 @@ export default hopeTheme({
   hotReload: true,
   pageInfo: ["Author", "Original", "Date", "Category", "Tag", "ReadingTime","Word","PageView"],
   plugins: {
+    docsearch: {
+      apiKey: "245de8b6749b44db33d1186c6ffe9957",
+      indexName: "ppmblszdp",
+      appId: "564TYA0K3B",
+      placeholder: "搜索文档",
+      translations: {
+        button: {
+          buttonText: '搜索文档',
+        },
+      },
+    },
     notice: [
       {
         path: "/",
