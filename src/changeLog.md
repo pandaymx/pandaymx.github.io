@@ -15,6 +15,8 @@ icon: /assets/icon/changeLog.svg
 - 添加英文 Markdown 子页面到实用技术导航栏，并创建相关的 README 文档
 - 添加英文 Markdown 介绍页面，包含基本概念、优势、编辑器和技术文档信息
 - 添加 `@vuepress/plugin-notice` 插件并配置初次见面通知
+- 添加 `@vuepress/plugin-docsearch` 插件并配置文档搜索功能
+- 更新高级 Markdown 文档，翻译 TOC 为“目录”，移除不必要的警告内容示例
 
 ## 2024-10-18
 

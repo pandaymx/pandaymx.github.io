@@ -15,6 +15,8 @@ icon: /assets/icon/changeLog.svg
 - Add an English Markdown subpage to the useful technologies navigation bar and create the corresponding README document
 - Add an English Markdown introduction page, including basic concepts, advantages, editors, and technical documentation information
 - Add the `@vuepress/plugin-notice` plugin and configure the first-time meeting notification
+- Add the `@vuepress/plugin-docsearch` plugin and configure the documentation search feature
+- Update the advanced Markdown document, translate TOC to '目录', and remove unnecessary warning content examples
 
 ## 2024-10-18
 
