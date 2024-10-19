@@ -123,7 +123,7 @@ export default hopeTheme({
 
   // enable it to preview all changes in time
   hotReload: true,
-
+  pageInfo: ["Author", "Original", "Date", "Category", "Tag", "ReadingTime","Word","PageView"],
   plugins: {
     blog: {
       type: [

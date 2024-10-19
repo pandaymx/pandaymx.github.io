@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - Enable the PWA plugin and update configuration to add caching and icon settings
 - Add PWA installation and update instructions to the README document
 - Delete multiple Chinese demo and article files, clean up project structure
+- Add page information configuration
 
 ## 2024-10-18
 
