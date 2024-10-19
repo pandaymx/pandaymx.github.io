@@ -125,6 +125,38 @@ export default hopeTheme({
   hotReload: true,
   pageInfo: ["Author", "Original", "Date", "Category", "Tag", "ReadingTime","Word","PageView"],
   plugins: {
+    notice: [
+      {
+        path: "/",
+        title: "初次见面",
+        content: "🤝你好，我叫皮皮萌宝，初次见面请多关照。<br>🚀本网站还处在构建状态中。<br>👇你可以点击下方链接进入博客的 GitHub 地址。<br>",
+        actions: [
+          {
+            text: "Github 地址",
+            link: "https://github.com/pandaymx/blog",
+            type: "primary",
+          },
+        ],
+        showOnce: true,
+        key: "hello",
+        fullscreen: true
+      },
+      {
+        path: "/en/",
+        title: "Nice to meet you",
+        content: "🤝Hello, my name is Pipimongbao. Nice to meet you.<br>🚀This website is still under construction. <br>👇You can click the link below to visit the blog's GitHub page. <br>",
+        actions: [
+          {
+            text: "Github Page",
+            link: "https://github.com/pandaymx/blog",
+            type: "primary",
+          },
+        ],
+        showOnce: true,
+        key: "hello",
+        fullscreen: true
+      },
+    ],
     blog: {
       type: [
         getRecentUpdatedArticles({

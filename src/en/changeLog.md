@@ -14,6 +14,7 @@ icon: /assets/icon/changeLog.svg
 - Remove redundant learning resource links, simplify the Chinese Markdown introduction content
 - Add an English Markdown subpage to the useful technologies navigation bar and create the corresponding README document
 - Add an English Markdown introduction page, including basic concepts, advantages, editors, and technical documentation information
+- Add the `@vuepress/plugin-notice` plugin and configure the first-time meeting notification
 
 ## 2024-10-18
 
