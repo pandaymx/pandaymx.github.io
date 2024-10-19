@@ -11,6 +11,7 @@ icon: /assets/icon/changeLog.svg
 - Delete multiple Chinese demo and article files, clean up project structure
 - Add page information configuration
 - Add an English technology page to the navigation bar and sidebar, and create the corresponding README document
+- Remove redundant learning resource links, simplify the Chinese Markdown introduction content
 
 ## 2024-10-18
 

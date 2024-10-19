@@ -70,9 +70,3 @@ Markdown 适合技术文档，GitHub 等代码托管平台都转向 Markdown 创
 ## Markdown 方言
 
 每个 Markdown 应用程序都实现了稍有不同的 Markdown 语法。推荐选择一个比较主流的 Markdown 应用程序，从而保证不会出现兼容性问题。
-
-## 更多学习资源
-
-- [VS Code 支持 Markdown 语法]()
-- [Obsidian 文档]()
-- [Nation 文档]()
