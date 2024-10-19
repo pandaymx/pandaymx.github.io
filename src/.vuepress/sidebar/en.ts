@@ -5,4 +5,5 @@ export const enSidebar = sidebar({
     "",
     "intro",
   ],
+  "/en/technology/": "structure",
 });

@@ -10,6 +10,7 @@ icon: /assets/icon/changeLog.svg
 - Add PWA installation and update instructions to the README document
 - Delete multiple Chinese demo and article files, clean up project structure
 - Add page information configuration
+- Add an English technology page to the navigation bar and sidebar, and create the corresponding README document
 
 ## 2024-10-18
 
