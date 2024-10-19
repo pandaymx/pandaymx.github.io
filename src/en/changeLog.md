@@ -17,6 +17,7 @@ icon: /assets/icon/changeLog.svg
 - Add the `@vuepress/plugin-notice` plugin and configure the first-time meeting notification
 - Add the `@vuepress/plugin-docsearch` plugin and configure the documentation search feature
 - Update the advanced Markdown document, translate TOC to '目录', and remove unnecessary warning content examples
+- Add license information to the theme configuration
 
 ## 2024-10-18
 

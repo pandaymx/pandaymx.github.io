@@ -17,6 +17,7 @@ icon: /assets/icon/changeLog.svg
 - 添加 `@vuepress/plugin-notice` 插件并配置初次见面通知
 - 添加 `@vuepress/plugin-docsearch` 插件并配置文档搜索功能
 - 更新高级 Markdown 文档，翻译 TOC 为“目录”，移除不必要的警告内容示例
+- 添加许可证信息至主题配置
 
 ## 2024-10-18
 

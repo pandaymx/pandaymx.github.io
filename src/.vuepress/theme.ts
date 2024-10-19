@@ -15,7 +15,7 @@ export default hopeTheme({
   repo: "pandaymx/pandaymx.github.io",
 
   docsDir: "src",
-
+  license: "CC BY-NC-SA 4.0",
   blog: {
     medias: {
       Baidu: "https://example.com",
@@ -82,7 +82,7 @@ export default hopeTheme({
         editLink: "Edit this page on GitHub",
       },
     },
-
+  
     /**
      * Chinese locale config
      */
