@@ -19,6 +19,7 @@ icon: /assets/icon/changeLog.svg
 - Update the advanced Markdown document, translate TOC to '目录', and remove unnecessary warning content examples
 - Add license information to the theme configuration
 - Remove the official V2 documentation link from the Chinese navigation bar.
+- Update the theme color configuration to add more color options
 
 ## 2024-10-18
 
