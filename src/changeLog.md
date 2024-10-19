@@ -3,6 +3,10 @@ title: 更新历史
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-19
+
+- 删除英文多个演示和文章文件，清理项目结构
+
 ## 2024-10-18
 
 - 将编译后的页面通过 GitHub 工作流推送到 Docker Hub 中

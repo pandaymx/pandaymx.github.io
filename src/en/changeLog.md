@@ -3,6 +3,10 @@ title: ChangeLog
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-19
+
+- Delete multiple English demo and article files, clean up project structure.
+
 ## 2024-10-18
 
 - Push the compiled pages to Docker Hub through a GitHub workflow
