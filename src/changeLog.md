@@ -7,6 +7,7 @@ icon: /assets/icon/changeLog.svg
 
 - 删除英文多个演示和文章文件，清理项目结构
 - 启用 PWA 插件并更新配置，添加缓存和图标设置
+- 添加 PWA 安装和更新说明到 README 文档
 
 ## 2024-10-18
 

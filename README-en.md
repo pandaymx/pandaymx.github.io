@@ -36,6 +36,12 @@ pnpm install
 pnpm run docs:dev
 ```
 
+### PWA
+
+1. Open the website in your browser.
+2. Click the install button next to the address bar (usually a plus icon).
+3. Follow the prompts to add the website to your home screen.
+
 ## Update
 
 ### Web
@@ -56,3 +62,9 @@ git pull
 cd blog
 pnpm install
 ```
+
+### PWA 
+
+1. Open your PWA application.
+2. Ensure your device is connected to the internet.
+3. Refresh the page to load the latest version.
