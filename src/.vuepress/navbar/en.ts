@@ -6,7 +6,13 @@ export const enNavbar = navbar([
     text: "Technology",
     icon: "/assets/icon/technology.svg",
     prefix: "/en/technology/",
-    link: "/en/technology/"
+    children: [
+      {
+        text: "Markdown",
+        icon: "/assets/icon/markdown.svg",
+        link: 'markdown/',
+      }
+    ]
   },
   {
     text: "ChangeLog",

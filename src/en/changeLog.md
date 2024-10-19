@@ -12,6 +12,7 @@ icon: /assets/icon/changeLog.svg
 - Add page information configuration
 - Add an English technology page to the navigation bar and sidebar, and create the corresponding README document
 - Remove redundant learning resource links, simplify the Chinese Markdown introduction content
+- Add an English Markdown subpage to the useful technologies navigation bar and create the corresponding README document
 
 ## 2024-10-18
 
