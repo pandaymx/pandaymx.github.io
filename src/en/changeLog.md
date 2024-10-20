@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - Add ECharts dependency and enable ECharts plugin support
 - Correct the table of contents format in the Markdown `README.md` file
 - Add a cloud services page and related icons to the navigation bar
+- Add an introduction related to cloud services
 
 ## 2024-10-19
 
