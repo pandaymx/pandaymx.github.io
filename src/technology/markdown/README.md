@@ -3,7 +3,7 @@ title: Markdown
 icon: /assets/icon/markdown.svg
 index: false
 dir:
-  - order: 1
+  order: 1
 category:
   - 实用技术
   - Markdown
