@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-20
 
 - Add a Chinese extension section page and related icons to the navigation bar. The extension page should illustrate the differences between ARM64 and AArch64
+- Add ECharts dependency and enable ECharts plugin support
 
 ## 2024-10-19
 

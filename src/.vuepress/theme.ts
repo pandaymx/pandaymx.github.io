@@ -82,12 +82,12 @@ export default hopeTheme({
         editLink: "Edit this page on GitHub",
       },
     },
-  
+
     /**
      * Chinese locale config
      */
     "/": {
-      author:{
+      author: {
         name: "皮皮萌宝",
         url: "https://pandaymx.github.io",
         email: "panda1943575780@outlook.com",
@@ -123,7 +123,7 @@ export default hopeTheme({
 
   // enable it to preview all changes in time
   hotReload: true,
-  pageInfo: ["Author", "Original", "Date", "Category", "Tag", "ReadingTime","Word","PageView"],
+  pageInfo: ["Author", "Original", "Date", "Category", "Tag", "ReadingTime", "Word", "PageView"],
   plugins: {
     docsearch: {
       apiKey: "245de8b6749b44db33d1186c6ffe9957",
@@ -247,7 +247,7 @@ export default hopeTheme({
       // insert component easily
 
       // install echarts before enabling it
-      // echarts: true,
+      echarts: true,
 
       // install flowchart.ts before enabling it
       // flowchart: true,
