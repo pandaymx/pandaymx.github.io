@@ -4,6 +4,11 @@ export const zhNavbar = navbar([
   "/",
   "/portfolio",
   {
+    text: "前端",
+    icon: "/assets/icon/front.svg",
+    link: "/front/",
+  },
+  {
     text: "实用技术",
     icon: "/assets/icon/technology.svg",
     prefix: "/technology/",
