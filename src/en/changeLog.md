@@ -10,6 +10,7 @@ icon: /assets/icon/changeLog.svg
 - Correct the table of contents format in the Markdown `README.md` file
 - Add a cloud services page and related icons to the navigation bar
 - Add an introduction related to cloud services
+- Add a Cloudflare page and related icons to the navigation bar
 
 ## 2024-10-19
 

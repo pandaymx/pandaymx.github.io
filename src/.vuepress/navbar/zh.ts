@@ -17,7 +17,12 @@ export const zhNavbar = navbar([
         text: "云服务",
         icon: "/assets/icon/aws.svg",
         link: 'aws/',
-      }
+      },
+      {
+        text: "Cloudflare",
+        icon: "/assets/icon/cloudflare.svg",
+        link: 'cloudflare/',
+      },
     ]
   },
   "/remarks",

@@ -10,6 +10,7 @@ icon: /assets/icon/changeLog.svg
 - 修正 Markdown `README.md` 文件中的目录格式
 - 添加云服务页面及相关图标至导航栏
 - 添加云服务相关简介
+- 添加 Cloudflare 页面及相关图标至导航栏
 
 ## 2024-10-19
 
