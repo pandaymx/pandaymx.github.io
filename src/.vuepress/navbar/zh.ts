@@ -15,6 +15,7 @@ export const zhNavbar = navbar([
       }
     ]
   },
+  "/remarks",
   {
     text: "变更日志",
     icon: "/assets/icon/changeLog.svg",
