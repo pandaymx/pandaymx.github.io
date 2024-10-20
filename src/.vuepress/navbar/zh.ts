@@ -12,6 +12,11 @@ export const zhNavbar = navbar([
         text: "Markdown",
         icon: "/assets/icon/markdown.svg",
         link: 'markdown/',
+      },
+      {
+        text: "云服务",
+        icon: "/assets/icon/aws.svg",
+        link: 'aws/',
       }
     ]
   },

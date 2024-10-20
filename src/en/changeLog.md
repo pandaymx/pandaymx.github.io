@@ -8,6 +8,7 @@ icon: /assets/icon/changeLog.svg
 - Add a Chinese extension section page and related icons to the navigation bar. The extension page should illustrate the differences between ARM64 and AArch64
 - Add ECharts dependency and enable ECharts plugin support
 - Correct the table of contents format in the Markdown `README.md` file
+- Add a cloud services page and related icons to the navigation bar
 
 ## 2024-10-19
 

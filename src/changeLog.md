@@ -8,6 +8,7 @@ icon: /assets/icon/changeLog.svg
 - 添加中文扩展部分页面及相关图标至导航栏，扩展页面体现 ARM64 和 AArch64 的区别
 - 添加 ECharts 依赖，启用 ECharts 插件支持
 - 修正 Markdown `README.md` 文件中的目录格式
+- 添加云服务页面及相关图标至导航栏
 
 ## 2024-10-19
 
