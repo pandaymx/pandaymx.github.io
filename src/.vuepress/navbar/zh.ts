@@ -6,7 +6,8 @@ export const zhNavbar = navbar([
   {
     text: "数据库",
     icon: "/assets/icon/database.svg",
-    link: "/database/",
+    prefix: "/database/",
+    children: ["redis/"],
   },
   {
     text: "前端",

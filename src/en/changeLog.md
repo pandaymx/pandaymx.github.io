@@ -14,6 +14,7 @@ icon: /assets/icon/changeLog.svg
 - Add a frontend page and related icons to the navigation bar and sidebar
 - Add Vue pages and related icons to the frontend navigation bar
 - Add database pages and related icons to the navigation bar and sidebar
+- Add Redis pages and related icons to the database navigation bar
 
 ## 2024-10-19
 
