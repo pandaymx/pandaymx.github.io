@@ -6,7 +6,8 @@ export const zhNavbar = navbar([
   {
     text: "前端",
     icon: "/assets/icon/front.svg",
-    link: "/front/",
+    prefix: "/front/",
+    children: ["vue/"]
   },
   {
     text: "实用技术",

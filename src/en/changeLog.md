@@ -12,6 +12,7 @@ icon: /assets/icon/changeLog.svg
 - Add an introduction related to cloud services
 - Add a Cloudflare page and related icons to the navigation bar
 - Add a frontend page and related icons to the navigation bar and sidebar
+- Add Vue pages and related icons to the frontend navigation bar
 
 ## 2024-10-19
 
