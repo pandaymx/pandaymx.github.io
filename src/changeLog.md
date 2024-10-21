@@ -8,6 +8,7 @@ icon: /assets/icon/changeLog.svg
 - 云服务章节丰富 `README` 文件
 - 添加 `Linux` 页面及相关图标至实用技术导航栏
 - 添加 `Linux` 介绍页面及相关内容
+- 添加 Java 页面及相关图标至导航栏和侧边栏
 
 ## 2024-10-20
 
