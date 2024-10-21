@@ -9,6 +9,7 @@ icon: /assets/icon/changeLog.svg
 - Add a `Linux` page and related icons to the useful technologies navigation bar
 - Add a Linux introduction page and related content
 - Add a Java page and related icons to the navigation bar and sidebar
+- Add WSL-related basic and advanced documentation and icons to the useful technologies navigation bar
 
 ## 2024-10-20
 
