@@ -1,9 +1,9 @@
 ---
-title: Linux
+title: WSL
 icon: /assets/icon/linux.svg
 index: false
 dir:
-  order: 1
+  order: 2
 category:
   - 实用技术
   - WSL
