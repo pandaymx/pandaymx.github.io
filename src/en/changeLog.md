@@ -3,6 +3,10 @@ title: ChangeLog
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-21
+
+- Enrich the Cloud Services section of the `README` file.
+
 ## 2024-10-20
 
 - Add a Chinese extension section page and related icons to the navigation bar. The extension page should illustrate the differences between ARM64 and AArch64

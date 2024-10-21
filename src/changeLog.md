@@ -3,6 +3,10 @@ title: 更新历史
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-21
+
+- 云服务章节丰富 README 文件
+
 ## 2024-10-20
 
 - 添加中文扩展部分页面及相关图标至导航栏，扩展页面体现 ARM64 和 AArch64 的区别
