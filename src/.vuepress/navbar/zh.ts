@@ -24,7 +24,7 @@ export const zhNavbar = navbar([
     text: "实用技术",
     icon: "/assets/icon/technology.svg",
     prefix: "/technology/",
-    children: ["markdown/","linux/","aws/","cloudflare/"]
+    children: ["markdown/","wsl/","linux/","aws/","cloudflare/"]
   },
   "/remarks",
   {
