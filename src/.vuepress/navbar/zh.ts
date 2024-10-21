@@ -19,23 +19,7 @@ export const zhNavbar = navbar([
     text: "实用技术",
     icon: "/assets/icon/technology.svg",
     prefix: "/technology/",
-    children: [
-      {
-        text: "Markdown",
-        icon: "/assets/icon/markdown.svg",
-        link: 'markdown/',
-      },
-      {
-        text: "云服务",
-        icon: "/assets/icon/aws.svg",
-        link: 'aws/',
-      },
-      {
-        text: "Cloudflare",
-        icon: "/assets/icon/cloudflare.svg",
-        link: 'cloudflare/',
-      },
-    ]
+    children: ["markdown/","linux/","aws/","cloudflare/"]
   },
   "/remarks",
   {

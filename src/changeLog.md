@@ -5,7 +5,8 @@ icon: /assets/icon/changeLog.svg
 
 ## 2024-10-21
 
-- 云服务章节丰富 README 文件
+- 云服务章节丰富 `README` 文件
+- 添加 `Linux` 页面及相关图标至实用技术导航栏
 
 ## 2024-10-20
 
