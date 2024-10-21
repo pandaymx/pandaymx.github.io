@@ -7,6 +7,7 @@ icon: /assets/icon/changeLog.svg
 
 - Enrich the Cloud Services section of the `README` file
 - Add a `Linux` page and related icons to the useful technologies navigation bar
+- Add a Linux introduction page and related content
 
 ## 2024-10-20
 
