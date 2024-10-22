@@ -3,6 +3,10 @@ title: ChangeLog
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-22
+
+- Add a Cloudflare introduction page and related content
+
 ## 2024-10-21
 
 - Enrich the Cloud Services section of the `README` file

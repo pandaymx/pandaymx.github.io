@@ -3,6 +3,10 @@ title: 更新历史
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-22
+
+- 添加 Cloudflare 介绍页面及相关内容
+
 ## 2024-10-21
 
 - 云服务章节丰富 `README` 文件
