@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-22
 
 - 添加 Cloudflare 介绍页面及相关内容
+- 添加 Docker 页面及相关图标至实用技术导航栏
 
 ## 2024-10-21
 

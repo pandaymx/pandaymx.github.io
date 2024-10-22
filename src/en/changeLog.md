@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-22
 
 - Add a Cloudflare introduction page and related content
+- Add a Docker page and related icons to the useful technologies navigation bar
 
 ## 2024-10-21
 
