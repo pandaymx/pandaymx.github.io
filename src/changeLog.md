@@ -3,6 +3,10 @@ title: 更新历史
 icon: /assets/icon/changeLog.svg
 ---
 
+## 2024-10-23
+
+- 添加人工智能页面及相关图标至实用技术导航栏
+
 ## 2024-10-22
 
 - 添加 Cloudflare 介绍页面及相关内容
