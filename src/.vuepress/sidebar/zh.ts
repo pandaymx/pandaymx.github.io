@@ -11,6 +11,7 @@ export const zhSidebar = sidebar({
       link: "https://ecosystem.vuejs.press/zh/plugins/markdown/revealjs/demo.html",
     },
   ],
+  "/ai/": "structure",
   "/java/": "structure",
   "/database/": "structure",
   "/front/": "structure",

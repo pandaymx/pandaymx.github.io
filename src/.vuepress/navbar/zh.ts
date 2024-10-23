@@ -26,6 +26,11 @@ export const zhNavbar = navbar([
     prefix: "/technology/",
     children: ["markdown/","wsl/","linux/","docker/","aws/","cloudflare/"]
   },
+  {
+    text: "人工智能",
+    icon: "/assets/icon/ai.svg",
+    link: "/ai/",
+  },
   "/remarks",
   {
     text: "变更日志",

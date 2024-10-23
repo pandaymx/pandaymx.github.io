@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-23
 
 - Add an Artificial Intelligence page and related icons to the useful technologies navigation bar
+- Add an Artificial Intelligence page and related icons to the navigation bar and sidebar.
 
 ## 2024-10-22
 
