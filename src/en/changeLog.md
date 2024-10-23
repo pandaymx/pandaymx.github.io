@@ -8,6 +8,7 @@ icon: /assets/icon/changeLog.svg
 - Add an Artificial Intelligence page and related icons to the useful technologies navigation bar
 - Add an Artificial Intelligence page and related icons to the navigation bar and sidebar
 - Add an NVIDIA page and related icons to the Artificial Intelligence navigation bar
+- Add a CUDA page and related icons
 
 ## 2024-10-22
 
