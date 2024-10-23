@@ -29,7 +29,8 @@ export const zhNavbar = navbar([
   {
     text: "人工智能",
     icon: "/assets/icon/ai.svg",
-    link: "/ai/",
+    prefix: "/ai/",
+    children: ["nvidia/"]
   },
   "/remarks",
   {
