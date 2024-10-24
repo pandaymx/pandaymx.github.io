@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-24
 
 - Enable error level markings in PrismJS
+- Add Java reflection documentation and related icons
 
 ## 2024-10-23
 

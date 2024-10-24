@@ -6,6 +6,7 @@ icon: /assets/icon/changeLog.svg
 ## 2024-10-24
 
 - prismjs 启用错误级别标记
+- 添加 Java 反射文档及相关图标
 
 ## 2024-10-23
 
