@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" id="reflect">
+  <g fill="#fff" transform="translate(4.674 -1032.052)">
+    <circle cx="7.826" cy="1044.552" r="12.5" fill="#239fdb" fill-rule="evenodd"></circle>
+    <path d="m13.635 1.014-1.22 1.617c-1.552-.844-3.223-1.154-4.856-.94-1.753.23-3.46 1.054-4.916 2.442l.691.724c2.512-2.393 5.64-2.875 8.46-1.404L10.622 5.01h1l3.164.011-1.15-4.007zM7.996 4.996v1h1v-1h-1zM1.1 5.594v9.404l5.115-4.703L1.693 6.14 1.1 5.594Zm14.793 0-.594.547-4.522 4.154 5.116 4.703V5.594zM7.996 6.996v1h1v-1h-1zm-6.103.783 2.736 2.518-2.736 2.515V7.78zm13.207 0v5.034l-2.737-2.516L15.1 7.779zM7.996 8.996v1h1v-1h-1zm0 2v1h1v-1h-1zm0 2v1h1v-1h-1zm0 2v1h1v-1h-1z" color="#000" font-family="sans-serif" font-weight="400" overflow="visible" style="line-height:normal;text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;block-progression:tb;isolation:auto;mix-blend-mode:normal" transform="translate(-.67 1036.062)"></path>
+  </g>
+</svg>
