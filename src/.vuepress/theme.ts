@@ -182,7 +182,8 @@ export default hopeTheme({
       themes: {
         light: "vs",
         dark: "one-dark"
-      }
+      },
+      notationErrorLevel: true,
     },
     // Install @waline/client before enabling it
     // Note: This is for testing ONLY!
