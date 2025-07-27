@@ -85,6 +85,12 @@ const config: Config = {
           position: 'left',
           label: '教程',
         },
+        {
+          type: 'doc',
+          docId: 'devops-and-tools/README',
+          position: 'left',
+          label: 'DevOps 与工具',
+        },
         {to: '/blog', label: '博客', position: 'left'},
         {
           href: 'https://github.com/pandaymx/pandaymx.github.io',
