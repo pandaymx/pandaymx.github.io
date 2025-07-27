@@ -79,12 +79,7 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: '教程',
-        },
+        
         {
           type: 'doc',
           docId: 'devops-and-tools/README',
@@ -105,10 +100,7 @@ const config: Config = {
         {
           title: '文档',
           items: [
-            {
-              label: '教程',
-              to: '/docs/intro',
-            },
+            
           ],
         },
         {
