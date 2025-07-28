@@ -79,10 +79,9 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
-        
         {
-          type: 'doc',
-          docId: 'devops-and-tools/README',
+          type: 'docSidebar',
+          sidebarId: 'devopsAndToolsSidebar',
           position: 'left',
           label: 'DevOps 与工具',
         },
