@@ -88,7 +88,6 @@ const config: Config = {
         {
           type: 'docSidebar',
           sidebarId: 'csSidebar',
-          to: '/docs/cs/README',
           position: 'left',
           label: '计算机科学'
         },
