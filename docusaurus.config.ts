@@ -85,6 +85,13 @@ const config: Config = {
           position: 'left',
           label: 'Tutorial',
         },
+        {
+          type: 'docSidebar',
+          sidebarId: 'csSidebar',
+          to: '/docs/cs/README',
+          position: 'left',
+          label: '计算机科学'
+        },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/facebook/docusaurus',
