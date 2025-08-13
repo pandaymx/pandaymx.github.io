@@ -1,5 +1,5 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -71,6 +71,12 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
+    docs: {
+      sidebar: {
+        hideable: true,
+        autoCollapseCategories: true
+      },
+    },
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
       title: 'My Site',
@@ -91,7 +97,7 @@ const config: Config = {
           position: 'left',
           label: '计算机科学'
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: 'https://github.com/facebook/docusaurus',
           label: 'GitHub',
