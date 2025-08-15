@@ -35,7 +35,16 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-
+  plugins: [
+    [
+      'rsdoctor',
+      {
+        rsdoctorOptions: {
+          mode: 'lite',
+        },
+      },
+    ],
+  ],
   presets: [
     [
       'classic',
