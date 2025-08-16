@@ -75,7 +75,7 @@ const config: Config = {
           customCss: "./src/css/custom.css",
         },
         gtag: {
-          trackingID: "Measurement Id",
+          trackingID: process.env.GTAG_TRACKING_ID,
           anonymizeIP: true,
         },
       } satisfies Preset.Options,

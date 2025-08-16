@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  GTAG_TRACKING_ID: ${{ secrets.GTAG_TRACKING_ID }}
+
 jobs:
   build:
     name: Build Docusaurus with Bun
@@ -39,3 +42,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+

@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  GTAG_TRACKING_ID: ${{ secrets.GTAG_TRACKING_ID }}
+  
 jobs:
   test-deploy:
     name: Test deployment
