@@ -37,7 +37,8 @@ const config: Config = {
     locales: ["en"],
   },
   plugins: [
-    [
+    // 仅在非 CI 环境启用 rsdoctor
+    !process.env.CI && [
       "rsdoctor",
       {
         rsdoctorOptions: {
@@ -45,7 +46,7 @@ const config: Config = {
         },
       },
     ],
-  ],
+  ].filter(Boolean),
   presets: [
     [
       "classic",
