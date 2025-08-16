@@ -49,23 +49,23 @@ def maximum69Number (num: int) -> int:
 ```
 
 </TabItem>
-<TabItem value="js" label="JavaScript">
+<TabItem value="c" label="C">
 
-```js
-function maximum69Number(num) {
-    return parseInt(num.toString().replace('6', '9'));
-}
-```
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-</TabItem>
-<TabItem value="java" label="Java">
-
-```java
-class Solution {
-    public int maximum69Number (int num) {
-        String s = Integer.toString(num);
-        return Integer.parseInt(s.replaceFirst("6", "9"));
+int maximum69Number (int num){
+    char s[10];
+    sprintf(s, "%d", num);
+    for (int i = 0; i < strlen(s); i++) {
+        if (s[i] == '6') {
+            s[i] = '9';
+            break;
+        }
     }
+    return atoi(s);
 }
 ```
 
@@ -90,6 +90,45 @@ public:
 ```
 
 </TabItem>
+<TabItem value="java" label="Java">
+
+```java
+class Solution {
+    public int maximum69Number (int num) {
+        String s = Integer.toString(num);
+        return Integer.parseInt(s.replaceFirst("6", "9"));
+    }
+}
+```
+
+</TabItem>
+<TabItem value="csharp" label="C#">
+
+```csharp
+public class Solution {
+    public int Maximum69Number(int num) {
+        char[] s = num.ToString().ToCharArray();
+        for (int i = 0; i < s.Length; i++) {
+            if (s[i] == '6') {
+                s[i] = '9';
+                break;
+            }
+        }
+        return Convert.ToInt32(new string(s));
+    }
+}
+```
+
+</TabItem>
+<TabItem value="js" label="JavaScript">
+
+```js
+function maximum69Number(num) {
+    return parseInt(num.toString().replace('6', '9'));
+}
+```
+
+</TabItem>
 <TabItem value="go" label="Go">
 
 ```go
@@ -104,6 +143,37 @@ func maximum69Number (num int) int {
     res, _ := strconv.Atoi(s)
     return res
 }
+```
+
+</TabItem>
+<TabItem value="rust" label="Rust">
+
+```rust
+impl Solution {
+    pub fn maximum69_number(num: i32) -> i32 {
+        num.to_string().replacen('6', "9", 1).parse::<i32>().unwrap()
+    }
+}
+```
+
+</TabItem>
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class Solution {
+    fun maximum69Number (num: Int): Int {
+        return num.toString().replaceFirst('6', '9').toInt()
+    }
+}
+```
+
+</TabItem>
+<TabItem value="ts" label="TypeScript">
+
+```ts
+function maximum69Number(num: number): number {
+    return Number(num.toString().replace('6', '9'));
+};
 ```
 
 </TabItem>
