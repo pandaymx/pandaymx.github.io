@@ -134,8 +134,8 @@ const config: Config = {
           title: "文档",
           items: [
             {
-              label: "教程",
-              to: "/docs/intro",
+              label: "计算机科学与技术",
+              to: "/docs/cs/",
             },
           ],
         },
