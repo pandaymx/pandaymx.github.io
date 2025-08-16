@@ -1,0 +1,121 @@
+---
+sidebar_position: 133
+---
+
+# LeetCode 1321-1330 解析
+
+## 1323. 最大 69 数
+
+### 题目描述
+
+给你一个仅由数字 6 和 9 组成的整数 `num`。
+
+你最多只能翻转一个数字，将 6 变为 9，或者将 9 变为 6 。
+
+请返回你可以得到的最大数字。
+
+### 示例
+
+输入：`num = 9669`
+
+输出：`9969`
+
+解释：
+改变第一个数字 6 会得到 9669 -> 6669
+改变第二个数字 6 会得到 9669 -> 9969
+改变第三个数字 6 会得到 9669 -> 9699
+改变第四个数字 9 会得到 9669 -> 9666
+其中最大的数字是 9969。
+
+### 字符串解法
+
+#### 核心原理
+
+要获得最大的数字，我们应该优先改变更高位的数字。将 6 变为 9 会使数字变大，而将 9 变为 6 会使数字变小。因此，最优策略是找到最左边的 6，并将其变为 9。如果数字中没有 6，则无需改变，原数即为最大。
+
+我们可以将整数转换为字符串，然后从左到右查找第一个 '6'，如果找到，就将其替换为 '9'，然后将字符串转换回整数。
+
+#### 代码
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId='leetcode'>
+<TabItem value="py" label="Python">
+
+```py
+def maximum69Number (num: int) -> int:
+    return int(str(num).replace('6', '9', 1))
+```
+
+</TabItem>
+<TabItem value="js" label="JavaScript">
+
+```js
+function maximum69Number(num) {
+    return parseInt(num.toString().replace('6', '9'));
+}
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+class Solution {
+    public int maximum69Number (int num) {
+        String s = Integer.toString(num);
+        return Integer.parseInt(s.replaceFirst("6", "9"));
+    }
+}
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <string>
+#include <algorithm>
+
+class Solution {
+public:
+    int maximum69Number (int num) {
+        std::string s = std::to_string(num);
+        auto pos = s.find('6');
+        if (pos != std::string::npos) {
+            s[pos] = '9';
+        }
+        return std::stoi(s);
+    }
+};
+```
+
+</TabItem>
+<TabItem value="go" label="Go">
+
+```go
+import (
+    "strconv"
+    "strings"
+)
+
+func maximum69Number (num int) int {
+    s := strconv.Itoa(num)
+    s = strings.Replace(s, "6", "9", 1)
+    res, _ := strconv.Atoi(s)
+    return res
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### 代码解析
+
+- `str(num)` / `Integer.toString(num)`: 将输入的整数 `num` 转换为字符串。
+- `.replace('6', '9', 1)` / `.replaceFirst("6", "9")`: 在字符串中查找第一个出现的 '6' 并将其替换为 '9'。参数 `1` 确保只替换一次。
+- `int(...)` / `Integer.parseInt(...)`: 将修改后的字符串转换回整数并返回。
+
+#### 算法分析
+
+- 时间复杂度：O(D)，其中 D 是整数 `num` 的位数。转换和替换操作的时间复杂度与数字的位数成正比。
+- 空间复杂度：O(D)，需要额外的空间来存储 `num` 的字符串表示。
