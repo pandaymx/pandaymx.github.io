@@ -1,4 +1,4 @@
-FROM oven/bun:1.0.11 AS build
+FROM oven/bun:1.2.20 AS build
 WORKDIR /app
 
 # Use Bun to install dependencies and build the Docusaurus site
