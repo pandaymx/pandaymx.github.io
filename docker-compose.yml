@@ -1,9 +1,25 @@
-version: "3.8"
+version: '3.8'
+
 services:
-  web:
-    build: .
+  # 为你的 Docusaurus 网站定义一个服务
+  docusaurus-site:
+    # Docker 将会构建的镜像名称和标签
+    image: my-docusaurus-site:latest
+
+    # 构建指令
+    build:
+      # build context 设置为当前目录
+      context: .
+      # 明确指定 Dockerfile 的名称
+      dockerfile: Dockerfile
+
+    # 为容器设置一个友好的名称
+    container_name: docusaurus_prod
+
+    # 端口映射：将主机的 8080 端口映射到容器的 80 端口
+    # 这样你就可以通过 http://localhost:8080 访问网站了
     ports:
       - "8080:80"
+
+    # 重启策略：除非手动停止，否则容器总是在退出后重启
     restart: unless-stopped
-    environment:
-      - NODE_ENV=production
