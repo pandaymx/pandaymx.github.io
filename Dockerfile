@@ -14,8 +14,15 @@ RUN CI=true bun run build
 
 FROM nginx:stable-alpine
 
-# Serve the built site
-COPY --from=build /app/build /usr/share/nginx/html
+RUN addgroup -S app && adduser -S -G app app \
+	&& chown -R app:app /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+USER app
+
+# 从构建阶段复制构建好的静态文件
+COPY --from=build --chown=app:app /app/build /usr/share/nginx/html
+
+# 复制自定义的 Nginx 配置文件
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
