@@ -1,11 +1,45 @@
+# Dependency directories
 node_modules
+.pnpm-store
+
+# Build output
 build
+dist
+.docusaurus
+
+# Docker-related files
 .dockerignore
 Dockerfile
+docker-compose.yml
+
+# Git-related files
 .git
 .gitignore
-npm-debug.log
-dist
+.gitattributes
+
+# Environment variables
 .env
+.env.*
+!/.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
 .vscode
-*.md
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Docusaurus cache
+.cache-loader
