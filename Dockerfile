@@ -10,7 +10,7 @@ RUN bun install
 
 # Copy the rest of the repository and run the build
 COPY . .
-RUN bun run build
+RUN CI=true bun run build
 
 FROM nginx:stable-alpine
 
