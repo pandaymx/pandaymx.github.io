@@ -15,9 +15,9 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "3.8.1",
-    "@docusaurus/plugin-google-gtag": "^3.8.1",
-    "@docusaurus/preset-classic": "^3.8.1",
+    "@docusaurus/core": "3.8.1-canary-6379",
+    "@docusaurus/plugin-google-gtag": "3.8.1-canary-6379",
+    "@docusaurus/preset-classic": "3.8.1-canary-6379",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "dotenv": "^17.2.1",
@@ -26,10 +26,10 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.8.1",
-    "@docusaurus/plugin-rsdoctor": "^3.8.1",
-    "@docusaurus/tsconfig": "3.8.1",
-    "@docusaurus/types": "3.8.1",
+    "@docusaurus/module-type-aliases": "3.8.1-canary-6379",
+    "@docusaurus/plugin-rsdoctor": "3.8.1-canary-6379",
+    "@docusaurus/tsconfig": "3.8.1-canary-6379",
+    "@docusaurus/types": "3.8.1-canary-6379",
     "typescript": "~5.9.2"
   },
   "browserslist": {
