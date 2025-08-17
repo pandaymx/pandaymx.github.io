@@ -1,6 +1,8 @@
 FROM oven/bun:1.2.20 AS build
 WORKDIR /app
 
+ENV GTAG_TRACKING_ID="123"
+
 # Use Bun to install dependencies and build the Docusaurus site
 # Copy lockfile and package manifest first to leverage layer caching
 COPY package.json bun.lock* ./
