@@ -14,10 +14,6 @@ RUN CI=true bun run build
 
 FROM nginx:stable-alpine
 
-RUN addgroup -S app && adduser -S -G app app \
-	&& chown -R app:app /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
-USER app
-
 # 从构建阶段复制构建好的静态文件
 COPY --from=build --chown=app:app /app/build /usr/share/nginx/html
 
