@@ -1,0 +1,1212 @@
+---
+sidebar_position: 68
+---
+
+# LeetCode 671-680 解析
+
+## 679. 24 点
+
+### 题目描述
+
+你有 4 张卡片，每张卡片上都有一个 1 到 9 的数字。你需要判断是否能通过 `*`，`/`，`+`，`-`，`(`，`)` 的运算得到 24。
+
+### 示例
+
+**示例 1:**
+
+输入: `[4, 1, 8, 7]`
+输出: `True`
+解释: `(8-4) * (7-1) = 24`
+
+**示例 2:**
+
+输入: `[1, 2, 1, 2]`
+输出: `False`
+
+### 暴力解法
+
+**核心原理**
+
+暴力解法通过枚举所有可能的数字排列和运算符组合来解决问题。对于4个数字，我们可以：
+
+1. 枚举所有数字的排列（4! = 24种）
+2. 枚举所有运算符的组合（4种运算符，3个位置，共4^3 = 64种）
+3. 枚举所有可能的括号组合（共有5种不同的计算顺序）
+
+通过遍历所有这些组合，计算表达式的值，看是否等于24。
+
+**代码**
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId='leetcode'>
+<TabItem value="py" label="Python">
+
+```py
+import itertools
+
+def judgePoint24(cards):
+    # 所有运算符
+    def add(a, b): return a + b
+    def subtract(a, b): return a - b
+    def multiply(a, b): return a * b
+    def divide(a, b): return a / b if b != 0 else float('inf')
+    
+    ops = [add, subtract, multiply, divide]
+    
+    # 所可能的表达式结构
+    def compute(a, b, c, d, op1, op2, op3):
+        # ((a op1 b) op2 c) op3 d
+        try:
+            return op3(op2(op1(a, b), c), d)
+        except:
+            return float('inf')
+    
+    # (a op1 (b op2 c)) op3 d
+    def compute2(a, b, c, d, op1, op2, op3):
+        try:
+            return op3(op1(a, op2(b, c)), d)
+        except:
+            return float('inf')
+    
+    # a op1 ((b op2 c) op3 d)
+    def compute3(a, b, c, d, op1, op2, op3):
+        try:
+            return op1(a, op2(op3(b, c), d))
+        except:
+            return float('inf')
+    
+    # a op1 (b op2 (c op3 d))
+    def compute4(a, b, c, d, op1, op2, op3):
+        try:
+            return op1(a, op2(b, op3(c, d)))
+        except:
+            return float('inf')
+    
+    # (a op1 b) op2 (c op3 d)
+    def compute5(a, b, c, d, op1, op2, op3):
+        try:
+            return op2(op1(a, b), op3(c, d))
+        except:
+            return float('inf')
+    
+    # 枚举所有数字排列
+    for perm in itertools.permutations(cards):
+        a, b, c, d = float(perm[0]), float(perm[1]), float(perm[2]), float(perm[3])
+        # 枚举所有运算符组合
+        for op1 in ops:
+            for op2 in ops:
+                for op3 in ops:
+                    # 尝试所有计算结构
+                    if abs(compute(a, b, c, d, op1, op2, op3) - 24) < 1e-6:
+                        return True
+                    if abs(compute2(a, b, c, d, op1, op2, op3) - 24) < 1e-6:
+                        return True
+                    if abs(compute3(a, b, c, d, op1, op2, op3) - 24) < 1e-6:
+                        return True
+                    if abs(compute4(a, b, c, d, op1, op2, op3) - 24) < 1e-6:
+                        return True
+                    if abs(compute5(a, b, c, d, op1, op2, op3) - 24) < 1e-6:
+                        return True
+    return False
+```
+
+</TabItem>
+<TabItem value="c" label="C">
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+// 计算所有可能的表达式结构
+double compute(double a, double b, double c, double d, 
+               double (*op1)(double, double), 
+               double (*op2)(double, double), 
+               double (*op3)(double, double)) {
+    // ((a op1 b) op2 c) op3 d
+    double temp1 = op1(a, b);
+    if (isinf(temp1)) return temp1;
+    double temp2 = op2(temp1, c);
+    if (isinf(temp2)) return temp2;
+    return op3(temp2, d);
+}
+
+double compute2(double a, double b, double c, double d,
+                double (*op1)(double, double),
+                double (*op2)(double, double),
+                double (*op3)(double, double)) {
+    // (a op1 (b op2 c)) op3 d
+    double temp1 = op2(b, c);
+    if (isinf(temp1)) return temp1;
+    double temp2 = op1(a, temp1);
+    if (isinf(temp2)) return temp2;
+    return op3(temp2, d);
+}
+
+double compute3(double a, double b, double c, double d,
+                double (*op1)(double, double),
+                double (*op2)(double, double),
+                double (*op3)(double, double)) {
+    // a op1 ((b op2 c) op3 d)
+    double temp1 = op2(b, c);
+    if (isinf(temp1)) return temp1;
+    double temp2 = op3(temp1, d);
+    if (isinf(temp2)) return temp2;
+    return op1(a, temp2);
+}
+
+double compute4(double a, double b, double c, double d,
+                double (*op1)(double, double),
+                double (*op2)(double, double),
+                double (*op3)(double, double)) {
+    // a op1 (b op2 (c op3 d))
+    double temp1 = op3(c, d);
+    if (isinf(temp1)) return temp1;
+    double temp2 = op2(b, temp1);
+    if (isinf(temp2)) return temp2;
+    return op1(a, temp2);
+}
+
+double compute5(double a, double b, double c, double d,
+                double (*op1)(double, double),
+                double (*op2)(double, double),
+                double (*op3)(double, double)) {
+    // (a op1 b) op2 (c op3 d)
+    double temp1 = op1(a, b);
+    if (isinf(temp1)) return temp1;
+    double temp2 = op3(c, d);
+    if (isinf(temp2)) return temp2;
+    return op2(temp1, temp2);
+}
+
+// 运算符函数
+double add(double a, double b) { return a + b; }
+double subtract(double a, double b) { return a - b; }
+double multiply(double a, double b) { return a * b; }
+double divide(double a, double b) { 
+    if (b == 0) return INFINITY;
+    return a / b; 
+}
+
+// 生成下一个排列
+int next_permutation(double *arr, int n) {
+    int i = n - 1;
+    while (i > 0 && arr[i-1] >= arr[i])
+        i--;
+    if (i <= 0)
+        return 0;
+    
+    int j = n - 1;
+    while (arr[j] <= arr[i-1])
+        j--;
+    
+    double temp = arr[i-1];
+    arr[i-1] = arr[j];
+    arr[j] = temp;
+    
+    j = n - 1;
+    while (i < j) {
+        temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+        i++;
+        j--;
+    }
+    return 1;
+}
+
+int judgePoint24(int* cards, int cardsSize) {
+    double nums[4];
+    for (int i = 0; i < 4; i++) {
+        nums[i] = (double)cards[i];
+    }
+    
+    // 所有运算符
+    double (*ops[4])(double, double) = {add, subtract, multiply, divide};
+    
+    // 枚举所有数字排列
+    do {
+        double a = nums[0], b = nums[1], c = nums[2], d = nums[3];
+        // 枚举所有运算符组合
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    // 尝试所有计算结构
+                    if (fabs(compute(a, b, c, d, ops[i], ops[j], ops[k]) - 24) < 1e-6) {
+                        return 1;
+                    }
+                    if (fabs(compute2(a, b, c, d, ops[i], ops[j], ops[k]) - 24) < 1e-6) {
+                        return 1;
+                    }
+                    if (fabs(compute3(a, b, c, d, ops[i], ops[j], ops[k]) - 24) < 1e-6) {
+                        return 1;
+                    }
+                    if (fabs(compute4(a, b, c, d, ops[i], ops[j], ops[k]) - 24) < 1e-6) {
+                        return 1;
+                    }
+                    if (fabs(compute5(a, b, c, d, ops[i], ops[j], ops[k]) - 24) < 1e-6) {
+                        return 1;
+                    }
+                }
+            }
+        }
+    } while (next_permutation(nums, 4));
+    
+    return 0;
+}
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <vector>
+#include <cmath>
+#include <algorithm>
+
+class Solution {
+public:
+    bool judgePoint24(std::vector<int>& cards) {
+        std::vector<double> nums(cards.begin(), cards.end());
+        return solve(nums);
+    }
+    
+private:
+    bool solve(std::vector<double>& nums) {
+        if (nums.size() == 1) {
+            return std::abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (int i = 0; i < nums.size(); i++) {
+            for (int j = i + 1; j < nums.size(); j++) {
+                std::vector<double> nextNums;
+                for (int k = 0; k < nums.size(); k++) {
+                    if (k != i && k != j) {
+                        nextNums.push_back(nums[k]);
+                    }
+                }
+                
+                double a = nums[i];
+                double b = nums[j];
+                
+                // 尝试所有运算
+                std::vector<double> results = {a + b, a - b, b - a, a * b};
+                if (b != 0) results.push_back(a / b);
+                if (a != 0) results.push_back(b / a);
+                
+                for (double res : results) {
+                    nextNums.push_back(res);
+                    if (solve(nextNums)) return true;
+                    nextNums.pop_back();
+                }
+            }
+        }
+        return false;
+    }
+};
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import java.util.*;
+
+public class Solution {
+    public boolean judgePoint24(int[] cards) {
+        List<Double> nums = new ArrayList<>();
+        for (int card : cards) {
+            nums.add((double) card);
+        }
+        return solve(nums);
+    }
+    
+    private boolean solve(List<Double> nums) {
+        if (nums.size() == 1) {
+            return Math.abs(nums.get(0) - 24) < 1e-6;
+        }
+        
+        for (int i = 0; i < nums.size(); i++) {
+            for (int j = i + 1; j < nums.size(); j++) {
+                List<Double> nextNums = new ArrayList<>();
+                for (int k = 0; k < nums.size(); k++) {
+                    if (k != i && k != j) {
+                        nextNums.add(nums.get(k));
+                    }
+                }
+                
+                double a = nums.get(i);
+                double b = nums.get(j);
+                
+                // 尝试所有运算
+                double[] results = new double[] {a + b, a - b, b - a, a * b};
+                for (double res : results) {
+                    List<Double> newNums = new ArrayList<>(nextNums);
+                    newNums.add(res);
+                    if (solve(newNums)) return true;
+                }
+                
+                // 除法运算
+                if (b != 0) {
+                    List<Double> newNums = new ArrayList<>(nextNums);
+                    newNums.add(a / b);
+                    if (solve(newNums)) return true;
+                }
+                
+                if (a != 0) {
+                    List<Double> newNums = new ArrayList<>(nextNums);
+                    newNums.add(b / a);
+                    if (solve(newNums)) return true;
+                }
+            }
+        }
+        return false;
+    }
+}
+```
+
+</TabItem>
+<TabItem value="csharp" label="C#">
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+public class Solution {
+    public bool JudgePoint24(int[] cards) {
+        List<double> nums = new List<double>();
+        foreach (int card in cards) {
+            nums.Add((double)card);
+        }
+        return Solve(nums);
+    }
+    
+    private bool Solve(List<double> nums) {
+        if (nums.Count == 1) {
+            return Math.Abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (int i = 0; i < nums.Count; i++) {
+            for (int j = i + 1; j < nums.Count; j++) {
+                List<double> nextNums = new List<double>();
+                for (int k = 0; k < nums.Count; k++) {
+                    if (k != i && k != j) {
+                        nextNums.Add(nums[k]);
+                    }
+                }
+                
+                double a = nums[i];
+                double b = nums[j];
+                
+                // 尝试所有运算
+                double[] results = new double[] {a + b, a - b, b - a, a * b};
+                if (b != 0) results = new List<double>(results) {a / b}.ToArray();
+                if (a != 0) results = new List<double>(results) {b / a}.ToArray();
+                
+                foreach (double res in results) {
+                    List<double> newNums = new List<double>(nextNums) {res};
+                    if (Solve(newNums)) return true;
+                }
+            }
+        }
+        return false;
+    }
+}
+```
+
+</TabItem>
+<TabItem value="js" label="JavaScript">
+
+```js
+function judgePoint24(cards) {
+    function solve(nums) {
+        if (nums.length === 1) {
+            return Math.abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = i + 1; j < nums.length; j++) {
+                const nextNums = [];
+                for (let k = 0; k < nums.length; k++) {
+                    if (k !== i && k !== j) {
+                        nextNums.push(nums[k]);
+                    }
+                }
+                
+                const a = nums[i];
+                const b = nums[j];
+                
+                // 尝试所有运算
+                const results = [a + b, a - b, b - a, a * b];
+                if (b !== 0) results.push(a / b);
+                if (a !== 0) results.push(b / a);
+                
+                for (const res of results) {
+                    if (solve([...nextNums, res])) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    return solve(cards.map(Number));
+}
+```
+
+</TabItem>
+<TabItem value="go" label="Go">
+
+```go
+package main
+
+import (
+    "math"
+)
+
+func judgePoint24(cards []int) bool {
+    nums := make([]float64, len(cards))
+    for i, card := range cards {
+        nums[i] = float64(card)
+    }
+    return solve(nums)
+}
+
+func solve(nums []float64) bool {
+    if len(nums) == 1 {
+        return math.Abs(nums[0]-24) < 1e-6
+    }
+    
+    for i := 0; i < len(nums); i++ {
+        for j := i + 1; j < len(nums); j++ {
+            var nextNums []float64
+            for k := 0; k < len(nums); k++ {
+                if k != i && k != j {
+                    nextNums = append(nextNums, nums[k])
+                }
+            }
+            
+            a, b := nums[i], nums[j]
+            
+            // 尝试所有运算
+            results := []float64{a + b, a - b, b - a, a * b}
+            if b != 0 {
+                results = append(results, a/b)
+            }
+            if a != 0 {
+                results = append(results, b/a)
+            }
+            
+            for _, res := range results {
+                newNums := append([]float64{res}, nextNums...)
+                if solve(newNums) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+```
+
+</TabItem>
+<TabItem value="rust" label="Rust">
+
+```rust
+impl Solution {
+    pub fn judge_point24(cards: Vec<i32>) -> bool {
+        let nums: Vec<f64> = cards.iter().map(|&x| x as f64).collect();
+        Self::solve(nums)
+    }
+    
+    fn solve(nums: Vec<f64>) -> bool {
+        if nums.len() == 1 {
+            return (nums[0] - 24.0).abs() < 1e-6;
+        }
+        
+        for i in 0..nums.len() {
+            for j in i+1..nums.len() {
+                let mut next_nums = Vec::new();
+                for k in 0..nums.len() {
+                    if k != i && k != j {
+                        next_nums.push(nums[k]);
+                    }
+                }
+                
+                let a = nums[i];
+                let b = nums[j];
+                
+                // 尝试所有运算
+                let mut results = vec![a + b, a - b, b - a, a * b];
+                if b != 0.0 {
+                    results.push(a / b);
+                }
+                if a != 0.0 {
+                    results.push(b / a);
+                }
+                
+                for &res in &results {
+                    let mut new_nums = vec![res];
+                    new_nums.extend(next_nums.iter());
+                    if Self::solve(new_nums) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+```
+
+</TabItem>
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class Solution {
+    fun judgePoint24(cards: IntArray): Boolean {
+        val nums = cards.map { it.toDouble() }
+        return solve(nums)
+    }
+    
+    private fun solve(nums: List<Double>): Boolean {
+        if (nums.size == 1) {
+            return Math.abs(nums[0] - 24) < 1e-6
+        }
+        
+        for (i in nums.indices) {
+            for (j in i + 1 until nums.size) {
+                val nextNums = mutableListOf<Double>()
+                for (k in nums.indices) {
+                    if (k != i && k != j) {
+                        nextNums.add(nums[k])
+                    }
+                }
+                
+                val a = nums[i]
+                val b = nums[j]
+                
+                // 尝试所有运算
+                val results = mutableListOf(a + b, a - b, b - a, a * b)
+                if (b != 0.0) results.add(a / b)
+                if (a != 0.0) results.add(b / a)
+                
+                for (res in results) {
+                    val newNums = nextNums + res
+                    if (solve(newNums)) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+}
+```
+
+</TabItem>
+<TabItem value="ts" label="TypeScript">
+
+```ts
+function judgePoint24(cards: number[]): boolean {
+    function solve(nums: number[]): boolean {
+        if (nums.length === 1) {
+            return Math.abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = i + 1; j < nums.length; j++) {
+                const nextNums: number[] = [];
+                for (let k = 0; k < nums.length; k++) {
+                    if (k !== i && k !== j) {
+                        nextNums.push(nums[k]);
+                    }
+                }
+                
+                const a = nums[i];
+                const b = nums[j];
+                
+                // 尝试所有运算
+                const results: number[] = [a + b, a - b, b - a, a * b];
+                if (b !== 0) results.push(a / b);
+                if (a !== 0) results.push(b / a);
+                
+                for (const res of results) {
+                    if (solve([...nextNums, res])) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    return solve(cards);
+}
+```
+
+</TabItem>
+</Tabs>
+
+**代码解析**
+
+- 枚举所有可能的数字排列和运算符组合
+- 尝试所有可能的计算顺序（括号组合）
+- 对于除法运算，需要特别处理除零情况
+- 使用浮点数比较时考虑精度误差
+
+**算法分析**
+
+- 时间复杂度：O(1)，因为输入规模固定为4个数字
+- 空间复杂度：O(1)，递归深度最多为3层
+
+### 回溯解法
+
+**核心原理**
+
+这个问题可以通过回溯法来解决。我们的目标是从 4 个数字中，通过所有可能的运算组合，看是否能得到 24。
+
+回溯函数的核心思想是：
+
+1. 从数字列表中任意选择两个数字。
+2. 对这两个数字进行所有可能的运算（加、减、乘、除）。注意减法和除法不满足交换律，所以 `a-b` 和 `b-a`，`a/b` 和 `b/a` 都要考虑。
+3. 将计算结果放回列表中，然后带着剩余的数字（列表长度减一）进行递归。
+4. 递归的终止条件是列表只剩下一个数字。如果这个数字是 24（或由于浮点数精度问题，与 24 非常接近），则返回 `true`。
+5. 如果所有组合都尝试过后仍未找到解，则返回 `false`。
+
+为了处理浮点数除法，最好将所有数字转换为浮点数进行计算。
+
+<Tabs groupId='leetcode'>
+<TabItem value="py" label="Python">
+
+```py
+import math
+
+class Solution:
+    def judgePoint24(self, cards: list[int]) -> bool:
+        EPSILON = 1e-6
+        
+        nums = [float(c) for c in cards]
+
+        def solve(current_nums: list[float]) -> bool:
+            n = len(current_nums)
+            
+            if n == 1:
+                return abs(current_nums[0] - 24) < EPSILON
+
+            for i in range(n):
+                for j in range(i + 1, n):
+                    a = current_nums[i]
+                    b = current_nums[j]
+
+                    next_nums = [current_nums[k] for k in range(n) if k != i and k != j]
+
+                    possible_results = [
+                        a + b,
+                        a * b,
+                        a - b,
+                        b - a
+                    ]
+                    if b != 0:
+                        possible_results.append(a / b)
+                    if a != 0:
+                        possible_results.append(b / a)
+
+                    for res in possible_results:
+                        if solve(next_nums + [res]):
+                            return True
+            
+            return False
+
+        return solve(nums)
+```
+
+</TabItem>
+<TabItem value="c" label="C">
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define EPSILON 1e-6
+
+// 计算数组长度
+int array_length(double* arr) {
+    int count = 0;
+    while (arr[count] != -999999) {  // 使用特殊值标记数组结束
+        count++;
+    }
+    return count;
+}
+
+int solve(double* nums) {
+    int n = 0;
+    while (nums[n] != -999999) n++;  // 计算数组长度
+    
+    if (n == 1) {
+        return fabs(nums[0] - 24) < EPSILON;
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            // 创建新数组，不包含第i和第j个元素
+            double* next_nums = (double*)malloc((n - 1) * sizeof(double));
+            int index = 0;
+            for (int k = 0; k < n; k++) {
+                if (k != i && k != j) {
+                    next_nums[index++] = nums[k];
+                }
+            }
+            next_nums[index] = -999999;  // 标记数组结束
+
+            double a = nums[i];
+            double b = nums[j];
+
+            // 创建结果数组
+            double results[6];
+            int result_count = 4;
+            results[0] = a + b;
+            results[1] = a * b;
+            results[2] = a - b;
+            results[3] = b - a;
+            
+            if (b != 0) {
+                results[result_count++] = a / b;
+            }
+            if (a != 0) {
+                results[result_count++] = b / a;
+            }
+
+            for (int r = 0; r < result_count; r++) {
+                // 创建包含结果的新数组
+                double* new_nums = (double*)malloc(n * sizeof(double));
+                for (int idx = 0; idx < n - 2; idx++) {
+                    new_nums[idx] = next_nums[idx];
+                }
+                new_nums[n - 2] = results[r];
+                new_nums[n - 1] = -999999;  // 标记数组结束
+                
+                if (solve(new_nums)) {
+                    free(next_nums);
+                    free(new_nums);
+                    return 1;
+                }
+                free(new_nums);
+            }
+            free(next_nums);
+        }
+    }
+    return 0;
+}
+
+int judgePoint24(int* cards, int cardsSize) {
+    double* nums = (double*)malloc((cardsSize + 1) * sizeof(double));
+    for (int i = 0; i < cardsSize; i++) {
+        nums[i] = (double)cards[i];
+    }
+    nums[cardsSize] = -999999;  // 标记数组结束
+    
+    int result = solve(nums);
+    free(nums);
+    return result;
+}
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <vector>
+#include <cmath>
+#include <numeric>
+
+class Solution {
+public:
+    bool judgePoint24(std::vector<int>& cards) {
+        std::vector<double> nums(cards.begin(), cards.end());
+        return solve(nums);
+    }
+
+private:
+    bool solve(std::vector<double>& nums) {
+        if (nums.size() == 1) {
+            return std::abs(nums[0] - 24) < 1e-6;
+        }
+
+        for (int i = 0; i < nums.size(); ++i) {
+            for (int j = i + 1; j < nums.size(); ++j) {
+                std::vector<double> next_nums;
+                for (int k = 0; k < nums.size(); ++k) {
+                    if (k != i && k != j) {
+                        next_nums.push_back(nums[k]);
+                    }
+                }
+
+                double a = nums[i];
+                double b = nums[j];
+
+                std::vector<double> results = {a + b, a - b, b - a, a * b};
+                if (b != 0) results.push_back(a / b);
+                if (a != 0) results.push_back(b / a);
+
+                for (double res : results) {
+                    next_nums.push_back(res);
+                    if (solve(next_nums)) {
+                        return true;
+                    }
+                    next_nums.pop_back();
+                }
+            }
+        }
+        return false;
+    }
+};
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+class Solution {
+    public boolean judgePoint24(int[] cards) {
+        double[] nums = new double[cards.length];
+        for (int i = 0; i < cards.length; i++) {
+            nums[i] = (double) cards[i];
+        }
+        return solve(nums);
+    }
+
+    private boolean solve(double[] nums) {
+        if (nums.length == 1) {
+            return Math.abs(nums[0] - 24) < 1e-6;
+        }
+
+        for (int i = 0; i < nums.length; i++) {
+            for (int j = i + 1; j < nums.length; j++) {
+                double[] next_nums = new double[nums.length - 1];
+                int index = 0;
+                for (int k = 0; k < nums.length; k++) {
+                    if (k != i && k != j) {
+                        next_nums[index++] = nums[k];
+                    }
+                }
+
+                double a = nums[i];
+                double b = nums[j];
+
+                double[] results = new double[]{a + b, a - b, b - a, a * b, a / b, b / a};
+                for (double res : results) {
+                    if (Double.isInfinite(res) || Double.isNaN(res)) continue;
+                    if ((res == a / b && b == 0) || (res == b/a && a == 0)) continue;
+                    
+                    next_nums[next_nums.length - 1] = res;
+                    if (solve(next_nums)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+```
+
+</TabItem>
+<TabItem value="csharp" label="C#">
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+public class Solution {
+    public bool JudgePoint24(int[] cards) {
+        double[] nums = new double[cards.Length];
+        for (int i = 0; i < cards.Length; i++) {
+            nums[i] = (double)cards[i];
+        }
+        return Solve(nums);
+    }
+    
+    private bool Solve(double[] nums) {
+        if (nums.Length == 1) {
+            return Math.Abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (int i = 0; i < nums.Length; i++) {
+            for (int j = i + 1; j < nums.Length; j++) {
+                List<double> nextNums = new List<double>();
+                for (int k = 0; k < nums.Length; k++) {
+                    if (k != i && k != j) {
+                        nextNums.Add(nums[k]);
+                    }
+                }
+                
+                double a = nums[i];
+                double b = nums[j];
+                
+                List<double> results = new List<double> {a + b, a - b, b - a, a * b};
+                if (b != 0) results.Add(a / b);
+                if (a != 0) results.Add(b / a);
+                
+                foreach (double res in results) {
+                    double[] newNums = new double[nextNums.Count + 1];
+                    nextNums.CopyTo(newNums);
+                    newNums[newNums.Length - 1] = res;
+                    
+                    if (Solve(newNums)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+```
+
+</TabItem>
+<TabItem value="js" label="JavaScript">
+
+```js
+function judgePoint24(cards) {
+    const nums = cards.map(Number);
+
+    function solve(currentNums) {
+        if (currentNums.length === 1) {
+            return Math.abs(currentNums[0] - 24) < 1e-6;
+        }
+
+        for (let i = 0; i < currentNums.length; i++) {
+            for (let j = i + 1; j < currentNums.length; j++) {
+                const a = currentNums[i];
+                const b = currentNums[j];
+                const nextNums = currentNums.filter((_, index) => index !== i && index !== j);
+
+                const possibleResults = [a + b, a - b, b - a, a * b];
+                if (b !== 0) possibleResults.push(a / b);
+                if (a !== 0) possibleResults.push(b / a);
+
+                for (const res of possibleResults) {
+                    if (solve([...nextNums, res])) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    return solve(nums);
+}
+```
+
+</TabItem>
+<TabItem value="go" label="Go">
+
+```go
+package main
+
+import (
+    "math"
+)
+
+func judgePoint24(cards []int) bool {
+    nums := make([]float64, len(cards))
+    for i, card := range cards {
+        nums[i] = float64(card)
+    }
+    return solve(nums)
+}
+
+func solve(nums []float64) bool {
+    if len(nums) == 1 {
+        return math.Abs(nums[0]-24) < 1e-6
+    }
+    
+    for i := 0; i < len(nums); i++ {
+        for j := i + 1; j < len(nums); j++ {
+            var nextNums []float64
+            for k := 0; k < len(nums); k++ {
+                if k != i && k != j {
+                    nextNums = append(nextNums, nums[k])
+                }
+            }
+            
+            a, b := nums[i], nums[j]
+            
+            // 尝试所有运算
+            results := []float64{a + b, a - b, b - a, a * b}
+            if b != 0 {
+                results = append(results, a/b)
+            }
+            if a != 0 {
+                results = append(results, b/a)
+            }
+            
+            for _, res := range results {
+                newNums := append([]float64{res}, nextNums...)
+                if solve(newNums) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+```
+
+</TabItem>
+<TabItem value="rust" label="Rust">
+
+```rust
+impl Solution {
+    pub fn judge_point24(cards: Vec<i32>) -> bool {
+        let nums: Vec<f64> = cards.iter().map(|&x| x as f64).collect();
+        Self::solve(nums)
+    }
+    
+    fn solve(nums: Vec<f64>) -> bool {
+        if nums.len() == 1 {
+            return (nums[0] - 24.0).abs() < 1e-6;
+        }
+        
+        for i in 0..nums.len() {
+            for j in i+1..nums.len() {
+                let mut next_nums = Vec::new();
+                for k in 0..nums.len() {
+                    if k != i && k != j {
+                        next_nums.push(nums[k]);
+                    }
+                }
+                
+                let a = nums[i];
+                let b = nums[j];
+                
+                // 尝试所有运算
+                let mut results = vec![a + b, a - b, b - a, a * b];
+                if b != 0.0 {
+                    results.push(a / b);
+                }
+                if a != 0.0 {
+                    results.push(b / a);
+                }
+                
+                for &res in &results {
+                    let mut new_nums = vec![res];
+                    new_nums.extend(next_nums.iter());
+                    if Self::solve(new_nums) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+```
+
+</TabItem>
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class Solution {
+    fun judgePoint24(cards: IntArray): Boolean {
+        val nums = cards.map { it.toDouble() }
+        return solve(nums)
+    }
+    
+    private fun solve(nums: List<Double>): Boolean {
+        if (nums.size == 1) {
+            return Math.abs(nums[0] - 24) < 1e-6
+        }
+        
+        for (i in nums.indices) {
+            for (j in i + 1 until nums.size) {
+                val nextNums = mutableListOf<Double>()
+                for (k in nums.indices) {
+                    if (k != i && k != j) {
+                        nextNums.add(nums[k])
+                    }
+                }
+                
+                val a = nums[i]
+                val b = nums[j]
+                
+                // 尝试所有运算
+                val results = mutableListOf(a + b, a - b, b - a, a * b)
+                if (b != 0.0) results.add(a / b)
+                if (a != 0.0) results.add(b / a)
+                
+                for (res in results) {
+                    val newNums = nextNums + res
+                    if (solve(newNums)) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+}
+```
+
+</TabItem>
+<TabItem value="ts" label="TypeScript">
+
+```ts
+function judgePoint24(cards: number[]): boolean {
+    function solve(nums: number[]): boolean {
+        if (nums.length === 1) {
+            return Math.abs(nums[0] - 24) < 1e-6;
+        }
+        
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = i + 1; j < nums.length; j++) {
+                const nextNums: number[] = [];
+                for (let k = 0; k < nums.length; k++) {
+                    if (k !== i && k !== j) {
+                        nextNums.push(nums[k]);
+                    }
+                }
+                
+                const a = nums[i];
+                const b = nums[j];
+                
+                // 尝试所有运算
+                const results: number[] = [a + b, a - b, b - a, a * b];
+                if (b !== 0) results.push(a / b);
+                if (a !== 0) results.push(b / a);
+                
+                for (const res of results) {
+                    if (solve([...nextNums, res])) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    return solve(cards);
+}
+```
+
+</TabItem>
+</Tabs>
+
+**代码解析**
+
+- 使用递归回溯的方法，每次选择两个数进行运算
+- 考虑所有可能的运算符组合（加减乘除）
+- 注意减法和除法不满足交换律，需要分别计算 `a-b` 和 `b-a`，`a/b` 和 `b/a`
+- 将运算结果与剩余数字组成新数组继续递归
+- 递归终止条件是数组只剩一个元素，判断是否等于24
+
+**算法分析**
+
+- 时间复杂度：O(1)，因为输入规模固定为4个数字
+- 空间复杂度：O(1)，递归深度最多为3层
