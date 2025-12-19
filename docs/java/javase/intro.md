@@ -46,6 +46,8 @@ Java 是一门广泛使用的编程语言，具有跨平台特性。Java 语言�
 - 1995 年，Sun Microsystems 发布了 Java 语言，最初的版本是 Java 1.0。Java 的跨平台特性和面向对象设计迅速吸引了开发者的关注。
 - 1996 年，Java 1.1 发布，引入了内部类、JavaBeans 和 JDBC 等新特性。
 - 1998 年，Java 2（J2SE 1.2）发布，带来了 Swing GUI 库和集合框架，显著提升了 Java 的功能和性能。
+- 1997–2001 年，围绕微软 Visual J++ 的兼容性与商标纠纷，Sun 对微软提起诉讼；法院的初步禁令推动了 Java 兼容性测试（JCK）与品牌使用规范的严格落实。
+- 2004 年 4 月，Sun 与微软就 J++/MSJVM 达成全面和解（约 19.5 亿美元），微软停止推进 J++ 并转向 .NET 与 C#，该事件成为 Java 标准化与兼容治理的重要转折点（参见博客：[镀金的牢笼：微软 Visual J++ 的兴衰、Java 战争与 .NET 的诞生](/blog/microsoft-jplusplus-event)）。
 - 2004 年，Java 5（曾用名 JDK 1.5）发布，引入了泛型、增强的 for 循环、自动装箱等重要特性。
 
 ### Oracle 时代
