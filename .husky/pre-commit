@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 禁止在 main 分支提交
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ]; then
+  echo "❌ 错误: 不允许直接在 main 分支提交代码！请在 feature 分支开发并提交 PR。"
+  exit 1
+fi
+
+bunx lint-staged
