@@ -3,7 +3,7 @@ WORKDIR /app
 
 # 1. Shared dependencies stage
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN HUSKY=0 bun install --frozen-lockfile
 
 # 2. Development stage
 FROM base AS dev
@@ -33,7 +33,7 @@ RUN apk add --no-cache --virtual .build-deps \
   gcc libc-dev make openssl-dev pcre2-dev pcre-dev zlib-dev \
   linux-headers git cmake g++ wget gnupg patch ca-certificates && \
   (wget -T 30 -t 5 -O nginx-${NGINX_VERSION}.tar.gz http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || \
-   wget -T 30 -t 5 -O nginx-${NGINX_VERSION}.tar.gz https://mirrors.ustc.edu.cn/nginx/download/nginx-${NGINX_VERSION}.tar.gz) && \
+  wget -T 30 -t 5 -O nginx-${NGINX_VERSION}.tar.gz https://mirrors.ustc.edu.cn/nginx/download/nginx-${NGINX_VERSION}.tar.gz) && \
   tar -zxf nginx-${NGINX_VERSION}.tar.gz && \
   git clone --depth 1 --recursive --shallow-submodules -j8 https://github.com/google/ngx_brotli.git && \
   cd ngx_brotli/deps/brotli && mkdir out && cd out && \

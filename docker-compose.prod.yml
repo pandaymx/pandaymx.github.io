@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       target: prod
     ports:
-      - "8080:8080"
+      - '8080:8080'
     restart: unless-stopped
     init: true
     # Resource limits to prevent a single container from exhausting host resources
@@ -17,10 +17,10 @@ services:
           cpus: '0.5'
     # Logging optimization to prevent disk space issues
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     networks:
       - blog-prod-net
 
@@ -30,7 +30,7 @@ services:
     command:
       - -nginx.scrape-uri=http://blog-prod:8080/status
     ports:
-      - "9113:9113"
+      - '9113:9113'
     depends_on:
       - blog-prod
     networks:
@@ -40,5 +40,3 @@ services:
 networks:
   blog-prod-net:
     driver: bridge
-
-
