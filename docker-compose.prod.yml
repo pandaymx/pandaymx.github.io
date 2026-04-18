@@ -1,0 +1,30 @@
+services:
+  blog-prod:
+    container_name: blog-prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    init: true
+    # Resource limits to prevent a single container from exhausting host resources
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    # Logging optimization to prevent disk space issues
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - blog-prod-net
+
+networks:
+  blog-prod-net:
+    driver: bridge
+
