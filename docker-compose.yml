@@ -1,0 +1,29 @@
+services:
+  blog-dev:
+    container_name: blog-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    init: true
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./:/app
+      - blog_node_modules:/app/node_modules
+    networks:
+      - blog-dev-net
+    stdin_open: true
+    tty: true
+
+networks:
+  blog-dev-net:
+    driver: bridge
+
+volumes:
+  blog_node_modules:
