@@ -3,5 +3,14 @@ build
 .docusaurus
 .cache
 .yarn
-package.json
-bun.lock
+
+# 锁文件
+*.lock
+bun.lockb
+.DS_Store
+
+# 翻译文件
+i18n/
+
+# 环境配置文件
+.env*
