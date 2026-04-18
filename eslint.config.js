@@ -53,6 +53,7 @@ module.exports = [
         'warn',
         { argsIgnorePattern: '^_' },
       ],
+      '@typescript-eslint/no-require-imports': 'off',
       'prettier/prettier': 'error',
     },
   },
