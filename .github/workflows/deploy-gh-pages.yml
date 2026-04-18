@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'docker-compose*'
+      - 'nginx*'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          cache: bun
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Cache Docusaurus build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .docusaurus
+            node_modules/.cache
+          key: ${{ runner.os }}-docusaurus-build-${{ hashFiles('bun.lock', 'docusaurus.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-docusaurus-build-
+
+      - name: Build website
+        run: bun run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'

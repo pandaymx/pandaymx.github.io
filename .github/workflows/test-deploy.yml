@@ -1,0 +1,53 @@
+name: Test deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'docker-compose*'
+      - 'nginx*'
+      - '.github/workflows/docker-publish.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-deploy:
+    name: Test deployment
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          cache: bun
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Cache Docusaurus build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .docusaurus
+            node_modules/.cache
+          key: ${{ runner.os }}-docusaurus-build-${{ hashFiles('bun.lock', 'docusaurus.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-docusaurus-build-
+
+      - name: Lint and Format check
+        run: |
+          bunx eslint .
+          bunx prettier --check .
+
+      - name: Test build website
+        run: bun run build -- --no-minify
