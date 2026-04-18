@@ -24,7 +24,21 @@ services:
     networks:
       - blog-prod-net
 
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: blog-metrics
+    command:
+      - -nginx.scrape-uri=http://blog-prod:8080/status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - blog-prod
+    networks:
+      - blog-prod-net
+    restart: unless-stopped
+
 networks:
   blog-prod-net:
     driver: bridge
+
 
