@@ -24,6 +24,11 @@ const config: Config = {
   organizationName: 'pandaymx', // Usually your GitHub org/user name.
   projectName: 'pandaymx.github.io', // Usually your repo name.
 
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   onBrokenLinks: 'throw',
 
   // Even if you don't use internationalization, you can use this field to set
