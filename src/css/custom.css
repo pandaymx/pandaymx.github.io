@@ -28,3 +28,128 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* --- Custom Code Block Language Labels --- */
+.custom-code-block {
+  position: relative;
+}
+
+/* Base style for the label - Visible by default, lowercase, far right */
+.custom-code-block[class*='language-']::before {
+  position: absolute;
+  z-index: 1;
+  top: 0.5rem;
+  right: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: lowercase;
+  color: var(--ifm-color-emphasis-500);
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+/* HIDE the language label when hovering the block (i.e., when buttons appear) */
+.custom-code-block:hover[class*='language-']::before {
+  opacity: 0;
+}
+
+/* Language-specific content (Lowercase) */
+.custom-code-block.language-typescript::before,
+.custom-code-block.language-ts::before,
+.custom-code-block.language-tsx::before {
+  content: 'typescript';
+}
+
+.custom-code-block.language-javascript::before,
+.custom-code-block.language-js::before,
+.custom-code-block.language-jsx::before {
+  content: 'javascript';
+}
+
+.custom-code-block.language-markdown::before,
+.custom-code-block.language-md::before,
+.custom-code-block.language-mdx::before {
+  content: 'markdown';
+}
+
+.custom-code-block.language-json::before {
+  content: 'json';
+}
+
+.custom-code-block.language-css::before {
+  content: 'css';
+}
+
+.custom-code-block.language-scss::before {
+  content: 'scss';
+}
+
+.custom-code-block.language-html::before {
+  content: 'html';
+}
+
+.custom-code-block.language-bash::before,
+.custom-code-block.language-sh::before,
+.custom-code-block.language-shell::before {
+  content: 'bash';
+}
+
+.custom-code-block.language-python::before,
+.custom-code-block.language-py::before {
+  content: 'python';
+}
+
+.custom-code-block.language-rust::before,
+.custom-code-block.language-rs::before {
+  content: 'rust';
+}
+
+.custom-code-block.language-go::before {
+  content: 'go';
+}
+
+.custom-code-block.language-yaml::before,
+.custom-code-block.language-yml::before {
+  content: 'yaml';
+}
+
+.custom-code-block.language-sql::before {
+  content: 'sql';
+}
+
+.custom-code-block.language-dockerfile::before,
+.custom-code-block.language-docker::before {
+  content: 'docker';
+}
+
+.custom-code-block.language-java::before {
+  content: 'java';
+}
+
+.custom-code-block.language-cpp::before,
+.custom-code-block.language-c\+\+::before {
+  content: 'cpp';
+}
+
+.custom-code-block.language-c::before {
+  content: 'c';
+}
+
+.custom-code-block.language-php::before {
+  content: 'php';
+}
+
+.custom-code-block.language-diff::before {
+  content: 'diff';
+}
+
+.custom-code-block.language-toml::before {
+  content: 'toml';
+}
+
+.custom-code-block.language-powershell::before,
+.custom-code-block.language-ps::before {
+  content: 'powershell';
+}
