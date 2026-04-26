@@ -50,17 +50,27 @@ position: 2
 ## 🧭 目录
 
 - [🚀 WSL 简介](./intro)
-	- [❓ 什么是 WSL](./intro#what-is-wsl)
-		- [💡 WSL 的作用](./intro#wsl-benefits)
-		- [🤔 为什么使用 WSL](./intro#why-use-wsl)
-		- [⚖️ WSL 2 vs. 传统虚拟机 vs. 双系统 详细对比](./intro#wsl-vs-vm-vs-dual-boot)
-	- [⚖️ WSL 1 vs WSL 2](./intro#wsl1-vs-wsl2)
-	- [🛠️ 安装 WSL](./intro#install-wsl)
-		- [📋 系统要求](./intro#system-requirements)
-		- [🏁 基础安装步骤](./intro#basic-install-steps)
-		- [⚙️ 其他安装模式 (手动)](./intro#manual-installation-mode)
-	- [🎉 初始化发行版](./intro#initialize-distro)
+  - [❓ 什么是 WSL](./intro#what-is-wsl)
+    - [💡 WSL 的作用](./intro#wsl-benefits)
+    - [🤔 为什么使用 WSL](./intro#why-use-wsl)
+    - [⚖️ WSL 2 vs. 传统虚拟机 vs. 双系统 详细对比](./intro#wsl-vs-vm-vs-dual-boot)
+  - [⚖️ WSL 1 vs WSL 2](./intro#wsl1-vs-wsl2)
+  - [🛠️ 安装 WSL](./intro#install-wsl)
+    - [📋 系统要求](./intro#system-requirements)
+    - [🏁 基础安装步骤](./intro#basic-install-steps)
+    - [⚙️ 其他安装模式 (手动)](./intro#manual-installation-mode)
+  - [🎉 初始化发行版](./intro#initialize-distro)
 
 ## 📝 版本说明
 
 WSL 是一项持续发展的技术。本教程力求记录最新的最佳实践，但由于技术的快速迭代，部分细节可能会随 Windows 或 WSL 版本的更新而有所变化。
+
+## 对比官方文档的问题
+
+- 删除了详细了官方提供的命令，因为绝大部分命令并没有用处，如需官方支持，请查看 [WSL 基础命令](https://learn.microsoft.com/zh-cn/windows/wsl/basic-commands)。
+- 删除了 Windows Server 安装 WSL 的相关内容，如需相关支持，请查看 [Windows Server 上的 WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install-on-server)。
+- 删除了 WSL 中的数据库支持相关内容，目前更推荐使用 Docker 来安装数据库软件，如需相关支持（除要和生产环境对接外，不建议使用 WSL 直接安装数据库），请查看 [WSL 数据库支持](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/wsl-database)。
+- 删除了 WSL 中 Visual Studio 的 C 和 C++ 开发支持的相关内容，其一我并非专业的 C/C++ 开发者，其二如果简单使用 C/C++ 开发，完全可以使用 VS Code 来开发，相关支持请查看 [WSL 中的 Visual Studio C++ 开发入门](https://learn.microsoft.com/zh-cn/cpp/build/walkthrough-build-debug-wsl2)。
+- 删除了 WSL 中的 Linux GUI 应用支持相关内容，因为当前的官方文档使用的工具除 GIMP 似乎并无安装的优势，如需相关支持，请查看 [运行 Linux GUI 应用](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/gui-apps)。
+- 删除了 WSL 中安装 Node.js 的相关内容，当前的官方文档使用的工具是 nvm，虽然 nvm 是一个非常好用的 Node.js 版本管理工具，但后续的潮流是使用 fnm 或 Volta 来管理 Node.js 版本，如需相关支持，请查看 [在 WSL 中安装 Node.js](https://learn.microsoft.com/zh-cn/windows/dev-environment/javascript/nodejs-on-wsl)。
+- 删除了 WSL 中关于 Linux 和 Bash 的入门，默认用户应当有一定的 Linux 和 Bash 基础，如需相关支持，请查看 [Linux 和 Bash 入门](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/linux)。
