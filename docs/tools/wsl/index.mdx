@@ -1,0 +1,113 @@
+---
+title: 🐧 WSL
+description: 在 Windows 上使用 WSL 构建高效的 Linux 开发环境，涵盖安装、配置、进阶操作及常见问题解答。
+position: 2
+---
+
+本章节旨在为开发者提供一份全面、深入的 **🐧 WSL 使用指南**，助你在 Windows 上打造极速、丝滑的 Linux 开发体验。
+
+## 🎯 教程目标
+
+通过本教程，读者将能够：
+
+- **🏗️ 深度理解架构**：全面理解 WSL 的核心概念、架构演进 (WSL 1 vs WSL 2) 及其与传统虚拟机的区别。
+- **⚙️ 掌握管理技能**：掌握 WSL 的多种安装方式（自动与手动）及基本管理命令。
+- **🚀 构建全栈环境**：学会在 WSL 环境中配置高效的开发环境，涵盖 VS Code、Git、Node.js、Python 深度学习、各类数据库及 Docker 容器化技术。
+- **🛠️ 玩转进阶操作**：探索跨文件系统操作、高级设置配置 (`.wslconfig`, `wsl.conf`)、网络配置及磁盘挂载。
+- **🚑 独立解决问题**：获取常见 WSL 问题的解答和故障排除技巧。
+- **📝 命令速查**：通过速查表快速查找各类管理与运行命令。
+
+## 👥 目标读者
+
+本教程主要面向：
+
+- **💻 软件开发者**：希望在 Windows 上使用 Linux 工具链、开发和测试跨平台应用程序。
+- **🖥️ 系统管理员**：需要使用 Linux 管理工具维护服务器或云实例。
+- **🧠 数据科学家**：寻求在 Windows 环境下利用 GPU 进行模型训练与推断。
+- **🎓 技术爱好者**：对 Linux 系统感兴趣并希望在 Windows 上学习和体验的用户。
+
+:::tip[技术前提]
+
+建议读者具备基本的 Windows 操作系统操作基础和命令行使用经验。
+
+:::
+
+## 🗺️ 主要内容概览
+
+1. **WSL 简介**：定义、架构对比、安装方法及基本命令。
+2. **开发环境配置**：VS Code、Git、深度学习、数据库、Docker、GUI 应用及 Node.js 详细配置。
+3. **进阶操作**：跨文件系统操作、高级设置配置 (`.wslconfig`, `wsl.conf`)、网络配置及磁盘挂载。
+4. **高级进阶**：GPU 加速、USB 设备透传、WSLg、定制内核及高级互操作性。
+5. **WSL 速查表**：汇总核心管理命令，方便快速查阅。
+6. **FAQ (常见问题解答)**：汇总并解答用户遇到的常见痛点。
+
+## 📖 如何使用本教程
+
+- **循序渐进**：建议初学者按照章节顺序学习；有经验的用户可直接跳转到需要的内容中。
+- **环境辨析**：教程中包含大量命令行示例，请务必区分 **Windows PowerShell** 与 **WSL Linux 终端** 的执行环境。
+- **动手实践**：所有代码块均支持一键复制，动手操作是掌握 WSL 的最佳途径。
+
+## 🧭 目录
+
+- [🚀 WSL 简介](./intro)
+  - [❓ 什么是 WSL](./intro#what-is-wsl)
+    - [💡 WSL 的作用](./intro#wsl-benefits)
+    - [🤔 为什么使用 WSL](./intro#why-use-wsl)
+    - [⚖️ WSL 2 vs. 传统虚拟机 vs. 双系统 详细对比](./intro#wsl-vs-vm-vs-dual-boot)
+  - [⚖️ WSL 1 vs WSL 2](./intro#wsl1-vs-wsl2)
+  - [🛠️ 安装 WSL](./intro#install-wsl)
+    - [📋 系统要求](./intro#system-requirements)
+    - [🏁 基础安装步骤](./intro#basic-install-steps)
+    - [⚙️ 其他安装模式 (手动)](./intro#manual-installation-mode)
+  - [🎉 初始化发行版](./intro#initialize-distro)
+- [🛠️ 开发环境配置](./development)
+  - [🆙 升级更新包](./development#update-packages)
+  - [🖥️ 基础工具](./development#basic-tools)
+    - [🟦 VS Code 远程开发](./development#vscode-remote)
+    - [🌿 Git 版本控制](./development#git-setup)
+  - [🗄️ 数据库入门](./development#database-setup)
+  - [🐳 Docker](./development#docker-setup)
+    - [📦 容器推荐](./development#container-recommendations)
+    - [⚙️ 设置 Docker Desktop](./development#docker-desktop-settings)
+    - [🚢 VS Code 在远程容器开发](./development#vscode-remote-containers)
+  - [🚀 深度学习 GPU 加速](./development#gpu-acceleration)
+    - [🧪 Docker 配置 NVIDIA CUDA](./development#docker-nvidia-cuda)
+    - [🧠 设置 TensorFlow-DirectML 或 PyTorch-DirectML](./development#tensorflow-pytorch-directml)
+- [🛡️ WSL 高级进阶](./advanced)
+  - [🔗 高级互操作性](./advanced#interoperability)
+    - [🚀 跨系统调用文件性能](./advanced#file-system-performance)
+  - [⚙️ 配置](./advanced#configuration)
+    - [🔄 重启](./advanced#restart)
+    - [📄 wsl.conf](./advanced#wsl-conf)
+    - [🛠️ .wslconfig](./advanced#wsl-config)
+  - [🌐 网络配置](./advanced#network-config)
+    - [🪞 镜像模式](./advanced#mirrored-mode)
+    - [🚇 DNS 隧道](./advanced#dns-tunneling)
+    - [🤖 自动代理](./advanced#auto-proxy)
+  - [📤 导入任何发行版](./advanced#import-distro)
+    - [📦 获取 Linux 二进制 tar 文件](./advanced#get-tar-file)
+    - [📥 获取对应的 tar 文件](./advanced#docker-export-tar)
+    - [🚀 导入示例](./advanced#import-example)
+    - [🔩 配置](./advanced#distro-config)
+- [📝 WSL 速查表](./cheat-sheet)
+
+## 📝 版本说明
+
+WSL 是一项持续发展的技术。本教程力求记录最新的最佳实践，但由于技术的快速迭代，部分细节可能会随 Windows 或 WSL 版本的更新而有所变化。
+
+## 🔍 对比官方文档的问题
+
+- 🗑️ **删除冗余命令**：删除了详细了官方提供的命令，因为绝大部分命令并没有用处，如需官方支持，请查看 [WSL 基础命令](https://learn.microsoft.com/zh-cn/windows/wsl/basic-commands)。
+- 🏢 **删除 Server 安装**：删除了 Windows Server 安装 WSL 的相关内容，如需相关支持，请查看 [Windows Server 上的 WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install-on-server)。
+- 🗄️ **优化数据库安装**：删除了 WSL 中的数据库支持相关内容，目前更推荐使用 Docker 来安装数据库软件，如需相关支持（除要和生产环境对接外，不建议使用 WSL 直接安装数据库），请查看 [WSL 数据库支持](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/wsl-database)。
+- 💻 **简化 C/C++ 开发**：删除了 WSL 中 Visual Studio 的 C 和 C++ 开发支持的相关内容，其一我并非专业的 C/C++ 开发者，其二如果简单使用 C/C++ 开发，完全可以使用 VS Code 来开发，相关支持请查看 [WSL 中的 Visual Studio C++ 开发入门](https://learn.microsoft.com/zh-cn/cpp/build/walkthrough-build-debug-wsl2)。
+- 🖥️ **精简 GUI 应用**：删除了 WSL 中的 Linux GUI 应用支持相关内容，因为当前的官方文档使用的工具除 GIMP 似乎并无安装的优势，如需相关支持，请查看 [运行 Linux GUI 应用](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/gui-apps)。
+- 📦 **更新 Node.js 管理**：删除了 WSL 中安装 Node.js 的相关内容，当前的官方文档使用的工具是 nvm，虽然 nvm 是一个非常好用的 Node.js 版本管理工具，但后续的潮流是使用 fnm 或 Volta 来管理 Node.js 版本，如需相关支持，请查看 [在 WSL 中安装 Node.js](https://learn.microsoft.com/zh-cn/windows/dev-environment/javascript/nodejs-on-wsl)。
+- 🐧 **省略基础 Bash 入门**：删除了 WSL 中关于 Linux 和 Bash 的入门，默认用户应当有一定的 Linux 和 Bash 基础，如需相关支持，请查看 [Linux 和 Bash 入门](https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/linux)。
+- 🔄 **简化互操作性说明**：删除了 WSL 中关于 Windows 和 Linux 命令的互操作性，因为基本这个内容没有什么意义，大部分人调用只会在 WSL 中调用 VS Code 或其他代码编辑器的打开命令；使用 WSLENV 在 Windows 和 WSL 之间共享环境变量；禁用互操作性。基本只有交叉编译的用户可能会使用，但是大部分用户的 Windows 和 Linux 是隔离开的。如需相关支持，请查看 [跨 Windows 和 Linux 文件系统工作](https://learn.microsoft.com/zh-cn/windows/wsl/filesystems)。
+- 🏗️ **省略自定义发行版构建**：删除构建自定义发行版，默认对于红帽这些企业需要做的，对于普通用户只需要掌握导出 Linux 发行版即可，如相关支持，请查看 [构建自定义发行版](https://learn.microsoft.com/zh-cn/windows/wsl/build-custom-distro)。
+- 💾 **省略磁盘装载**：删除 WSL 装载磁盘，默认对于开发者来说意义不大，如需相关支持，请查看 [在 WSL 中装载磁盘](https://learn.microsoft.com/zh-cn/windows/wsl/wsl2-mount-disk)。
+- 🔌 **省略 USB 与大小写配置**：删除连接 USB 设备和区分大小写的配置，除嵌入式和安卓开发外对 USB 需求过少，其次作为开发者应关注区分大小写问题，默认不应该使用同名的文件名，如需相关支持，请查看 [连接 USB 设备](https://learn.microsoft.com/zh-cn/windows/wsl/connect-usb) 和 [区分大小写的配置](https://learn.microsoft.com/zh-cn/windows/wsl/case-sensitivity)
+- 🧹 **精简磁盘管理**：删除了管理 WSL 磁盘空间的大部分内容，仅保留磁盘空间扩展和缩减内容，如需更多支持，请查看 [管理 WSL 磁盘空间](https://learn.microsoft.com/zh-cn/windows/wsl/disk-space)。
+- 🧩 **省略插件开发**：删除了创建 WSL 插件，因为大部分开发者无需 WSL 插件来增强，如需相关支持，请查看 [WSL 插件](https://learn.microsoft.com/zh-cn/windows/wsl/wsl-plugins)。
+- 🛡️ **省略企业安全配置**：删除了 WSL 中企业安全性相关问题，如需相关支持请查看 [为公司配置 WSL](https://learn.microsoft.com/zh-cn/windows/wsl/enterprise) 和 [WSL 的 Intune 设置](https://learn.microsoft.com/zh-cn/windows/wsl/intune)。
