@@ -9,7 +9,7 @@ on:
       - '.gitignore'
       - '.dockerignore'
       - 'Dockerfile'
-      - 'docker-compose*'
+      - 'docker/docker-compose*'
       - 'nginx*'
       - '.github/workflows/docker-publish.yml'
 

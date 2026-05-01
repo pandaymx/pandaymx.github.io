@@ -2,7 +2,7 @@ services:
   blog-prod:
     container_name: blog-prod
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
       target: prod
     ports:

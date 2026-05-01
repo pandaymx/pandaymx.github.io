@@ -12,12 +12,14 @@ COPY . .
 CMD ["bun", "start", "--host", "0.0.0.0"]
 
 # 3. Build stage
-FROM base AS builder
-ENV NODE_ENV=production
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=base /app/node_modules ./node_modules
 COPY . .
-RUN bun run build && \
+ENV NODE_ENV=production
+RUN npm run build && \
   find build -type f \( -name "*.js" -o -name "*.css" -o -name "*.html" -o -name "*.svg" \) \
-  -exec bun x brotli-cli compress --quality 11 {} \;
+  -exec npx brotli-cli compress --quality 11 {} \;
 
 
 # 4. Brotli module builder (Using Alpine-based Nginx to ensure apk availability)
@@ -66,9 +68,9 @@ COPY --from=brotli-builder /app/*.so /usr/lib/nginx/modules/
 USER 101
 
 # Copy configurations
-COPY nginx-main.conf /etc/nginx/nginx.conf
-COPY security-headers.conf /etc/nginx/conf.d/security-headers.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/nginx-main.conf /etc/nginx/nginx.conf
+COPY docker/nginx/security-headers.conf /etc/nginx/conf.d/security-headers.conf
+COPY docker/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 8080

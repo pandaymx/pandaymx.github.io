@@ -12,7 +12,7 @@ on:
       - '.dockerignore'
       - '.vscode/**'
       - '.husky/**'
-      - 'docker-compose*.yml'
+      - 'docker/docker-compose*.yml'
       - '.github/workflows/!(docker-publish.yml)'
 
 # 为了能够向 GHCR 推送镜像以及执行旧镜像清理，必需在此赋予足够的 GITHUB_TOKEN 权限
