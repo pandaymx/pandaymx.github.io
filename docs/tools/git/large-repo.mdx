@@ -1,0 +1,222 @@
+---
+title: 📦 大文件与大仓库处理
+sidebar_position: 9
+description: 掌握 Git LFS 大文件存储、Monorepo 策略（Nx/Turborepo）、浅克隆与部分克隆优化，解决大仓库的性能瓶颈。
+---
+
+当仓库体积超过 1GB、单文件超过 100MB、或提交历史超过 10 万次时，标准 Git 操作会明显变慢。本章介绍三大优化方向。
+
+<a id="git-lfs"></a>
+## 📁 Git LFS——大文件存储
+
+Git LFS（Large File Storage）用"指针文件"替代二进制大文件，让仓库保持轻量。
+
+### 工作原理
+
+```
+Git LFS 前（问题）：
+repo.git/
+  ├── photo.raw (50MB)     ← 每个版本都完整存储！
+  ├── video.mp4 (200MB)    ← 100 个版本 = 20GB！
+  └── ...
+
+Git LFS 后（解决）：
+repo.git/
+  ├── photo.raw (指针，1KB)  ← 只存指针
+  ├── video.mp4 (指针，1KB)
+  └── .git/lfs/             ← 大文件存在这里（服务器）
+```
+
+### 安装与配置
+
+```bash
+# 1. 安装 Git LFS（各平台）
+# macOS: brew install git-lfs
+# Ubuntu: sudo apt install git-lfs
+# Windows: 已包含在 Git for Windows 中
+
+# 2. 初始化（每个仓库只需一次）
+git lfs install
+
+# 3. 跟踪大文件类型
+git lfs track "*.psd"
+git lfs track "*.mp4"
+git lfs track "*.zip"
+
+# 4. 确保 .gitattributes 被提交
+git add .gitattributes
+git commit -m "chore: add Git LFS tracking"
+```
+
+### `.gitattributes` 示例
+
+```
+# 图片
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.ai filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+
+# 视频/音频
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+
+# 数据集/模型
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+```
+
+### 迁移已有大文件到 LFS
+
+```bash
+# 用 git lfs migrate 迁移历史中的大文件
+git lfs migrate import --include="*.psd,*.mp4" --everything
+
+# 推送到远程（会重写历史，需要通知团队）
+git push --force-with-lease origin main
+```
+
+:::warning[⚠️ `git lfs migrate` 会重写历史]
+
+迁移后 commit hash 会改变，所有团队成员需要重新 clone 或 `git reset --hard origin/main`。执行前务必通知团队。
+
+:::
+
+<a id="monorepo"></a>
+## 🏗️ Monorepo 策略
+
+当多个项目共享一个仓库时（Monorepo），Git 性能会成为瓶颈。以下是主流应对方案。
+
+### 方案对比
+
+| 方案 | 适用场景 | 工具链 | 优点 | 缺点 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Nx** | 前端 Monorepo（React/Angular） | Nx + Turborepo | 任务缓存、依赖图分析 | 学习曲线较陡 |
+| **Turborepo** | 前端 Monorepo（通用） | Turborepo | 远程缓存、零配置 | 仅限 JS/TS 生态 |
+| **Bazel** | 大型多语言 Monorepo | Bazel | Google 级性能 | 配置复杂 |
+| **Git Submodules** | 多仓库但想统一管理 | git submodule | 原生支持、轻量 | 操作复杂、容易搞混 |
+| **Git Subtree** | 想把外部仓库合入主仓库 | git subtree | 不用额外工具 | 历史合并复杂 |
+
+### Nx + Turborepo 基础配置
+
+```json
+// turbo.json（Turborepo 配置）
+{
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    }
+  }
+}
+```
+
+```bash
+# Turborepo 远程缓存（加速 CI）
+turbo login
+turbo link
+
+# CI 中自动使用远程缓存
+turbo run build --remote-only
+```
+
+### 什么时候不该用 Monorepo？
+
+```
+✅ 适合 Monorepo：
+- 多个包/应用共享工具和配置
+- 团队在同一代码库协作
+- 需要原子化跨包修改
+
+❌ 不适合 Monorepo：
+- 包之间完全独立，几乎没有共享代码
+- 团队跨时区，协调成本高
+- 单个包体积巨大（> 1GB），影响所有人 clone 速度
+```
+
+:::tip[💡 Monorepo 的性能瓶颈不在 Git，在工具链]
+
+真正慢的是 `npm install`（10 分钟）和 `build`（30 分钟），不是 `git clone`（30 秒）。优化方向应该是：Turborepo 远程缓存、pnpm 硬链接、ESBuild/SWC 替代 Webpack。
+
+:::
+
+<a id="shallow-clone"></a>
+## ⚡ 浅克隆与部分克隆优化
+
+### 浅克隆（Shallow Clone）
+
+```bash
+# 只克隆最近 1 个提交（CI 场景极速）
+git clone --depth=1 https://github.com/user/repo.git
+
+# 克隆指定分支，深度 1
+git clone --depth=1 --branch=main https://github.com/user/repo.git
+
+# 浅克隆后，如何获取完整历史？
+git fetch --unshallow  # 拉取完整历史
+```
+
+| 场景 | 推荐 depth | 说明 |
+| :--- | :--- | :--- |
+| **CI 只跑测试** | `depth=1` | 最快，不需要历史 |
+| **CI 需要 sematic-release** | `depth=0`（全量） | 需要完整历史计算版本号 |
+| **本地开发** | 不浅克隆 | 需要完整历史做 `git log`、`git blame` |
+
+### 部分克隆（Partial Clone）——Git 2.19+
+
+部分克隆允许你**只下载需要的对象**，特别适合大仓库。
+
+```bash
+# 只下载 commit 和 tree 对象，blob 按需下载
+git clone --filter=blob:none https://github.com/large-repo.git
+
+# 更激进：连 tree 也按需下载（Git 2.20+）
+git clone --filter=tree:0 https://github.com/large-repo.git
+```
+
+### 稀疏检出（Sparse Checkout）——只检出部分目录
+
+```bash
+# 1. 初始化稀疏检出
+git sparse-checkout init --cone
+
+# 2. 设置只检出哪些目录
+git sparse-checkout set apps/web packages/ui
+
+# 3. 查看当前稀疏配置
+git sparse-checkout list
+
+# 4. 禁用稀疏检出（恢复完整工作区）
+git sparse-checkout disable
+```
+
+:::tip[💡 三大优化手段对比]
+
+| 手段 | 减少什么 | 适合场景 |
+| :--- | :--- | :--- |
+| **浅克隆** | 历史提交数量 | CI 快速构建 |
+| **部分克隆** | Blob/Tree 对象 | 大仓库日常开发 |
+| **稀疏检出** | 工作区文件数量 | Monorepo 只开发部分应用 |
+
+:::
+
+---
+
+## 📝 下一步
+
+- **[🏠️ 工作区多开（Git Worktree + AI 编程）](./worktrees)** —— `git worktree` 实现多分支并行开发
+- **[🔬 Git 底层原理](./internals)** —— `.git` 目录结构、Blob/Tree/Commit 对象
+
+:::tip[💡 延伸阅读]
+
+- [Git LFS Documentation](https://git-lfs.github.io/)
+- [Turborepo Documentation](https://turbo.build/repo/docs)
+- [Git Partial Clone (GitHub Blog)](https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/)
+- [Git Sparse Checkout](https://git-scm.com/docs/git-sparse-checkout)
+
+:::
