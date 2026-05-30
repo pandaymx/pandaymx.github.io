@@ -1,0 +1,226 @@
+---
+title: 🖥️ 工作区多开（Git Worktree + AI 编程）
+sidebar_position: 10
+description: 掌握 `git worktree` 实现多分支并行开发，配合 AI 编程助手（Copilot/Cursor/Claude）的最佳实践。
+---
+
+当你需要同时修改多个分支、或让 AI 助手在不同分支上并行工作时，`git worktree` 是你的利器。它让你在同一仓库中拥有**多个工作目录**，每个目录对应不同分支，互不干扰。
+
+<a id="worktree-basics"></a>
+## 🌲 `git worktree` 基础
+
+### 为什么需要 Worktree？
+
+```
+传统方式（问题）：
+├── 你正在 main 分支开发功能 A
+├── 突然需要修一个 hotfix（分支 B）
+├── 你得 stash 或 commit 当前修改
+├── git checkout hotfix-B
+├── 修完，再 checkout main，恢复 stash
+└── 来回切换，效率低下，容易搞混
+
+Worktree 方式（解决）：
+├── 主工作区：/project          → main 分支（功能 A 开发中）
+├── Worktree 1：/project-hotfix  → hotfix-B 分支（紧急修复）
+├── Worktree 2：/project-review  → PR-123 分支（Code Review）
+└── 三个目录同时存在，无需切换！
+```
+
+### 基本操作
+
+```bash
+# 1. 为某个分支创建 worktree（目录自动创建）
+git worktree add ../my-project-feature-a feature-a
+
+# 2. 为新分支创建 worktree（自动创建分支）
+git worktree add -b feature-b ../my-project-feature-b main
+
+# 3. 查看所有 worktree
+git worktree list
+# /home/user/my-project  abc1234 [main]
+# /home/user/my-project-feature-a  def5678 [feature-a]
+# /home/user/my-project-feature-b  ghi9012 [feature-b]
+
+# 4. 删除 worktree（完成后清理）
+git worktree remove ../my-project-feature-a
+
+# 5. 强制删除（worktree 内有未提交修改时）
+git worktree remove --force ../my-project-feature-a
+```
+
+### Worktree 目录结构
+
+```
+~/projects/
+├── my-app/              ← 主仓库（包含 .git 目录）
+│   ├── .git/            ← 这个是"主 .git"，所有 worktree 共享
+│   ├── src/
+│   └── package.json
+├── my-app-feature-a/    ← Worktree 1（只有工作文件，无 .git 目录）
+│   ├── src/             ← 独立的工作区，修改不影响主仓库
+│   └── package.json
+└── my-app-hotfix/      ← Worktree 2
+    └── src/
+```
+
+:::tip[💡 Worktree 的魔法：共享 `.git` 目录]
+
+所有 worktree 共享同一个 `.git` 目录。这意味着：
+- 在一个 worktree 里 `git commit`，其他 worktree 的 `git log` 立即可见
+- 不需要每个 worktree 都 `npm install`（共享 node_modules，前提是不在 `.gitignore` 里）
+- 磁盘占用极省（只有工作文件，没有多份 `.git` 对象）
+
+:::
+
+<a id="ai-pair-programming"></a>
+## 🤖 配合 AI 编程助手的最佳实践
+
+### 场景 1：AI 助手在不同分支并行工作
+
+```
+你：在 main 分支开发功能 A（你自己写代码）
+AI：在 feature-B 分支帮你写功能 B（AI 写代码）
+AI：同时在 hotfix-C 分支修紧急 Bug（AI 写代码）
+
+→ 三个任务并行，不需要来回 stash/checkout
+```
+
+**配置示例（Cursor / VS Code + Copilot）：**
+
+```
+项目根目录/
+├── .cursor/              ← Cursor 配置（AI 上下文）
+├── feature-a/            ← Worktree A（你的工作）
+├── feature-b/            ← Worktree B（AI 写功能 B）
+└── hotfix-c/            ← Worktree C（AI 修 Bug）
+```
+
+在每个 worktree 里打开独立的编辑器窗口：
+
+```bash
+# 终端 1：打开主工作区
+code /home/user/my-app-feature-a
+
+# 终端 2：打开 AI 工作区 B
+code /home/user/my-app-feature-b
+
+# 终端 3：打开 AI 工作区 C
+code /home/user/my-app-hotfix-c
+```
+
+### 场景 2：AI Code Review 专用 Worktree
+
+```bash
+# 为 PR #123 创建 review worktree
+git worktree add ../my-app-pr123 pr/123/head
+
+# 在 review worktree 里让 AI 做 Code Review
+cd ../my-app-pr123
+# 把代码发给 AI："""请 review 这个 PR 的代码，关注：..."""
+```
+
+### 场景 3：A/B 测试两个方案（AI 生成方案 A vs 方案 B）
+
+```bash
+# Worktree A：AI 生成的方案 A
+git worktree add -b experiment-A ../my-app-exp-a main
+cd ../my-app-exp-a
+# AI 在这里实现方案 A
+
+# Worktree B：AI 生成的方案 B
+git worktree add -b experiment-B ../my-app-exp-b main
+cd ../my-app-exp-b
+# AI 在这里实现方案 B
+
+# 两个方案同时运行、对比性能
+cd ../my-app-exp-a && npm run build  # 记录时间
+cd ../my-app-exp-b && npm run build  # 记录时间
+```
+
+:::warning[⚠️ Worktree + AI 的注意事项]
+
+1. **AI 工具可能混淆 worktree 路径**——Cursor/VS Code 有时会缓存错误的 workspace 路径，需要手动确认
+2. **共享 node_modules 的坑**——如果 worktree 之间依赖版本不同，`node_modules` 会冲突。解决方案：每个 worktree 独立 `node_modules`（加到 `.gitignore` 或用 `pnpm` 的 `node_modules/.pnpm` 隔离）
+3. **Git hook 在 worktree 里也会触发**——如果你在 worktree A 里 `git commit`，主仓库的 `pre-commit` hook 也会跑
+
+:::
+
+<a id="parallel-workflow"></a>
+## 🏗️ 多分支并行开发工作流
+
+### 标准 Worktree 工作流
+
+```
+早晨开始工作：
+1. git worktree add ../my-app-feature ../my-app-feature main
+2. cd ../my-app-feature && code .  # 开始开发功能
+
+中午：紧急 hotfix 来了
+3. git worktree add ../my-app-hotfix ../my-app-hotfix main
+4. cd ../my-app-hotfix && code .  # 新窗口修 hotfix
+
+下午：hotfix 修完，发 PR
+5. cd ../my-app-hotfix && git push && gh pr create
+6. git worktree remove ../my-app-hotfix  # 清理
+
+晚上：feature 开发完成
+7. cd ../my-app-feature && git push && gh pr create
+8. git worktree remove ../my-app-feature  # 清理
+```
+
+### 自动化 Worktree 管理脚本
+
+```bash
+#!/bin/bash
+# create-worktree.sh - 快速创建 worktree 并开始工作
+
+BRANCH_NAME=$1
+BASE_BRANCH=${2:-main}
+
+if [ -z "$BRANCH_NAME" ]; then
+  echo "用法: ./create-worktree.sh <branch-name> [base-branch]"
+  exit 1
+fi
+
+WORKTREE_DIR="../my-app-$BRANCH_NAME"
+
+# 创建 worktree
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" "$BASE_BRANCH"
+
+# 进入 worktree，安装依赖（如果需要）
+cd "$WORKTREE_DIR"
+npm install  # 或 pnpm install
+
+# 打开编辑器
+code .
+
+echo "✅ Worktree 创建成功: $WORKTREE_DIR"
+echo "   分支: $BRANCH_NAME (基于 $BASE_BRANCH)"
+```
+
+:::tip[💡 用 `git worktree` 替代 `git stash` 的场景]
+
+| 场景 | 用 stash | 用 worktree |
+| :--- | :--- | :--- |
+| 临时切换分支修 hotfix（< 30 分钟） | ✅ 合适 | 可以，但略重 |
+| 需要同时运行两个分支对比 | ❌ 做不到 | ✅ 完美 |
+| AI 助手需要独立工作区 | ❌ 做不到 | ✅ 完美 |
+| 长时间（> 1 天）并行开发 | ❌ stash 会忘 | ✅ 完美 |
+
+:::
+
+---
+
+## 📝 下一步
+
+- **[🔬 Git 底层原理](./internals)** —— `.git` 目录结构、Blob/Tree/Commit 对象
+- **[📝 Git 速查表](./cheat-sheet)** —— 所有常用命令一览
+
+:::tip[💡 延伸阅读]
+
+- [Git Worktree Documentation](https://git-scm.com/docs/git-worktree)
+- [Using git worktree for parallel development (ArrowWild)](https://arrowwild.dev/blog/git-worktree)
+- [Cursor AI - Multiple Windows Setup](https://docs.cursor.com)
+
+:::

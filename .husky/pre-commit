@@ -5,4 +5,4 @@ if [ "$BRANCH" = "main" ]; then
   exit 1
 fi
 
-bunx lint-staged
+bun node_modules/.bin/lint-staged

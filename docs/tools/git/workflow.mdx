@@ -1,0 +1,308 @@
+---
+title: 🌿 Git 日常工作流
+sidebar_position: 2
+description: 掌握 Git 三区概念、日常命令（status/add/commit/push/pull）及分支管理基础，建立高效的日常开发工作流。
+---
+
+日常开发中使用 Git 的核心工作流可以概括为：**编辑 → 暂存 → 提交 → 推送**。理解这个循环，以及 Git 的「三区」模型，是掌握 Git 的关键。
+
+<a id="three-areas"></a>
+## 📊 三区概念
+
+Git 的本地工作区分为三个逻辑区域，理解它们的关系是掌握 Git 命令的基础：
+
+```
+┌─────────────────┐
+│                Working Directory（工作区）                │
+│  你正在编辑的文件，尚未被 Git 跟踪或已修改但未暂存        │
+│  git add → 进入 Staging Area                            │
+└─────────────────┘
+                    ↓ git add
+┌─────────────────┐
+│                Staging Area（暂存区 / 索引）             │
+│  已标记将在下一次提交中包含的变更                         │
+│  git commit → 进入 Repository                           │
+└─────────────────┘
+                    ↓ git commit
+┌─────────────────┐
+│                Repository（版本库 / HEAD）                │
+│  已永久记录的提交历史，可通过 git log 查看                │
+│  git push → 推送到远程仓库                              │
+└─────────────────┘
+```
+
+| 区域 | 命令（进入） | 命令（退出/查看） | 文件状态 |
+| :--- | :--- | :--- | :--- |
+| **Working Directory** | 编辑文件 | `git add` | `modified`（已修改）|
+| **Staging Area** | `git add` | `git commit` / `git reset` | `staged`（已暂存）|
+| **Repository** | `git commit` | `git push` | `committed`（已提交）|
+
+:::tip[💡 核心心法]
+
+每次 `git status` 的输出都会告诉你文件在哪个区域，以及用什么命令移动它。**遇到不确定的情况，先 `git status`，再行动。**
+
+:::
+
+<a id="daily-commands"></a>
+## 🔄 日常命令详解
+
+<a id="git-status"></a>
+### `git status` — 查看状态
+
+最常用的命令，没有之一。每次操作前后都应该运行它确认状态：
+
+```bash
+git status
+
+# 输出示例：
+# On branch main
+# Changes to be committed:
+#   (use "git restore --staged <file>..." to unstage)
+#         modified:   src/auth.ts
+#
+# Changes not staged for commit:
+#   (use "add <file>..." to update what will be committed)
+#   (use "restore <file>..." to discard changes in working directory)
+#         modified:   src/utils.ts
+#
+# Untracked files:
+#   (use "git add <file>..." to include in what will be committed)
+#         new-feature.md
+```
+
+<a id="git-add"></a>
+### `git add` — 暂存变更
+
+将工作区的变更放入暂存区，**准备下一次提交**：
+
+```bash
+# 暂存单个文件
+git add src/auth.ts
+
+# 暂存多个文件
+git add src/auth.ts src/utils.ts
+
+# 暂存所有变更（谨慎使用）
+git add .
+
+# 交互式暂存（推荐！逐个代码块选择）
+git add -p
+# 询问每个代码块：y=暂存 n=跳过 s=拆碎 e=手动编辑 q=退出
+```
+
+:::warning[⚠️ `git add .` 的风险]
+
+`git add .` 会暂存**当前目录及子目录的所有变更**，很容易把不想提交的文件（日志、临时文件、node_modules）一起暂存。始终推荐使用 `git add <specific-file>` 或 `git add -p`。
+
+:::
+
+<a id="git-commit"></a>
+### `git commit` — 提交变更
+
+将暂存区的内容创建一个新提交：
+
+```bash
+# 快速提交（单行 message）
+git commit -m "fix(auth): handle token expiration"
+
+# 多行 message（会打开编辑器）
+git commit
+# 编辑器格式：
+# 第一行：subject（<50字符，祈使语气）
+# 空行
+# 正文：解释 Why 和 What（每行<72字符）
+
+# 修正最后一次提交（不新增提交）
+git commit --amend --no-edit    # 追加文件，不改 message
+git commit --amend              # 修改最后一次提交的 message
+
+# 空提交（用于触发 CI 等）
+git commit --allow-empty -m "chore: trigger CI"
+```
+
+<a id="git-push"></a>
+### `git push` — 推送到远程
+
+将本地提交推送到远程仓库：
+
+```bash
+# 推送当前分支到远程（首次需要 -u 绑定）
+git push -u origin main
+
+# 后续推送（已绑定后）
+git push
+
+# 强制推送（危险！会覆盖远程历史）
+git push --force-with-lease   # 比 --force 安全一点，会检查是否有他人推送
+```
+
+:::danger[🚨 强制推送警告]
+
+`git push --force` **会覆盖远程仓库的历史**，可能导致他人的提交丢失。仅在以下情况使用：
+- 你确定只有你在这个分支工作
+- 你正在修复自己刚推送的提交（`--force-with-lease` 更安全）
+
+:::
+
+<a id="git-pull"></a>
+### `git pull` — 拉取远程更新
+
+将远程仓库的更新拉取到本地并合并：
+
+```bash
+# 默认行为：fetch + merge（会产生 merge commit）
+git pull
+
+# 推荐：fetch + rebase（保持历史线性）
+git pull --rebase
+
+# 配置默认使用 rebase（一劳永逸）
+git config --global pull.rebase true
+```
+
+:::tip[💡 Merge vs. Rebase]
+
+| 方式 | 优点 | 缺点 | 适用场景 |
+| :--- | :--- | :--- | :--- |
+| `git pull`（merge）| 保留完整历史 | 产生大量 merge commit，历史非线性 | 新手、团队强制要求 |
+| `git pull --rebase` | 历史线性清晰 | 会改写本地提交时间线 | **推荐日常使用** |
+
+:::
+
+<a id="git-fetch"></a>
+### `git fetch` — 仅拉取不合并
+
+`git pull` = `git fetch` + `git merge`。如果你只想看看远程有什么更新，但不想立即合并：
+
+```bash
+# 拉取所有远程分支的最新数据（不合并）
+git fetch --all
+
+# 查看远程分支和本地分支的差异
+git log HEAD..origin/main --oneline
+```
+
+<a id="branch-basics"></a>
+## 🌿 分支管理基础
+
+分支是 Git 最强大的功能之一。掌握分支操作，才能高效地进行并行开发。
+
+<a id="branch-create"></a>
+### 创建与切换分支
+
+```bash
+# 创建新分支并切换（推荐方式）
+git checkout -b feature/user-profile
+# 或使用新版命令
+git switch -c feature/user-profile
+
+# 仅创建分支（不切换）
+git branch feature/user-profile
+
+# 切换回 main
+git checkout main
+git switch main
+```
+
+<a id="branch-list"></a>
+### 查看分支
+
+```bash
+# 查看本地分支（当前分支前有 * 标记）
+git branch
+
+# 查看所有分支（包括远程）
+git branch -a
+
+# 查看每个分支的最新提交
+git branch -v
+```
+
+<a id="branch-merge"></a>
+### 合并分支
+
+完成功能开发后，将功能分支合并回主分支：
+
+```bash
+# 切换到目标分支（如 main）
+git checkout main
+
+# 合并功能分支
+git merge feature/user-profile
+
+# 合并后删除功能分支（本地）
+git branch -d feature/user-profile
+
+# 删除远程功能分支
+git push origin --delete feature/user-profile
+```
+
+合并时可能遇到**冲突**，Git 会提示：
+
+```
+CONFLICT (content): Merge conflict in src/auth.ts
+Automatic merge failed; fix conflicts and then commit the result.
+```
+
+解决冲突的步骤：
+
+```bash
+# 1. 打开冲突文件，找到冲突标记
+# <<<<<<< HEAD
+# 当前分支的代码
+# =======
+# 要合并的分支的代码
+# >>>>>>> feature/user-profile
+
+# 2. 编辑文件，保留正确代码，删除冲突标记
+
+# 3. 暂存解决后的文件
+git add src/auth.ts
+
+# 4. 完成合并提交
+git commit
+```
+
+<a id="branch-delete"></a>
+### 删除分支
+
+```bash
+# 删除已合并的本地分支
+git branch -d feature/old-feature
+
+# 强制删除未合并的分支（会丢失变更！）
+git branch -D feature/abandoned
+
+# 删除远程分支
+git push origin --delete feature/old-feature
+```
+
+<a id="branch-naming"></a>
+### 分支命名规范
+
+推荐使用以下前缀规范：
+
+| 前缀 | 用途 | 示例 |
+| :--- | :--- | :--- |
+| `feature/` | 新功能开发 | `feature/user-login` |
+| `fix/` | Bug 修复 | `fix/api-timeout` |
+| `hotfix/` | 生产环境紧急修复 | `hotfix/auth-crash` |
+| `chore/` | 杂项（依赖更新、配置） | `chore/deps-update` |
+| `docs/` | 文档变更 | `docs/api-guide` |
+| `refactor/` | 重构 | `refactor/auth-module` |
+
+---
+
+## 📝 下一步
+
+掌握日常工作流后，建议继续学习：
+
+- **[🛡️ 进阶操作](./advanced)** —— Interactive Rebase、Bisect、Reflog、Cherry-pick
+- **[✍️ 提交规范](./commit-conventions)** —— Conventional Commits 规范与工具配置
+
+:::tip[💡 延伸阅读]
+
+- [Pro Git - Git Branching](https://git-scm.com/book/zh/v2/Git-分支-分支简介)
+- [Understanding the Working Directory, Staging Area, and Repository](https://www.freecodecamp.org/news/git-staging-area/)
+
+:::

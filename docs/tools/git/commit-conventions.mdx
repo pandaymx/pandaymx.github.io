@@ -1,0 +1,261 @@
+---
+title: ✍️ 提交规范
+sidebar_position: 4
+description: 掌握 Conventional Commits 规范、Commit Message 编写技巧，以及 commitlint + husky 工具配置，建立团队的提交标准。
+---
+
+清晰的 Commit Message 是团队协作的基础设施。它让 `git log` 成为项目的「演变史书」，让 Code Review 更高效，让 `git bisect` 和 `git blame` 真正有用。
+
+<a id="why-conventions-matter"></a>
+## 🤔 为什么需要提交规范
+
+| 问题 | 没有规范 | 有规范 |
+| :--- | :--- | :--- |
+| `git log` 可读性 | 一堆 `fix`、`update`、`wip` | 清晰的变更意图和历史 |
+| Code Review 效率 | Reviewer 需要先猜意图 | Message 本身就是最好的说明 |
+| 自动生成 Changelog | 无法自动化 | `feat:` → Changelog 新功能节 |
+| 语义化版本号 | 无法判断是否需要大版本号 | `BREAKING CHANGE:` → 自动 Major 版本 |
+
+<a id="conventional-commits"></a>
+## 📋 Conventional Commits 规范
+
+[Conventional Commits](https://www.conventionalcommits.org/) 是一套轻量级的 Commit Message 约定，格式如下：
+
+```
+<type>[optional scope]: <subject>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Type 类型
+
+| Type | 说明 | 示例 |
+| :--- | :--- | :--- |
+| `feat` | 新功能（minor 版本） | `feat(auth): add OAuth2 login` |
+| `fix` | Bug 修复（patch 版本） | `fix(api): handle null pointer` |
+| `docs` | 文档变更 | `docs(README): update install guide` |
+| `style` | 代码格式（不影响功能） | `style(linter): fix eslint warnings` |
+| `refactor` | 重构（非 feat/fix） | `refactor(utils): extract date logic` |
+| `perf` | 性能优化 | `perf(query): add index to user_email` |
+| `test` | 测试相关 | `test(auth): add login flow tests` |
+| `build` | 构建/依赖变更 | `build(deps): upgrade react to v18` |
+| `ci` | CI 配置变更 | `ci(github): add PR lint workflow` |
+| `chore` | 其他杂项 | `chore(release): bump v1.2.0` |
+
+### Scope（可选）
+
+`scope` 指明变更影响的范围，通常是模块名或文件名：
+
+```
+feat(auth): ...      # auth 模块
+fix(api): ...        # api 层
+docs(README): ...    # README 文件
+perf(db): ...        # 数据库相关
+```
+
+### Subject 写作原则
+
+`subject` 是最重要的部分，应遵循：
+
+1. **祈使语气**：`add` 而非 `added`/`adds`/`adding`
+2. **首字母小写**（中文可忽略）
+3. **不超过 50 字符**（英文）/ 30 汉字（中文）
+4. **不以句号结尾**
+5. **描述做了什么，而非为什么做**
+
+```
+# ✅ 好的 subject
+feat(auth): add OAuth2 login support
+fix(api): handle null pointer in user service
+refactor(utils): extract date formatting logic
+
+# ❌ 不好的 subject
+added OAuth2 login                  # 过去式
+Feat(auth): Add OAuth2              # 首字母大写
+feat: add OAuth2 and fix bug and update docs  # 太长，不原子
+```
+
+### Body 写作原则
+
+`body` 回答「为什么要做这个变更？」：
+
+```
+fix(auth): prevent duplicate session creation
+
+When a user logged in rapidly clicking the submit button,
+multiple sessions were created due to missing debounce logic.
+
+Added client-side debounce (300ms) and server-side idempotency
+check using Redis lock to prevent race condition.
+
+Fixes #1234
+```
+
+### Footer 写作原则
+
+`footer` 用于引用 Issue/PR，或标记破坏性变更：
+
+```
+Fixes #1234          # 关闭 Issue #1234
+Closes #5678         # 关闭 PR #5678
+Relates to #9012     # 关联 Issue #9012
+
+BREAKING CHANGE: The auth API now requires a Bearer token.
+Old API keys are no longer supported.
+```
+
+<a id="commit-message-tips"></a>
+## ✍️ Commit Message 编写技巧
+
+### 技巧 1：用 `git commit` 而非 `git commit -m`
+
+`-m` 适合快速提交，但重要的提交应该用编辑器写多行 Message：
+
+```bash
+# 会打开编辑器，写多行 message
+git commit
+```
+
+### 技巧 2：`git add -p` 拆分变更
+
+一个文件里同时改了「修 Bug」和「加日志」？用 `git add -p` 拆分：
+
+```bash
+git add -p src/auth.ts
+# y = 暂存这个块    n = 跳过
+# s = 拆更小        e = 手动编辑
+```
+
+### 技巧 3：`git commit --amend` 修正最后一次提交
+
+```bash
+# 修正 message
+git commit --amend -m "fix(auth): correct message"
+
+# 追加文件（不新增提交）
+git add forgotten.ts && git commit --amend --no-edit
+```
+
+:::warning[⚠️ `--amend` 会改写历史]
+
+不要对已经 push 的提交使用 `--amend`，除非你确定在做什么。
+
+:::
+
+### 技巧 4：`git rebase -i` 重写本地历史
+
+Push 之前，用 Interactive Rebase 整理提交：
+
+```bash
+git rebase -i HEAD~3
+# pick = 保留   reword = 改 message
+# edit = 暂停修改   squash = 合并（保留 message）
+# fixup = 合并（丢弃 message）  drop = 删除
+```
+
+<a id="commitlint-husky"></a>
+## 🛠️ 工具配置：commitlint + husky
+
+光有规范文档不够，需要用工具强制执行。
+
+### 安装依赖
+
+```bash
+npm install --save-dev @commitlint/cli @commitlint/config-conventional husky lint-staged
+```
+
+### 配置 commitlint
+
+创建 `commitlint.config.js`：
+
+```js
+/** @type {import('@commitlint/types').UserConfig} */
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'subject-max-length': [2, 'always', 50],
+    'header-max-length': [2, 'always', 72],
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat',
+        'fix',
+        'docs',
+        'style',
+        'refactor',
+        'perf',
+        'test',
+        'build',
+        'ci',
+        'chore',
+      ],
+    ],
+  },
+};
+```
+
+### 配置 husky
+
+```bash
+# 初始化 husky
+npx husky init
+
+# 添加 commit-msg hook（检查 commit message）
+npx husky add .husky/commit-msg 'bun node_modules/.bin/commitlint --edit $1'
+
+# 添加 pre-commit hook（运行 lint-staged）
+# .husky/pre-commit 内容：
+# bun node_modules/.bin/lint-staged
+```
+
+### 配置 lint-staged
+
+在 `package.json` 中添加：
+
+```json
+{
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,css}": ["prettier --write"]
+  }
+}
+```
+
+### 验证配置
+
+```bash
+# 测试 commitlint（应该失败）
+echo "bad commit message" | npx commitlint
+
+# 测试 commitlint（应该通过）
+echo "feat(auth): add login" | npx commitlint
+```
+
+<a id="tools-recommend"></a>
+## 🧰 工具推荐
+
+| 工具 | 用途 | 推荐场景 |
+| :--- | :--- | :--- |
+| **[commitlint](https://commitlint.js.org/)** | 检查 Commit Message 格式 | 团队规范强制执行 |
+| **[commitizen](https://github.com/commitizen/cz-cli)** | 交互式生成规范 Message | 个人/小团队提效 |
+| **[lint-staged](https://github.com/okonet/lint-staged)** | 只对暂存文件运行 Linter | 配合 husky 使用 |
+| **[changesets](https://github.com/changesets/changesets)** | 管理版本号和 Changelog | 库/框架维护者 |
+| **[semantic-release](https://semantic-release.gitbook.io/)** | 全自动版本号和发布 | CI 自动化发布流程 |
+
+---
+
+## 📝 下一步
+
+- **[📝 Git 速查表](./cheat-sheet)** —— 所有常用命令一览
+- **[🛡️ 进阶操作](./advanced)** —— 回顾 Interactive Rebase、Bisect 等进阶技巧
+
+:::tip[💡 延伸阅读]
+
+- [Conventional Commits 官方规范](https://www.conventionalcommits.org/)
+- [How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/)
+- [commitlint 官方文档](https://commitlint.js.org/)
+
+:::

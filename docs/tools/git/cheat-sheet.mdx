@@ -1,0 +1,341 @@
+---
+title: 📝 Git 速查表
+sidebar_position: 99
+description: Git 常用命令速查表，按场景分类，快速查找所需命令。
+---
+
+本页汇总 Git 日常开发中最常用的命令，按使用场景分类，方便快速查阅。
+
+:::tip[💡 使用方式]
+
+遇到不熟悉的命令，先 `git <command> --help` 查看官方文档，或 `git <command> -h` 查看简短帮助。
+
+:::
+
+<a id="setup-config"></a>
+## ⚙️ 安装与配置
+
+```bash
+# 查看版本
+git --version
+
+# 配置用户信息（全局）
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
+
+# 配置默认编辑器
+git config --global core.editor "code --wait"   # VS Code
+git config --global core.editor "vim"             # Vim
+git config --global core.editor "nano"            # Nano
+
+# 查看所有配置
+git config --global --list
+
+# 配置别名（提效）
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+git config --global alias.lg "log --oneline --graph --all"
+git config --global alias.unstage "reset HEAD --"
+```
+
+<a id="create-init"></a>
+## 📁 创建与初始化
+
+```bash
+# 初始化新仓库
+git init
+
+# 克隆远程仓库
+git clone https://github.com/user/repo.git
+git clone git@github.com:user/repo.git        # SSH 方式
+
+# 克隆指定分支
+git clone -b main https://github.com/user/repo.git
+
+# 克隆到指定目录
+git clone https://github.com/user/repo.git my-folder
+```
+
+<a id="basic-workflow"></a>
+## 🔄 日常基本工作流
+
+```bash
+# 查看状态（最常用！）
+git status
+
+# 查看变更详情
+git diff                # 工作区 vs 暂存区
+git diff --staged       # 暂存区 vs 最新提交
+git diff HEAD           # 工作区 vs 最新提交
+
+# 暂存变更
+git add <file>         # 暂存指定文件
+git add .               # 暂存所有（谨慎！）
+git add -p              # 交互式暂存（推荐）
+
+# 提交
+git commit -m "message"
+git commit              # 打开编辑器写多行 message
+git commit --amend      # 修正最后一次提交
+
+# 推送
+git push
+git push -u origin main # 首次推送并绑定
+
+# 拉取
+git pull                # fetch + merge
+git pull --rebase      # fetch + rebase（推荐）
+```
+
+<a id="branch-operations"></a>
+## 🌿 分支操作
+
+```bash
+# 查看分支
+git branch              # 本地分支
+git branch -a           # 所有分支（含远程）
+git branch -v           # 显示最新提交
+
+# 创建与切换
+git branch <name>       # 创建分支
+git checkout -b <name>  # 创建并切换（旧版）
+git switch -c <name>    # 创建并切换（新版推荐）
+
+# 切换分支
+git checkout <name>
+git switch <name>
+
+# 合并分支
+git merge <branch>      # 合并到当前分支
+git merge --no-ff <branch>  # 强制产生 merge commit
+
+# 变基（改写历史，慎用！）
+git rebase <base-branch>
+git rebase -i HEAD~3   # 交互式 rebase
+
+# 删除分支
+git branch -d <name>    # 已合并，可删除
+git branch -D <name>    # 强制删除（未合并）
+```
+
+<a id="history-view"></a>
+## 📜 历史查看
+
+```bash
+# 基本 log
+git log
+git log --oneline       # 简洁格式
+git log --graph --all   # 图形化分支 history
+
+# 查看某文件的历史
+git log -- <file>
+git log -p -- <file>   # 附带 diff
+
+# 查看某行代码的作者（责追究器）
+git blame <file>
+git blame -L 10,20 <file>  # 只看第 10-20 行
+
+# 查看某次提交的详情
+git show <commit-hash>
+git show HEAD            # 查看最新提交
+```
+
+<a id="undo-changes"></a>
+## ⏪ 撤销与回滚
+
+```bash
+# 撤销工作区的修改（危险！文件内容会丢失）
+git restore <file>              # Git 2.23+
+git checkout -- <file>          # 旧版命令
+
+# 撤销暂存区的文件（保留工作区修改）
+git restore --staged <file>    # Git 2.23+
+git reset HEAD <file>           # 旧版命令
+
+# 撤销提交（保留修改在工作区）
+git reset --soft HEAD~1        # 回退 1 个提交，修改留在暂存区
+git reset HEAD~1                # 回退 1 个提交，修改留在工作区
+
+# 硬回滚（危险！所有修改丢失）
+git reset --hard HEAD~1        # 回退 1 个提交，丢弃所有修改
+git reset --hard <commit-hash>  # 回退到指定提交
+
+# 用新提交撤销旧提交（安全，推荐用于已推送的提交）
+git revert <commit-hash>
+```
+
+<a id="remote-operations"></a>
+## 🌐 远程操作
+
+```bash
+# 查看远程仓库
+git remote -v
+
+# 添加远程仓库
+git remote add origin https://github.com/user/repo.git
+
+# 修改远程仓库地址
+git remote set-url origin https://github.com/user/new-repo.git
+
+# 拉取远程更新（不合并）
+git fetch
+git fetch --all
+
+# 推送
+git push
+git push origin <branch>
+git push --force-with-lease   # 安全强制推送
+
+# 删除远程分支
+git push origin --delete <branch>
+```
+
+<a id="stash-operations"></a>
+## 📦 Stash（暂存工作现场）
+
+```bash
+# 暂存当前工作（未提交的修改）
+git stash
+git stash push -m "WIP: feature X"   # 带描述
+
+# 查看 stash 列表
+git stash list
+
+# 恢复 stash（不删除）
+git stash apply stash@{0}
+
+# 恢复 stash（删除）
+git stash pop stash@{0}
+
+# 删除 stash
+git stash drop stash@{0}
+git stash clear            # 清空所有 stash
+```
+
+<a id="tag-operations"></a>
+## 🏷️ 标签操作
+
+```bash
+# 查看标签
+git tag
+
+# 创建轻量标签
+git tag v1.0.0
+
+# 创建附注标签（推荐）
+git tag -a v1.0.0 -m "Release v1.0.0"
+
+# 推送标签到远程
+git push origin v1.0.0
+git push origin --tags     # 推送所有标签
+
+# 删除标签
+git tag -d v1.0.0                # 本地删除
+git push origin :refs/tags/v1.0.0  # 远程删除
+```
+
+<a id="advanced-commands"></a>
+## 🛡️ 进阶命令速查
+
+```bash
+# ===== Git Bisect（二分查找 Bug）=====
+git bisect start
+git bisect bad                    # 当前版本有 Bug
+git bisect good v2.0.0            # v2.0.0 没 Bug
+# ...测试每个版本，标记 good/bad...
+git bisect reset                    # 结束后清理
+
+# 自动化 bisect
+git bisect start
+git bisect bad
+git bisect good v2.0.0
+git bisect run npm test            # 自动运行测试
+
+# ===== Git Reflog（找回丢失的提交）=====
+git reflog                        # 查看 HEAD 移动历史
+git reset --hard HEAD@{2}         # 回到 reflog 中的某个状态
+
+# ===== Cherry-pick（遴选提交）=====
+git cherry-pick <commit-hash>     # 应用指定提交
+git cherry-pick <hash1> <hash2>  # 应用多个提交
+git cherry-pick --no-commit <hash> # 应用但不提交
+
+# ===== Clean（清理未跟踪文件）=====
+git clean -n                       # 预览将要删除的文件（dry run）
+git clean -f                       # 强制删除未跟踪文件
+git clean -fd                      # 删除未跟踪文件和目录
+```
+
+<a id="gitignore"></a>
+## 🚫 .gitignore 模板
+
+```
+# ===== 依赖 =====
+node_modules/
+venv/
+__pycache__/
+
+# ===== 构建产物 =====
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# ===== 环境配置 =====
+.env
+.env.local
+.<environment>.local
+
+# ===== 日志 =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== 测试覆盖率 =====
+coverage/
+*.lcov
+
+# ===== 临时文件 =====
+*.tmp
+*.bak
+*.cache
+```
+
+---
+
+## 📝 速查表总结
+
+| 场景 | 命令 |
+| :--- | :--- |
+| **查看状态** | `git status` |
+| **暂存文件** | `git add <file>` / `git add -p` |
+| **提交** | `git commit -m "message"` |
+| **推送** | `git push` |
+| **拉取** | `git pull --rebase` |
+| **创建分支** | `git switch -c <name>` |
+| **合并分支** | `git merge <branch>` |
+| **查看历史** | `git log --oneline --graph` |
+| **撤销工作区** | `git restore <file>` |
+| **硬回滚** | `git reset --hard HEAD~1` |
+| **安全回滚** | `git revert <hash>` |
+| **找回丢失提交** | `git reflog` → `git reset --hard` |
+| **二分查 Bug** | `git bisect start` |
+
+:::tip[💡 记住这句话]
+
+> **「先 `git status`，再行动。」** —— 任何时候不确定，先跑 `git status` 看看当前状态，比瞎猜强一百倍。
+
+:::
