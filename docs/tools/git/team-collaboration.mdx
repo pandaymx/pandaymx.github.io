@@ -1,0 +1,197 @@
+---
+title: 🤝 团队协作与分支策略
+sidebar_position: 6
+description: 掌握 Git Flow、GitHub Flow、Trunk-Based Development 三大主流分支模型，学会根据团队规模与发布节奏选择最适合的分支策略。
+---
+
+分支策略是团队协做的核心约定。选对模型，代码集成顺畅；选错模型，合并地狱、发布混乱接踵而至。
+
+本章对比三大主流分支模型，帮助你根据团队规模、发布节奏和风险容忍度做出正确选择。
+
+<a id="git-flow"></a>
+## 🌊 Git Flow——经典但笨重
+
+Git Flow 由 Vincent Driessen 在 2010 年提出，是最早被广泛采用的分支模型。
+
+### 核心结构
+
+```
+main (生产)     ────●───────────●─────────────
+                      \         \
+release/v1.1     ────●─────────●───
+                        \         \
+develop           ────●───●───●───●───●───
+                      \   \   \   \   \
+feature/A  (分支)    ●   ●   ●   ●   ●
+```
+
+| 分支 | 用途 | 生命周期 | 从哪来 | 合到哪去 |
+| :--- | :--- | :--- | :--- | :--- |
+| `main` | 生产环境代码 | 永久 | — | — |
+| `develop` | 集成开发线 | 永久 | `main` | — |
+| `feature/*` | 新功能开发 | 临时 | `develop` | `develop` |
+| `release/*` | 版本发布准备 | 临时 | `develop` | `main` + `develop` |
+| `hotfix/*` | 生产紧急修复 | 临时 | `main` | `main` + `develop` |
+
+### 优缺点
+
+| ✅ 优点 | ❌ 缺点 |
+| :--- | :--- |
+| 结构清晰，适合有计划的版本发布 | 分支多，管理复杂 |
+| `main` 永远稳定，方便回滚 | 合并频繁，冲突概率高 |
+| 支持多个并行版本维护 | 发布周期长，不适合持续交付 |
+| | 新手容易搞混分支关系 |
+
+### 适用场景
+
+- 📦 **版本化产品**（如桌面软件、移动 App）——有清晰的版本号，需要维护多个历史版本
+- 👥 **发布节奏固定**——每 2-4 周一个版本，有专门的发布周期
+- 🔒 **风险容忍度低**——生产发布需要充分测试，不直接从 `develop` 发布
+
+:::warning[⚠️ 2024 年的现实]
+
+Git Flow 在微服务、持续交付的团队中已逐渐被淘汰。如果你做的是 Web 服务或 SaaS 产品，优先考虑 GitHub Flow 或 Trunk-Based。
+
+:::
+
+<a id="github-flow"></a>
+## 🚀 GitHub Flow——简单而高效
+
+GitHub Flow 是 GitHub 在 2011 年推广的轻量级模型，核心哲学：**`main` 永远可发布，功能通过 Pull Request 合并**。
+
+### 核心流程
+
+```
+1. 从 main 创建 feature 分支
+2. 在 feature 分支上提交（可多次 push）
+3. 打开 Pull Request（代码审查）
+4. Review 通过，合并到 main
+5. 立即部署 main 到生产
+```
+
+### 关键规则
+
+| 规则 | 说明 |
+| :--- | :--- |
+| **`main` 永远可发布** | 任何时刻 `main` 都可以部署到生产 |
+| **功能分支从 `main` 创建** | 不用 `develop`，直接基于 `main` |
+| **PR 合并前必须 Review** | 代码质量门禁，至少 1 人 Approve |
+| **合并后立即部署** | CI/CD 自动触发，main 即生产 |
+
+### 与 Git Flow 的对比
+
+| | Git Flow | GitHub Flow |
+| :--- | :--- | :--- |
+| 长期分支 | `main` + `develop` | 只有 `main` |
+| 发布分支 | 有 `release/*` | 无，main 即发布 |
+| 合并频率 | 低（功能 → develop → release → main） | 高（feature → main） |
+| 发布节奏 | 计划性发布 | 持续交付 |
+| 适合场景 | 版本化产品 | Web 服务 / SaaS |
+
+:::tip[💡 为什么 GitHub Flow 更适合现代团队]
+
+在持续交付的环境下，"发布"不再是大事——每次合并都是一次微型发布。GitHub Flow 的分支模型与这个节奏天然契合。
+
+:::
+
+<a id="trunk-based"></a>
+## 🌳 Trunk-Based Development——高频集成
+
+Trunk-Based Development（基于主干开发）是 Google、Meta、Netflix 等顶级工程团队使用的模型。核心哲学：**所有人每天向 `main`（trunk）提交，通过 Feature Flag 而非长期分支管理未完工功能**。
+
+### 核心原则
+
+1. **每天向 `main` 提交**——分支生命周期 < 1 天，最好 < 4 小时
+2. **Feature Flag 而非 Feature Branch**——未完成功能用开关隐藏，不暴露给用户
+3. **严格的 CI 门禁**——每次 push 都跑完整测试套件，阻断不合规代码
+4. **小步提交**——每次提交只改一小件事，方便回滚和 Blame
+
+### 工作流程
+
+```
+开发者 A                  主干 (main)                CI/CD
+───────                  ─────────                ─────
+创建短分支 (可选)   →
+修改代码             →
+跑本地测试           →
+git push            →  触发 CI ─────────────→ 跑测试套件
+                              ↓
+                          通过 ✅
+                              ↓
+                        自动部署到 Staging
+                              ↓
+                        人工验证 (可选)
+                              ↓
+                        自动部署到生产
+```
+
+### 为什么大厂都用 Trunk-Based？
+
+| 痛点 | Git Flow / GitHub Flow | Trunk-Based |
+| :--- | :--- | :--- |
+| **合并冲突** | 功能分支存活数天，冲突频发 | 分支 < 4h，冲突极少 |
+| **集成延迟** | 功能完成才合并，"集成地狱" | 每天多次集成，问题早发现 |
+| **回滚困难** | 大功能一次合并，回滚影响大 | 小提交，精准回滚 |
+| **Feature 暴露** | 分支合并即上线 | Feature Flag 控制，灰度发布 |
+
+### Feature Flag 入门
+
+```javascript
+// 未完工的功能用 Flag 隐藏
+function CheckoutButton() {
+  // FEATURE_CHECKOUT_V2 = false → 旧版本
+  // FEATURE_CHECKOUT_V2 = true  → 新版本
+  if (featureFlag.isEnabled('CHECKOUT_V2')) {
+    return <NewCheckoutFlow />;
+  }
+  return <OldCheckoutFlow />;
+}
+```
+
+:::warning[⚠️ Trunk-Based 的前提条件]
+
+Trunk-Based 不是"随便向 main 提交"，它需要：
+1. **完善的 CI/CD**——每次 push 自动跑测试，失败阻断合并
+2. **Feature Flag 基础设施**——能动态开关功能，支持灰度
+3. **小团队或高度纪律**——每人每天多次提交，需要团队习惯配合
+
+不满足这些条件，强行 Trunk-Based 只会制造混乱。
+
+:::
+
+<a id="compare-models"></a>
+## 🏆 三大模型对比与选型
+
+| 维度 | Git Flow | GitHub Flow | Trunk-Based |
+| :--- | :--- | :--- | :--- |
+| **分支复杂度** | 高（5 类分支） | 低（主要 `main` + feature） | 极低（只有 `main`） |
+| **合并频率** | 低 | 中 | 高（每天多次） |
+| **发布节奏** | 计划性（周/月） | 持续（随时） | 持续（按需） |
+| **适合团队规模** | 小~中（< 20 人） | 中~大（任何规模） | 大（> 50 人，强工程文化） |
+| **适合产品类型** | 版本化（App/桌面） | Web 服务 / SaaS | 大规模 Web 服务 |
+| **CI/CD 要求** | 低 | 中 | 高（必须完善） |
+| **学习曲线** | 陡 | 平缓 | 陡（需要 Feature Flag 经验） |
+
+### 选型建议
+
+```
+团队 < 10 人，做 Web 产品    →  GitHub Flow
+团队 < 10 人，做桌面/移动 App  →  Git Flow（或简化版）
+团队 10-50 人，有 CI/CD      →  GitHub Flow（PR + 自动化测试）
+团队 > 50 人，强工程文化      →  Trunk-Based（Feature Flag + 严格 CI）
+```
+
+---
+
+## 📝 下一步
+
+- **[💥 冲突解决与灾难恢复](./conflict-recovery)** —— 合并冲突处理、revert vs reset、生产事故应急
+- **[🏭 现代工程化与 CI/CD 集成](./ci-cd)** —— GitHub Actions、GitLab CI 中的 Git 操作
+
+:::tip[💡 延伸阅读]
+
+- [Comparing Git Flow and GitHub Flow (GitHub Blog)](https://github.blog/2011/07/15/github-flow/)
+- [Trunk-Based Development (Martin Fowler)](https://martinfowler.com/articles/branching-patterns.html)
+- [Choose Branching Strategy (Azure DevOps)](https://learn.microsoft.com/en-us/azure/devops/repos/git/git-branching-guidance)
+
+:::
