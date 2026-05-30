@@ -1,0 +1,275 @@
+---
+title: 🛡️ Git 进阶操作
+sidebar_position: 3
+description: 掌握 Interactive Rebase、Git Bisect、Reflog、Cherry-pick 等进阶命令，应对复杂开发场景。
+---
+
+当你已经掌握日常工作流后，进阶操作能让你在复杂场景下依然游刃有余。本章介绍四个核心进阶命令。
+
+<a id="interactive-rebase"></a>
+## 🔄 Interactive Rebase
+
+`git rebase -i` 是**重写提交历史**最强大的工具。它允许你编辑、重排、合并、拆分或删除已有的提交。
+
+### 基本用法
+
+```bash
+# 对最近 3 个提交进行交互式 rebase
+git rebase -i HEAD~3
+
+# 对某个提交之后的所有提交进行 rebase
+git rebase -i <commit-hash>
+```
+
+运行后会打开编辑器，列出每个提交及操作指令：
+
+```
+pick abc1234 feat: add user login
+pick def5678 fix: correct login validation
+pick ghi9012 docs: update README
+
+# Commands:
+# p, pick   = 保留该提交（默认）
+# r, reword = 保留提交但修改 message
+# e, edit   = 暂停，修改内容后可继续
+# s, squash  = 合并到前一个提交（保留 message）
+# f, fixup   = 合并到前一个提交（丢弃 message）
+# d, drop    = 删除该提交
+# x, exec    = 执行 shell 命令
+```
+
+### 常见场景
+
+**场景 1：合并多个「修复」提交**
+
+开发中常出现 `fix: typo`、`fix: lint` 等琐碎提交，合并到主分支前应整理：
+
+```
+# rebase 前
+abc1234 feat: add user login
+def5678 fix: typo in login
+efg7890 fix: eslint warnings
+
+# rebase 编辑（将后两个改为 fixup）
+pick abc1234 feat: add user login
+fixup def5678 fix: typo in login
+fixup efg7890 fix: eslint warnings
+
+# rebase 后（变成一个干净的提交）
+abc1234 feat: add user login
+```
+
+**场景 2：修改旧提交的 Message**
+
+```bash
+# 对包含目标提交的历史进行 rebase
+git rebase -i HEAD~5
+# 将目标提交的操作改为 `reword`，保存退出后 Git 会逐个打开编辑器让你修改 message
+```
+
+**场景 3：拆分一个提交**
+
+```bash
+# 1. 对目标提交执行 rebase，操作改为 `edit`
+git rebase -i HEAD~3
+# edit abc1234 feat: add feature X（这个提交里混了多件事）
+
+# 2. Git 会暂停在目标提交，此时撤销该提交的变更但保留在工作区
+git reset HEAD~1
+
+# 3. 逐个文件/代码块重新提交（原子化）
+git add src/part-a.ts && git commit -m "feat: add part A"
+git add src/part-b.ts && git commit -m "feat: add part B"
+
+# 4. 继续 rebase
+git rebase --continue
+```
+
+:::warning[⚠️ Rebase 的黄金法则]
+
+**永远不要 rebase 已经推送到远程的提交**，除非你确定团队其他成员没有基于这些提交工作。改写公共历史会导致协作灾难。
+
+如果必须 rebase 已推送的提交，使用 `git push --force-with-lease` 而非 `git push --force`。
+
+:::
+
+<a id="git-bisect"></a>
+## 🔍 Git Bisect——二分查找 Bug
+
+当发现了一个 Bug，但不知道是哪个提交引入的，`git bisect` 可以通过二分查找，快速定位到「第一个引入 Bug 的提交」。
+
+### 基本流程
+
+```bash
+# 1. 开始 bisect 会话
+git bisect start
+
+# 2. 标记当前版本有 Bug（bad）
+git bisect bad
+
+# 3. 标记某个已知没 Bug 的版本（good）
+git bisect good v2.0.0
+
+# Git 会自动切换到中间的提交，你测试后标记
+# （重复以下步骤直到 Git 告诉你答案）
+
+# 4. 测试当前版本，标记 good 或 bad
+git bisect bad    # 这个版本有 Bug
+git bisect good   # 这个版本没问题
+
+# 5. Git 找到答案后，会输出类似：
+# Bisecting: 0 revisions left to test after this (roughly 0 steps)
+# 8a3f2c1 is the first bad commit
+# Author: ...
+# Date: ...
+# fix: update cache logic    ← 这就是引入 Bug 的提交！
+
+# 6. 结束 bisect 会话，回到原分支
+git bisect reset
+```
+
+### 自动化 Bisect（高效方式）
+
+如果有可自动运行的测试脚本，`git bisect run` 可以全自动完成查找：
+
+```bash
+# 运行自动化二分查找
+# 脚本返回 0 = good，返回 1-127 = bad
+git bisect run npm test
+
+# 自定义脚本
+git bisect run bash -c "node -e 'require(\"./dist/index.js\").test()'"
+```
+
+### Bisect 最佳实践
+
+| 要点 | 说明 |
+| :--- | :--- |
+| **提交要原子化** | 每个提交只做一件事，bisect 才能精准定位到具体代码行 |
+| **Good 版本要准确** | 选一个确实没 Bug 的历史版本，否则 bisect 会给出错误答案 |
+| **用 `run` 自动化** | 手动测试 10+ 个提交很累，写测试脚本让 Git 全自动跑 |
+
+<a id="git-reflog"></a>
+## 📜 Git Reflog——引用日志
+
+`git reflog` 记录了 **HEAD 和分支引用在过去的所有移动**。它是你的「后悔药」——即使提交被删除或分支被重置，只要还在 reflog 里（默认保留 90 天），就能找回来。
+
+### 查看 Reflog
+
+```bash
+# 查看 HEAD 的引用日志
+git reflog
+
+# 输出示例：
+# abc1234 (HEAD -> main, origin/main) HEAD@{0}: commit: fix: auth timeout
+# def5678 HEAD@{1}: commit: feat: add user dashboard
+# ghi9012 HEAD@{2}: reset: moving to HEAD~2
+# jkl3456 HEAD@{3}: commit: wip: broken feature
+# mno7890 HEAD@{4}: pull: Fast-forward from main to origin/main
+```
+
+### 用 Reflog 恢复丢失的提交
+
+```bash
+# 场景：不小心 git reset --hard 丢掉了几个提交
+# 解决：从 reflog 找到丢失的提交，reset 回去
+
+git reflog
+# 发现 abc1234 是丢失前的状态
+
+git reset --hard abc1234
+# 成功恢复！所有「丢失」的提交都回来了
+```
+
+### Reflog 与 `git log` 的区别
+
+| | `git log` | `git reflog` |
+| :--- | :--- | :--- |
+| **显示内容** | 提交历史（DAG） | HEAD/分支的移动记录 |
+| **包含已删除提交** | ❌ 不包含 | ✅ 包含（在过期前） |
+| **主要用途** | 查看项目演变 | 恢复误操作丢失的提交 |
+| **数据保留期** | 永久 | 默认 90 天 |
+
+:::tip[💡 Reflog 不是永久的]
+
+Reflog 数据会在过期后自动清理（默认 90 天）。如果你发现重要提交「消失」了，越快用 reflog 恢复越好。
+
+:::
+
+<a id="cherry-pick"></a>
+## 🍒 Cherry-pick——遴选提交
+
+`git cherry-pick` 将**某个（些）提交**应用到当前分支，而不需要合并整个分支。适用于「只想拿某个提交，不要其他变更」的场景。
+
+### 基本用法
+
+```bash
+# 将提交 abc1234 的变更应用到当前分支
+git cherry-pick abc1234
+
+# 遴选多个提交（按顺序排列）
+git cherry-pick abc1234 def5678
+
+# 遴选但不自动提交（让你先检查/修改）
+git cherry-pick --no-commit abc1234
+```
+
+### 常见场景
+
+**场景 1：将 Hotfix 同时应用到多个分支**
+
+```
+# 假设 main 分支发现了一个紧急 Bug，你在 main 上提交了修复：
+# fix: patch security vulnerability (commit: sec1234)
+
+# 但 staging 分支也需要这个修复，又不想合并整个 main...
+git checkout staging
+git cherry-pick sec1234
+# staging 分支现在也有了 sec1234 的修复，但没有 main 上的其他变更
+```
+
+**场景 2：从错误分支上「抢救」提交**
+
+```
+# 你不小心在 main 上直接提交了功能代码（应该提交到 feature 分支）
+# 解决：在 feature 分支 cherry-pick 这个提交，然后在 main 上 revert
+
+git checkout feature-x
+git cherry-pick abc1234    # 把提交拿到 feature 分支
+
+git checkout main
+git revert abc1234          # 在 main 上撤回这个提交
+```
+
+### Cherry-pick 冲突处理
+
+Cherry-pick 可能产生冲突，处理方式与 merge 冲突类似：
+
+```bash
+# 发生冲突时
+git status    # 查看冲突文件
+
+# 手动解决冲突后
+git add <conflicted-files>
+git cherry-pick --continue
+
+# 或者放弃此次 cherry-pick
+git cherry-pick --abort
+```
+
+---
+
+## 📝 下一步
+
+掌握进阶操作后，建议继续学习：
+
+- **[✍️ 提交规范](./commit-conventions)** —— Conventional Commits 规范与工具配置
+- **[📝 Git 速查表](./cheat-sheet)** —— 所有常用命令一览
+
+:::tip[💡 延伸阅读]
+
+- [Pro Git - Rewriting History](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History)
+- [Git Bisect Documentation](https://git-scm.com/docs/git-bisect)
+- [Reflog - Your Safety Net](https://www.atlassian.com/git/tutorials/refs-and-the-reflog)
+
+:::
