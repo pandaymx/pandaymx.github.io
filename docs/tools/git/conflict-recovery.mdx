@@ -1,0 +1,266 @@
+---
+title: 💥 冲突解决与灾难恢复
+sidebar_position: 7
+description: 掌握合并冲突处理实战、revert vs reset 抉择、用 reflog 找回丢失提交，以及生产事故的应急回滚流程。
+---
+
+冲突是团队协作中不可避免的现实。如何处理冲突、如何在误操作或生产事故后快速恢复，是每个开发者必须掌握的生存技能。
+
+<a id="merge-conflict"></a>
+## 🔥 合并冲突处理实战
+
+### 冲突是怎么产生的？
+
+```
+你在 feature 分支修改了 src/auth.ts 第 10 行
+你的同事在 main 分支也修改了同一行
+→ Git 无法自动合并，产生冲突
+```
+
+### 冲突标记详解
+
+```
+<<<<<<< HEAD
+const timeout = 5000;  // 你的版本（当前分支）
+=======
+const timeout = 3000;  // 传入分支的版本
+>>>>>>> feature/optimize-timeout
+```
+
+| 标记 | 含义 |
+| :--- | :--- |
+| `<<<<<<< HEAD` | 冲突开始，下面是当前分支的内容 |
+| `=======` | 分隔线，上面是当前分支，下面是传入分支 |
+| `>>>>>>> feature/...` | 冲突结束，标明传入分支名 |
+
+### 解决冲突的标准流程
+
+```bash
+# 1. 发生冲突后，Git 会标记冲突文件
+git status
+# Unmerged paths:
+#   (use "git add <file>..." to mark resolution)
+#         both modified:   src/auth.ts
+
+# 2. 打开冲突文件，找到所有 <<<<<<< 标记
+#    手动编辑，保留正确代码，删除冲突标记
+
+# 3. 暂存解决后的文件
+git add src/auth.ts
+
+# 4. 完成合并提交
+git commit
+```
+
+### 使用工具辅助解决冲突
+
+| 工具 | 类型 | 推荐场景 |
+| :--- | :--- | :--- |
+| **VS Code** | GUI | 内置冲突编辑器，三栏对比，点击按钮选择 |
+| **GitKraken** | 独立 GUI | 可视化分支历史，拖拽合并 |
+| **Sourcetree** | 独立 GUI | 免费，功能全面 |
+| **vimdiff** | TUI | 终端党，`git mergetool` 配置 |
+
+:::tip[💡 VS Code 解决冲突最佳配置]
+
+```json
+// settings.json
+{
+  "git.mergeEditor": true,  // 启用 3-way merge 编辑器
+  "git.conflict.autoNavigate.next": true  // 自动跳到下一个冲突
+}
+```
+
+在冲突文件中，VS Code 会显示 `Accept Current Change`、`Accept Incoming Change`、`Accept Both Changes`、`Compare Changes` 四个按钮。
+
+:::
+
+<a id="revert-vs-reset"></a>
+## ⏪ revert vs. reset 抉择
+
+两个命令都能"撤销"，但机制和适用场景完全不同。
+
+| | `git revert` | `git reset` |
+| :--- | :--- | :--- |
+| **原理** | 创建一个**新提交**，内容是被撤销提交的逆操作 | **移动 HEAD**，直接改写历史 |
+| **历史保留** | ✅ 保留原提交（可追溯） | ❌ 丢弃原提交（除非 reflog 找回） |
+| **可否用于已推送** | ✅ 安全（推荐） | ⚠️ 危险（会改写公共历史） |
+| **适用场景** | 撤销已推送的提交 | 撤销本地未推送的提交 |
+| **命令示例** | `git revert abc1234` | `git reset --hard HEAD~1` |
+
+### 决策树
+
+```
+需要撤销一个提交？
+├── 提交已推送到远程？
+│   └── 是 → git revert（安全）
+│   └── 否 → git reset（或 git rebase -i）
+└── 想完全丢弃本地修改？
+    └── 是 → git reset --hard（危险！）
+    └── 否 → git reset --soft 或 --mixed
+```
+
+### `git reset` 三种模式
+
+```bash
+# --soft：只移动 HEAD，修改留在暂存区（可直接重新提交）
+git reset --soft HEAD~1
+
+# --mixed（默认）：移动 HEAD，修改留在工作区（需重新 git add）
+git reset HEAD~1
+git reset --mixed HEAD~1  # 同上
+
+# --hard：移动 HEAD，修改全部丢弃（不可恢复，除非 reflog）
+git reset --hard HEAD~1
+```
+
+:::danger[🚨 `--hard` 是不可逆的]
+
+`git reset --hard` 会**永久丢弃**工作区和暂存区的所有修改。执行前务必 `git status` 确认没有重要未提交的修改。如果误执行，立即用 `git reflog` 找回。
+
+:::
+
+<a id="reflog-recovery"></a>
+## 🚑 用 reflog 找回丢失提交
+
+`git reflog` 是你的"后悔药"——它记录了 HEAD 的每一次移动，即使提交被 `reset --hard` 丢弃，只要还在 reflog 保留期内（默认 90 天），就能找回。
+
+### 典型场景：误 `reset --hard` 后恢复
+
+```bash
+# 1. 查看 reflog，找到丢失前的状态
+git reflog
+# abc1234 (HEAD -> main) HEAD@{0}: reset: moving to HEAD~3
+# def5678 HEAD@{1}: commit: feat: add user dashboard  ← 这是我们要回到的状态
+# ghi9012 HEAD@{2}: commit: fix: auth timeout
+# jkl3456 HEAD@{3}: commit: docs: update README
+
+# 2. 用 reflog 引用恢复到那个状态
+git reset --hard def5678
+# 或等价写法：
+git reset --hard HEAD@{1}
+
+# 3. 验证恢复结果
+git log --oneline -5
+```
+
+### reflog 引用语法
+
+| 引用 | 含义 |
+| :--- | :--- |
+| `HEAD@{0}` | HEAD 当前位置 |
+| `HEAD@{1}` | HEAD 上一次所在位置 |
+| `HEAD@{2}` | HEAD 上上次所在位置 |
+| `main@{yesterday}` | main 分支昨天的位置 |
+| `main@{1.month.ago}` | main 分支一个月前的位置 |
+
+:::tip[💡 reflog 不是永久的]
+
+reflog 数据会在过期后自动清理（默认 90 天）。如果发现重要提交"消失"了，**越快用 reflog 恢复越好**。超过 90 天，神仙难救。
+
+:::
+
+<a 相同id="production-disaster"></a>
+## 🚨 生产事故应急回滚流程
+
+生产环境出问题了——用户无法登录、数据错误、服务崩溃。此时每一秒都是损失，需要**快速、准确、可回溯**的回滚操作。
+
+### 黄金原则：先恢复服务，再排查原因
+
+```
+P0 事故响应流程：
+1. 确认事故范围（影响多少用户？）
+2. 执行回滚（恢复服务）
+3. 验证恢复（确认服务正常）
+4. 事后排查（找根因，写 Postmortem）
+```
+
+### 场景 1：刚发布的提交导致事故 → `git revert`
+
+```bash
+# 1. 找到导致事故的提交（用 git bisect 或看最近提交）
+git log --oneline -10
+
+# 2. revert 这个提交（会产生一个新提交，内容是被撤销的变更的逆操作）
+git revert abc1234 --no-edit
+
+# 3. 推送回滚提交
+git push origin main
+
+# 4. 验证生产恢复
+```
+
+**为什么用 revert 而不是 reset？**
+- `revert` 不改写历史，其他开发者 `git pull` 会自动获得回滚
+- `reset` 会改写历史，需要所有人同步，容易出错
+
+### 场景 2：无法快速定位事故提交 → 回滚到上一个已知好的版本
+
+```bash
+# 1. 找到上一个稳定版本（看 git tag 或 git log）
+git log --oneline --graph --all | head -20
+
+# 2. 直接用 revert 回滚到那个版本的所有提交（麻烦）
+# 更简单：用 reset --hard 然后 force push（仅限紧急情况）
+git reset --hard v1.2.0
+git push --force-with-lease origin main
+```
+
+:::danger[🚨 `force push` 在生产分支是极度危险操作]
+
+只有在**生产事故、服务已中断、无法用 revert 快速解决**的情况下，才考虑 `git push --force-with-lease`。执行前必须：
+1. 通知所有团队成员"不要 push"
+2. 确认没有其他人正在基于 main 工作
+3. 用 `--force-with-lease` 而非 `--force`（前者会检查远程是否有你不知道的提交）
+
+:::
+
+### 场景 3：数据库迁移脚本导致事故
+
+```bash
+# 数据库迁移是特殊场景——代码可以回滚，但数据迁移可能无法回滚
+# 此时需要：
+# 1. 先回滚代码（git revert）
+# 2. 手动编写"反向迁移"脚本
+# 3. 运行反向迁移，恢复数据
+# 4. 验证数据完整性
+```
+
+### 事故后的 Postmortem 模板
+
+```markdown
+## 事故报告：2024-03-15 用户登录失败
+
+### 影响范围
+- 时间：14:32 - 14:47（15 分钟）
+- 影响：约 30% 用户无法登录
+- 根因：OAuth2 token 刷新逻辑 bug（commit: abc1234）
+
+### 时间线
+- 14:32 部署 v1.3.2
+- 14:33 监控告警：登录失败率 30%
+- 14:35 确认根因：token 刷新超时
+- 14:36 执行回滚（git revert abc1234）
+- 14:38 监控恢复：登录失败率 < 1%
+- 14:47 完全恢复
+
+### 改进措施
+- [ ] 增加登录流程的端到端测试（Deadline: 2024-03-22）
+- [ ] 部署前增加 Canary 发布步骤（Deadline: 2024-03-20）
+- [ ] 接入 PagerDuty 自动告警（Deadline: 2024-03-18）
+```
+
+---
+
+## 📝 下一步
+
+- **[🏭 现代工程化与 CI/CD 集成](./ci-cd)** —— GitHub Actions、GitLab CI 中的 Git 操作
+- **[📦 大文件与大仓库处理](./large-repo)** —— Git LFS、Monorepo 策略、浅克隆优化
+
+:::tip[💡 延伸阅读]
+
+- [Git Reflog - Your Safety Net (Atlassian)](https://www.atlassian.com/git/tutorials/refs-and-the-reflog)
+- [How to revert a Git commit (GitHub Docs)](https://docs.github.com/en/get-started/using-git/undoing-changes)
+- [Postmortem Culture (Google SRE)](https://sre.google/sre-book/postmortem-culture/)
+
+:::
