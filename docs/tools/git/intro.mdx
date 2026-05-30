@@ -1,0 +1,376 @@
+---
+title: 🚀 Git 基础入门
+sidebar_position: 1
+description: 了解 Git 的基本概念、与其他版本控制系统的对比、安装方法及初次提交，开启版本控制之旅。
+---
+
+<a id="what-is-git"></a>
+## ❓ 什么是 Git
+
+Git 是一个**分布式版本控制系统**（Distributed Version Control System），由 Linus Torvalds 在 2005 年创建，用于管理 Linux 内核开发。
+
+与传统的集中式版本控制系统（如 SVN）不同，Git 让每个开发者的本地仓库都拥有完整的历史记录，可以在离线状态下完成几乎所有操作。
+
+<a id="git-benefits"></a>
+### 💡 Git 的作用
+
+- **📖 历史追踪**：记录每一次代码变更，随时可以回溯到任意历史版本。
+- **🤝 并行协作**：多个开发者可以同时工作，通过分支和合并高效整合代码。
+- **🔄 版本回滚**：当新版本出现问题时，可以快速回退到上一个稳定版本。
+- **🧪 实验隔离**：通过分支在隔离环境中尝试新想法，不影响主分支。
+- **📊 责任追溯**：通过 `git blame` 和 `git bisect` 精准定位问题代码和引入者。
+
+<a id="why-use-git"></a>
+### 🤔 为什么使用 Git
+
+在当今软件开发中，Git 已经成为**事实标准**。以下是选择 Git 的核心原因：
+
+| 理由 | 说明 |
+| :--- | :--- |
+| **🌍 市场占有率最高** | 超过 90% 的开发者在使用 Git，GitHub/GitLab 生态极其丰富 |
+| **⚡ 性能卓越** | 本地操作极快，网络断开也能正常工作 |
+| **🛡️ 数据完整性** | 所有提交通过 SHA-1 校验，防止数据损坏或篡改 |
+| **🌿 分支模型优雅** | 创建、切换、合并分支的代价极低，鼓励频繁使用分支 |
+| **📦 分布式架构** | 每个克隆都是完整备份，无单点故障风险 |
+
+<a id="git-vs-svn"></a>
+### ⚖️ Git vs. SVN vs. Mercurial 详细对比
+
+| 特性 | Git | SVN (Subversion) | Mercurial (Hg) |
+| :--- | :--- | :--- | :--- |
+| **架构类型** | 🌍 分布式 | 🏢 集中式 | 🌍 分布式 |
+| **离线工作** | ✅ 完整支持 | ❌ 需要服务器连接 | ✅ 完整支持 |
+| **分支性能** | ⚡ 极快（本地操作） | 🐢 较慢（服务器侧） | ⚡ 极快 |
+| **学习曲线** | 📈 中等（概念较多） | 📉 较平缓 | 📊 中等 |
+| **存储空间** | 📦 高效（压缩+去重） | 📂 较大 | 📦 高效 |
+| **主要用户** | 开源界/互联网公司 | 传统企业/游戏公司 | Facebook（已迁移至 Git）|
+| **推荐场景** | 💻 几乎所有场景 | 🏢 传统企业内部 | 🌐 已逐渐被 Git 取代 |
+
+:::tip[💡 迁移建议]
+
+如果你正在使用 SVN 或 Mercurial，建议尽快迁移到 Git。GitHub 提供了 [导入工具](https://import.github.com/)，大多数迁移可以在几分钟内完成。
+
+:::
+
+<a id="install-git"></a>
+## 🛠️ 安装 Git
+
+<a id="system-requirements"></a>
+### 📋 系统要求
+
+- **Windows**：Windows 7 或更高版本
+- **macOS**：OS X 10.9 或更高版本
+- **Linux**：任意现代发行版（内核 2.6+）
+
+<a id="install-steps"></a>
+### 🏁 安装步骤
+
+<Tabs>
+<TabItem value="windows" label="🪟 Windows">
+
+**方式一：官方安装包（推荐）**
+
+1. 访问 [Git 官方下载页](https://git-scm.com/download/win)
+2. 下载 64-bit Git for Windows Setup
+3. 运行安装程序，按以下建议配置：
+
+| 安装选项 | 推荐选择 | 说明 |
+| :--- | :--- | :--- |
+| Select Components | ✅ Git Bash Here | 右键菜单添加 Git Bash |
+| | ✅ Git GUI Here | 右键菜单添加 Git GUI |
+| Choosing HTTPS transport | ✅ Use the OpenSSL library | 使用系统证书存储 |
+| Configuring line ending conversions | ✅ Checkout as-is, commit as-is | 避免换行符自动转换问题 |
+| Configuring terminal emulator | ✅ Use MinTTY | 更好的终端体验 |
+| Default pull behavior | ✅ Fast-forward or merge | 保守策略，适合初学者 |
+
+**方式二：Winget（Windows 11+）**
+
+```powershell
+winget install --id Git.Git -e --source winget
+```
+
+**方式三：Chocolatey**
+
+```powershell
+choco install git -y
+```
+
+</TabItem>
+<TabItem value="macos" label="🍎 macOS">
+
+**方式一：Homebrew（推荐）**
+
+```bash
+brew install git
+```
+
+**方式二：官方安装包**
+
+访问 [Git 官方下载页](https://git-scm.com/download/mac) 下载 `.dmg` 安装包。
+
+**方式三：Xcode Command Line Tools**
+
+```bash
+xcode-select --install
+```
+
+> 此方法安装的 Git 版本较旧，不推荐长期使用。
+
+</TabItem>
+<TabItem value="linux" label="🐧 Linux">
+
+<Tabs groupId="distro">
+<TabItem value="ubuntu" label="🐧 Ubuntu/Debian">
+
+```bash
+sudo apt update && sudo apt install git -y
+```
+
+</TabItem>
+<TabItem value="fedora" label="🎩 Fedora">
+
+```bash
+sudo dnf install git -y
+```
+
+</TabItem>
+<TabItem value="arch" label="🏔️ Arch Linux">
+
+```bash
+sudo pacman -S git
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>
+
+### ✅ 验证安装
+
+安装完成后，在终端中运行以下命令验证：
+
+```bash
+git --version
+# 输出示例：git version 2.43.0
+```
+
+<a id="initial-config"></a>
+## ⚙️ 初始配置
+
+安装完成后，需要进行一些全局配置。这些配置只需设置一次，除非你需要为不同项目使用不同身份。
+
+<a id="user-config"></a>
+### 👤 配置用户信息
+
+这是**最重要**的配置——每次提交都会使用这些信息：
+
+```bash
+# 配置全局用户名和邮箱
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# 验证配置
+git config --global --list
+```
+
+:::warning[⚠️ 注意邮箱地址]
+
+如果你使用 GitHub 或 GitLab，请确保此处填写的邮箱与平台账号的邮箱一致，否则提交记录不会关联到你的账号。
+
+:::
+
+<a id="editor-config"></a>
+### ✏️ 配置默认编辑器
+
+当 Git 需要你输入多行 Commit Message 时，会打开这个编辑器：
+
+```bash
+# VS Code（推荐）
+git config --global core.editor "code --wait"
+
+# Vim（默认，适合熟悉 Vim 的用户）
+git config --global core.editor "vim"
+
+# Nano（对新手友好）
+git config --global core.editor "nano"
+```
+
+<a id="line-ending-config"></a>
+### 🔧 配置换行符处理
+
+不同操作系统使用不同的换行符（Windows: `CRLF`，Linux/macOS: `LF`），配置不当会导致大量无意义的 diff。
+
+```bash
+# Windows 用户（推荐）
+git config --global core.autocrlf false
+git config --global core.safecrlf true
+
+# macOS / Linux 用户（推荐）
+git config --global core.autocrlf input
+```
+
+:::tip[💡 更好的方案：`.gitattributes`]
+
+相比全局配置，在项目根目录添加 `.gitattributes` 文件是更推荐的做法，它可以确保团队成员使用一致的换行符规则：
+
+```
+# .gitattributes
+* text=auto
+*.sh text eol=lf
+*.bat text eol=crlf
+*.png binary
+```
+
+:::
+
+<a id="alias-config"></a>
+### ⚡ 配置常用别名（可选但推荐）
+
+通过别名可以大幅减少打字量：
+
+```bash
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+git config --global alias.visual '!gitk'
+```
+
+配置后可以使用短命令：
+
+```bash
+git st      # 等同于 git status
+git co       # 等同于 git checkout
+git ci       # 等同于 git commit
+git br       # 等同于 git branch
+```
+
+<a id="first-commit"></a>
+## 🎉 第一次提交
+
+完成配置后，让我们完成第一次 Git 提交，建立对 Git 工作流的直观理解。
+
+<a id="create-repo"></a>
+### 1️⃣ 创建仓库
+
+有两种方式获得一个 Git 仓库：
+
+**方式 A：初始化新仓库（本地项目）**
+
+```bash
+# 创建一个新目录并进入
+mkdir my-project && cd my-project
+
+# 初始化 Git 仓库
+git init
+
+# 查看仓库状态
+git status
+```
+
+**方式 B：克隆已有仓库（参与已有项目）**
+
+```bash
+# 克隆远程仓库到本地
+git clone https://github.com/username/repository.git
+
+# 进入项目目录
+cd repository
+```
+
+<a id="check-status"></a>
+### 2️⃣ 查看状态
+
+```bash
+git status
+# 输出示例：
+# On branch main
+# No commits yet
+# nothing to commit (create/copy files and use "git add" to track)
+```
+
+<a id="create-file"></a>
+### 3️⃣ 创建文件并暂存
+
+```bash
+# 创建一个新文件
+echo "# My Project" > README.md
+
+# 查看状态（文件显示为红色，表示未跟踪）
+git status
+
+# 将文件加入暂存区
+git add README.md
+
+# 再次查看状态（文件显示为绿色，表示已暂存）
+git status
+```
+
+<a id="commit-changes"></a>
+### 4️⃣ 提交变更
+
+```bash
+# 提交暂存区的内容
+git commit -m "feat: add README file"
+
+# 查看提交历史
+git log --oneline
+# 输出示例：
+# abc1234 (HEAD -> main) feat: add README file
+```
+
+:::tip[💡 关于 Commit Message]
+
+`-m` 参数适合快速提交，但对于重要的提交，建议使用多行 Message：
+
+```bash
+# 不加 -m 参数，Git 会打开编辑器让你写多行 Message
+git commit
+```
+
+编辑器中的格式：
+
+```
+feat: add README file
+
+Add project README with basic description and setup instructions.
+
+- Include installation steps
+- Add contribution guidelines reference
+```
+
+:::
+
+<a id="push-remote"></a>
+### 5️⃣ 推送到远程（可选）
+
+如果克隆了远程仓库或添加了远程地址，可以将本地提交推送到远程：
+
+```bash
+# 添加远程仓库地址（仅首次需要）
+git remote add origin https://github.com/username/repository.git
+
+# 推送本地 main 分支到远程
+git push -u origin main
+```
+
+---
+
+## 📝 下一步
+
+恭喜！你已经完成了第一次 Git 提交。接下来建议学习：
+
+- **[🌿 日常工作流](./workflow)** —— 掌握 Status/Add/Commit/Push/Pull 等日常命令
+- **[🛡️ 进阶操作](./advanced)** —— 学习 Rebase、Bisect、Reflog 等进阶技巧
+- **[✍️ 提交规范](./commit-conventions)** —— 编写规范的 Commit Message
+
+:::tip[💡 延伸阅读]
+
+- [Pro Git 中文版（免费电子书）](https://git-scm.com/book/zh/v2)
+- [Git 官方文档](https://git-scm.com/doc)
+- [Learn Git Branching（交互式学习）](https://learngitbranching.js.org/)
+
+:::
