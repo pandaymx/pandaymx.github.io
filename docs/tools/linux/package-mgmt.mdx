@@ -1,0 +1,283 @@
+---
+title: 📦 软件包管理
+sidebar_position: 5
+description: apt/dnf/pacman 对比、日常包管理操作、从源码编译、依赖管理、清理与维护。
+---
+
+Linux 包管理器是系统的**应用商店**。不同发行版用不同的包管理器，但核心概念一样：安装、更新、卸载、查依赖。
+
+:::tip[三大包管理器速查]
+
+| 操作 | Ubuntu/Debian (apt) | Fedora/RHEL (dnf) | Arch (pacman) |
+|---|---|---|---|
+| 更新索引 | `sudo apt update` | `sudo dnf check-update` | `sudo pacman -Sy` |
+| 升级软件 | `sudo apt upgrade` | `sudo dnf upgrade` | `sudo pacman -Syu` |
+| 安装 | `sudo apt install pkg` | `sudo dnf install pkg` | `sudo pacman -S pkg` |
+| 卸载 | `sudo apt remove pkg` | `sudo dnf remove pkg` | `sudo pacman -R pkg` |
+| 搜索 | `apt search pkg` | `dnf search pkg` | `pacman -Ss pkg` |
+| 查看信息 | `apt show pkg` | `dnf info pkg` | `pacman -Si pkg` |
+
+:::
+
+## 📋 包管理器对比
+
+<a id="package-managers"></a>
+
+### apt (Debian/Ubuntu)
+
+```bash
+# 更新软件包索引（必须定期执行）
+sudo apt update
+
+# 升级所有可升级的包
+sudo apt upgrade -y
+
+# 智能升级（会处理依赖变更，推荐）
+sudo apt full-upgrade -y
+
+# 搜索包
+apt search nginx
+
+# 查看包信息
+apt show nginx
+
+# 安装包
+sudo apt install nginx -y
+
+# 查看已安装的包
+apt list --installed
+
+# 卸载包（保留配置文件）
+sudo apt remove nginx
+
+# 完全卸载（删除配置文件）
+sudo apt purge nginx
+
+# 自动移除不再需要的依赖
+sudo apt autoremove -y
+```
+
+### dnf (Fedora/RHEL 9+)
+
+```bash
+# 更新索引
+sudo dnf check-update
+
+# 升级
+sudo dnf upgrade -y
+
+# 搜索
+dnf search nginx
+
+# 安装
+sudo dnf install nginx -y
+
+# 查看依赖
+dnf repoquery --requires nginx
+
+# 卸载
+sudo dnf remove nginx -y
+
+# 清理缓存
+sudo dnf clean all
+```
+
+### pacman (Arch)
+
+```bash
+# 同步仓库 + 升级系统
+sudo pacman -Syu
+
+# 安装
+sudo pacman -S nginx
+
+# 搜索（本地 + AUR）
+pacman -Ss nginx
+
+# 查看文件列表
+pacman -Ql nginx
+
+# 卸载（保留依赖）
+sudo pacman -R nginx
+
+# 卸载（递归卸载依赖）
+sudo pacman -Rs nginx
+
+# 清理缓存
+sudo pacman -Scc
+```
+
+## 🔄 日常包管理操作
+
+<a id="daily-operations"></a>
+
+### 典型工作流
+
+```bash
+# 步骤 1：更新索引
+sudo apt update
+
+# 步骤 2：查看可升级的包
+apt list --upgradable
+
+# 步骤 3：升级（交互式，会提示是否继续）
+sudo apt upgrade
+
+# 步骤 3 替代：非交互式升级
+sudo apt upgrade -y
+
+# 步骤 4：清理
+sudo apt autoremove -y
+sudo apt autoclean
+```
+
+### 查看包详情
+
+```bash
+# 查看包安装了哪些文件
+dpkg -L nginx           # Debian/Ubuntu
+rpm -ql nginx           # Fedora/RHEL
+pacman -Ql nginx        # Arch
+
+# 查看某个文件属于哪个包
+dpkg -S /usr/sbin/nginx
+rpm -qf /usr/sbin/nginx
+pacman -Qo /usr/sbin/nginx
+
+# 查看包依赖
+apt-cache depends nginx
+dnf repoquery --requires nginx
+pacman -Si nginx
+```
+
+### 安装特定版本
+
+```bash
+# Ubuntu/Debian：查看可用版本
+apt-cache policy nginx
+
+# 安装指定版本
+sudo apt install nginx=1.18.0-6ubuntu14.4
+
+# Fedora：查看可用版本
+dnf module list nginx
+
+# 锁定版本（防止意外升级）
+sudo apt-mark hold nginx
+```
+
+## 🔨 从源码编译
+
+<a id="build-from-source"></a>
+
+有些包在官方仓库里没有，或者你需要最新版本 → **从源码编译**。
+
+### 经典三步曲
+
+```bash
+# 步骤 1：下载源码
+wget https://example.com/app-1.2.3.tar.gz
+tar -xzf app-1.2.3.tar.gz
+cd app-1.2.3/
+
+# 步骤 2：配置（检查依赖，生成 Makefile）
+./configure --prefix=/usr/local/app-1.2.3
+
+# 步骤 3：编译
+make -j$(nproc)          # nproc = CPU 核心数，并行加速
+
+# 步骤 4：安装
+sudo make install
+```
+
+### 用 checkinstall 替代 make install（推荐）
+
+`make install` 不会记录安装的文件，难以卸载。`checkinstall` 会生成包管理器认识的包。
+
+```bash
+sudo apt install checkinstall
+
+# 编译后，用 checkinstall 安装
+sudo checkinstall make install
+# 会生成 .deb 包，可以用 dpkg -r 卸载
+```
+
+### 从 Git 仓库安装（开发者常用）
+
+```bash
+# 克隆仓库
+git clone https://github.com/user/repo.git
+cd repo/
+
+# 查看标签，切换到稳定版本
+git tag
+git checkout v1.2.3
+
+# 构建（以 Rust 项目为例）
+cargo build --release
+sudo cp target/release/app /usr/local/bin/
+
+# 或者用 cargo install（自动处理）
+cargo install --path .
+```
+
+## 🧹 清理与维护
+
+<a id="cleanup-maintenance"></a>
+
+### 清理 apt 缓存
+
+```bash
+# 查看缓存占用
+sudo du -sh /var/cache/apt/archives/
+
+# 删除已下载的 .deb 包（保留锁文件）
+sudo apt clean
+
+# 删除过期的缓存包
+sudo apt autoclean
+
+# 删除不再需要的依赖
+sudo apt autoremove --purge -y
+```
+
+### 清理 dnf 缓存
+
+```bash
+sudo dnf clean all
+sudo rm -rf /var/cache/dnf/*
+```
+
+### 查找大包（清理目标）
+
+```bash
+# Ubuntu：按已安装包大小排序
+dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -20
+
+# Fedora：查看最大包
+dnf repoquery --installed --qf '%{size} %{name}' | sort -n | tail -20
+```
+
+## ⚠️ 依赖冲突处理
+
+### 场景：依赖地狱
+
+```bash
+# 问题：包 A 需要 libfoo >= 2.0，包 B 需要 libfoo < 2.0
+# 解决方式 1：用容器隔离（推荐）
+docker run -it ubuntu:20.04   # 在容器里跑旧版本
+
+# 解决方式 2：从源码编译到 /usr/local/
+./configure --prefix=/usr/local/old-libfoo
+make && sudo make install
+
+# 解决方式 3：用 update-alternatives 切换版本
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110
+sudo update-alternatives --config gcc  # 交互式选择
+```
+
+## 📚 下一步
+
+- 下一章：[⚙️ 进程与系统管理](./process-mgmt) — ps/top/htop、信号、systemd、日志
+- 进阶：[🌐 网络配置与调试](./networking) — IP/路由/DNS、SSH、curl、防火墙

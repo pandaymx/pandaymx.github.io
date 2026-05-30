@@ -1,0 +1,295 @@
+---
+title: 🔒 安全实践
+sidebar_position: 9
+description: 文件权限与 sudo、SSH 密钥管理、secrets 处理（.env/密码管理器）、常见安全陷阱。
+---
+
+开发者安全习惯不好，可能让公司数据泄露、服务器被入侵。本章教你**开发者必须掌握**的安全技能。
+
+:::tip[开发者视角]
+
+本章**不深入**企业安全运维：
+- 不教 SELinux/AppArmor 策略编写
+- 不教入侵检测系统（IDS/IPS）
+- 不教渗透测试（Pentest）
+
+我们聚焦**开发者代码和服务器操作**中的安全实践。
+
+:::
+
+## 🔐 文件权限与 sudo
+
+<a id="permissions-sudo"></a>
+
+### Linux 权限基础
+
+```bash
+ls -la
+# 输出示例：
+# -rw-r--r-- 1 alice devs  1234 May 31 02:00 config.yaml
+# ↑↑↑↑↑↑↑↑
+# │││││││└─ 其他用户权限 (others)
+# │││││└─── 组权限 (group)
+# │││└──── 所有者权限 (owner)
+# │└───── 类型 (-文件 d目录 l链接)
+# └────── 权限字符
+
+# 权限数字表示法
+# r=4, w=2, x=1
+# 所以 644 = rw-r--r-- (所有者可读写，其他人只读)
+# 所以 755 = rwxr-xr-x (所有者全权限，其他人读+执行)
+```
+
+### 常用权限命令
+
+```bash
+# 修改文件权限
+chmod 644 file.txt          # 文件通常 644
+chmod 755 script.sh        # 可执行文件 755
+chmod -R 755 dir/         # 递归修改目录
+
+# 修改所有者
+sudo chown alice:devs file.txt
+sudo chown -R alice:devs dir/
+
+# 特殊权限：setuid（少见，有风险）
+chmod u+s /usr/bin/passwd   # passwd 需要 setuid 才能改 /etc/shadow
+```
+
+:::warning[不要给普通文件 777 权限]
+
+```bash
+chmod 777 file.txt   # ❌ 所有人都能读/写/执行，危险！
+```
+
+正确做法：只给需要的用户/组权限。
+
+:::
+
+### sudo 安全配置
+
+```bash
+# 查看 sudo 权限
+sudo -l
+
+# 编辑 sudo 配置（危险！改错可能失去 sudo 权限）
+sudo visudo
+
+# 常见配置：
+# 允许 alice 用户无需密码执行特定命令
+alice ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
+
+# 允许 devs 组所有用户无需密码执行 docker
+%devs ALL=(ALL) NOPASSWD: /usr/bin/docker
+```
+
+## 🔑 SSH 密钥管理
+
+<a id="ssh-keys"></a>
+
+### 生成 SSH 密钥（推荐 ed25519）
+
+```bash
+# 现代标准：ed25519（安全且快）
+ssh-keygen -t ed25519 -C "alice@example.com"
+
+# 老标准：RSA 4096（兼容性更好）
+ssh-keygen -t rsa -b 4096 -C "alice@example.com"
+
+# 指定文件名（管理多个密钥时有用）
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github
+```
+
+### SSH 密钥安全最佳实践
+
+```bash
+# ✅ 好的做法
+
+# 1. 私钥设置正确权限（600）
+chmod 600 ~/.ssh/id_ed25519
+
+# 2. 使用密钥密码（passphrase）保护私钥
+# （生成密钥时会提示输入，也可以用 ssh-add 添加）
+ssh-add ~/.ssh/id_ed25519
+
+# 3. 用 ~/.ssh/config 管理多个密钥
+# （见 networking.mdx SSH 配置章节）
+
+# 4. 定期轮换密钥（每年或离职时）
+# 去 GitHub/GitLab 删除旧密钥，生新密钥
+
+# ❌ 坏的做法
+
+# 1. 把私钥提交到 Git 仓库
+echo "id_ed25519" >> .gitignore  # 确保私钥不被提交
+
+# 2. 私钥权限设为 644（任何人都能读）
+chmod 644 ~/.ssh/id_ed25519  # 危险！
+
+# 3. 用没有密码的密钥（私钥泄露=直接访问）
+ssh-keygen -t ed25519 -N ""  # 不推荐（空密码）
+
+# 4. 把私钥粘贴到聊天工具/邮件
+# 永远不要！用密码管理器或安全的 secrets 管理工具
+```
+
+## 🔐️ Secrets 处理
+
+<a id="secrets-handling"></a>
+
+### .env 文件（本地开发）
+
+```bash
+# .env 文件存放本地开发环境变量
+# ⚠️ 千万不要提交到 Git！
+
+# .gitignore 必须包含：
+.env
+.env.*
+!.env.example
+
+# .env.example 是模板（不含真实密钥）
+DB_HOST=localhost
+DB_PASSWORD=changeme
+API_KEY=your_api_key_here
+```
+
+### 查看 Git 历史里是否有泄露的密钥
+
+```bash
+# 用 git-secrets 或 truffleHog 扫描
+pip install truffleHog
+trufflehog git file://. --since-commit HEAD~10
+
+# 简单方法：grep 常见密钥模式
+git log -p | grep -i "api_key\|secret\|password\|token"
+```
+
+:::danger[密钥已经泄露到 Git 历史里了怎么办？]
+
+1. **立即轮换密钥**（去服务商后台作废旧密钥，生成新的）
+2. **清理 Git 历史**（用 `git filter-branch` 或 `BFG Repo-Cleaner`）
+3. **强制推送**（通知团队成员重新 clone）
+
+```bash
+# 用 BFG 清理（推荐）
+# https://rtyley.github.io/bfg-repo-cleaner/
+java -jar bfg.jar --replace-text secrets.txt my-repo.git
+```
+
+:::
+
+### 生产环境 Secrets 管理
+
+```
+开发环境 Secrets 管理方案对比：
+
+方案 1：环境变量（简单）
+  └── 12-factor 推荐，但容易被日志泄露
+
+方案 2：.env 文件 + docker secrets（Docker Swarm）
+  └── Docker 内置，适合单机 Docker
+
+方案 3：HashiCorp Vault（企业级）
+  └── 动态密钥、自动轮换、审计日志
+
+方案 4：AWS Secrets Manager / Azure Key Vault（云原生）
+  └── 和云平台深度集成，适合云上应用
+
+方案 5：SOPS（GitOps 友好）
+  └── 加密的 secrets 文件直接提交到 Git
+```
+
+## ⚠️ 常见安全陷阱
+
+<a id="common-traps"></a>
+
+### 陷阱 1：curl | sh（管道安装脚本）
+
+```bash
+# ❌ 危险！你不知道脚本会做什么
+curl -fsSL https://example.com/install.sh | sh
+
+# ✅ 安全做法：先下载，检查，再执行
+curl -fsSL https://example.com/install.sh -o install.sh
+# （人工检查 install.sh 内容）
+bash install.sh
+```
+
+### 陷阱 2：Docker 容器内 root 运行
+
+```dockerfile
+# ❌ 默认用 root 运行（容器内 root = 宿主机 root）
+FROM node:20
+USER root
+CMD ["./app"]
+
+# ✅ 好的做法：用非 root 用户
+FROM node:20
+RUN addgroup -S app && adduser -S app -G app
+USER app
+CMD ["./app"]
+```
+
+### 陷阱 3：暴露 Docker Socket 给容器
+
+```yaml
+# ❌ 危险！容器内能控制宿主机 Docker
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+
+# ✅ 替代方案：用 DinD（Docker in Docker）或 Podman
+```
+
+### 陷阱 4：--network=host（容器网络模式）
+
+```bash
+# ❌ 容器直接访问宿主机网络栈（安全风险）
+docker run --network=host myapp
+
+# ✅ 用端口映射
+docker run -p 3000:3000 myapp
+```
+
+### 陷阱 5：硬编码密钥在代码里
+
+```javascript
+// ❌ 硬编码密钥
+const apiKey = "sk_live_51abc123...";
+
+// ✅ 从环境变量读取
+const apiKey = process.env.STRIPE_API_KEY;
+```
+
+## 🛡️ 基础安全加固清单
+
+### 服务器基础加固
+
+```bash
+# 1. 禁用 root SSH 登录
+sudo vim /etc/ssh/sshd_config
+# 修改：PermitRootLogin no
+sudo systemctl restart sshd
+
+# 2. 更改 SSH 默认端口（减少扫描攻击）
+# /etc/ssh/sshd_config 里改：Port 2222
+sudo systemctl restart sshd
+
+# 3. 启用防火墙（只开放必要端口）
+sudo ufw enable
+sudo ufw allow 2222/tcp    # SSH 新端口
+sudo ufw allow 80/tcp      # HTTP
+sudo ufw allow 443/tcp     # HTTPS
+
+# 4. 自动安全更新
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+# 5. 安装 fail2ban（防暴力破解）
+sudo apt install fail2ban
+```
+
+## 📚 下一步
+
+- 下一章：[🔍 故障排查与性能优化](./troubleshooting) — 日志分析、性能监控、常见故障
+- 进阶：[📝 Linux 速查表](./cheat-sheet) — 按场景分类的核心命令速查

@@ -1,0 +1,298 @@
+---
+title: 🌐 网络配置与调试
+sidebar_position: 7
+description: IP/路由/DNS 配置、SSH 高级用法、curl/wget 调试、防火墙（ufw/firewalld）。
+---
+
+开发者日常网络问题：SSH 连不上、服务端口不通、DNS 解析失败。本章教你快速定位和修复。
+
+:::tip[开发者视角]
+
+本章**不深入**网络工程师内容：
+- 不教 VLAN/VxLAN 配置
+- 不教 BGP/OSPF 路由协议
+- 不教 iptables 复杂规则
+
+我们聚焦**开发者调试网络问题**的实用技能。
+
+:::
+
+## 🔌 网络配置基础
+
+<a id="network-config"></a>
+
+### 查看网络接口
+
+```bash
+ip addr show          # 查看所有网卡 IP 地址（推荐）
+ip a                    # 简写
+ifconfig               # 老命令（需要 net-tools 包）
+
+# 查看路由表
+ip route show
+ip r                   # 简写
+route -n               # 老命令
+
+# 查看 DNS 配置
+cat /etc/resolv.conf
+systemd-resolve --status  # systemd 系统
+```
+
+### 常用网络命令
+
+```bash
+# 测试连通性
+ping -c 4 google.com       # 发 4 个包
+ping6 -c 4 google.com      # IPv6 ping
+
+# 追踪路由（排查网络路径问题）
+traceroute google.com      # 需要安装：sudo apt install traceroute
+tracepath google.com       # 不需要额外安装
+
+# 查看端口占用
+sudo lsof -i :3000         # 查看 3000 端口被谁占用
+sudo netstat -tulnp | grep 3000  # 老命令
+ss -tulnp | grep 3000     # 新命令（推荐）
+
+# 下载文件
+wget https://example.com/file.zip
+curl -O https://example.com/file.zip  # 用 -O 保存文件
+curl -s https://api.github.com | jq .   # API 调试（配合 jq）
+```
+
+## 🔑 SSH 高级用法
+
+<a id="ssh-advanced"></a>
+
+### 基础连接
+
+```bash
+# 连接远程服务器
+ssh user@server.com
+
+# 指定端口
+ssh -p 2222 user@server.com
+
+# 指定密钥文件
+ssh -i ~/.ssh/id_ed25519 user@server.com
+
+# 执行远程命令后退出（不用登录）
+ssh user@server.com "uptime && free -h"
+```
+
+### SSH 配置文件（~/.ssh/config）
+
+每次打 `ssh user@server.com -p 2222 -i ~/.ssh/id_ed25519` 太累，配置一次，以后打 `ssh myserver` 就行。
+
+```bash
+# ~/.ssh/config
+Host myserver
+  HostName server.com
+  User ubuntu
+  Port 2222
+  IdentityFile ~/.ssh/id_ed25519
+  ServerAliveInterval 60     # 保持连接
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+
+# 使用
+ssh myserver                # 等价于上面的长命令
+scp file.txt myserver:/tmp/  # SCP 也自动用配置
+```
+
+### SSH 端口转发（隧道）
+
+```bash
+# 本地转发：把远程的 3306 端口映射到本地 3306
+ssh -L 3306:localhost:3306 user@server.com
+# 现在本地访问 localhost:3306 = 访问服务器的 3306
+
+# 远程转发：把本地的 3000 暴露给远程服务器
+ssh -R 8080:localhost:3000 user@server.com
+# 服务器访问 localhost:8080 = 访问你本地的 3000
+
+# 动态转发（SOCKS5 代理）
+ssh -D 1080 user@server.com
+# 浏览器设置 SOCKS5 代理 localhost:1080 → 流量走服务器
+```
+
+:::tip[SSH 隧道实战场景]
+
+| 场景 | 命令 |
+|---|---|
+| 访问服务器上的数据库 | `ssh -L 3306:localhost:3306 user@server` |
+| 本地开发环境暴露给同事看 | `ssh -R 80:localhost:3000 user@public-server` |
+| 绕过公司防火墙访问外网 | `ssh -D 1080 user@home-server` |
+
+:::
+
+## 🔍 curl / wget 调试
+
+<a id="curl-wget"></a>
+
+### curl 调试 HTTP 请求
+
+```bash
+# 基础 GET
+curl https://api.github.com
+
+# 显示响应头和响应体
+curl -i https://api.github.com
+
+# 只显示响应头（排查 CORS、重定向问题）
+curl -I https://api.github.com
+
+# POST JSON 数据
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com"}'
+
+# 上传文件
+curl -X POST https://api.example.com/upload \
+  -F "file=@/path/to/file.zip"
+
+# 跟随重定向
+curl -L https://github.com/user/repo
+
+# 设置自定义 Header
+curl -H "Authorization: Bearer $TOKEN" https://api.example.com/me
+
+# 查看详细请求过程（调试神器）
+curl -v https://api.github.com
+```
+
+### wget 下载文件
+
+```bash
+# 下载单个文件
+wget https://example.com/file.zip
+
+# 断点续传
+wget -c https://example.com/big-file.iso
+
+# 后台下载
+wget -b https://example.com/big-file.iso
+
+# 限制下载速度
+wget --limit-rate=1m https://example.com/big-file.iso
+```
+
+## 🛡️ 防火墙配置
+
+<a id="firewall"></a>
+
+### ufw（Ubuntu 默认，简单）
+
+```bash
+# 查看状态
+sudo ufw status
+
+# 启用防火墙
+sudo ufw enable
+
+# 允许 SSH（必须！否则会被锁外面）
+sudo ufw allow 22/tcp
+
+# 允许特定端口
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# 允许应用配置
+sudo ufw allow 'Nginx Full'    # ufw 预定义了常见应用的规则
+
+# 拒绝特定 IP
+sudo ufw deny from 192.168.1.100
+
+# 删除规则
+sudo ufw delete allow 80/tcp
+```
+
+### firewalld（Fedora/RHEL，稍复杂）
+
+```bash
+# 查看状态
+sudo firewall-cmd --state
+
+# 查看当前区域
+sudo firewall-cmd --get-active-zones
+
+# 开放 HTTP/HTTPS
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+
+# 开放自定义端口
+sudo firewall-cmd --permanent --add-port=3000/tcp
+sudo firewall-cmd --reload
+```
+
+:::warning[修改防火墙前先测试 SSH 不掉线]
+
+最悲剧的事：改了防火墙规则 → SSH 断开 → 再也连不上 → 只能去机房/控制台手动修复
+
+安全做法：
+1. 开两个 SSH 终端
+2. 一个改防火墙，另一个马上测试 SSH 还能连
+3. 或者先设定时任务 5 分钟后自动恢复防火墙
+
+:::
+
+## 🚨 常见网络故障排查
+
+### 场景 1：服务端口不通
+
+```
+排查流程：
+1. 服务是否启动？ → systemctl status <service>
+2. 端口是否监听？ → ss -tulnp | grep <port>
+3. 防火墙是否放行？ → sudo ufw status
+4. 安全组/云防火墙是否放行？ → 去云控制台检查
+5. 用 telnet/nc 测试连通性 → telnet server.com 80
+```
+
+### 场景 2：DNS 解析失败
+
+```bash
+# 1. 测试 DNS 解析
+nslookup google.com          # 老命令
+dig google.com               # 推荐（信息更详细）
+dig +short google.com       # 只看 IP
+
+# 2. 查看 DNS 配置
+cat /etc/resolv.conf
+
+# 3. 测试特定 DNS 服务器
+dig @8.8.8.8 google.com    # 用 Google DNS 解析
+
+# 4. 清除 DNS 缓存（systemd-resolved）
+sudo systemd-resolve --flush-caches
+```
+
+### 场景 3：SSH 连接超时
+
+```bash
+# 排查步骤：
+# 1. 服务器是否在线？
+ping server.com
+
+# 2. SSH 端口是否通？
+telnet server.com 22         # 或 nc -zv server.com 22
+
+# 3. 防火墙是否放行 22 端口？
+sudo ufw status
+
+# 4. SSH 服务是否运行？
+sudo systemctl status sshd
+
+# 5. 查看 SSH 日志
+sudo journalctl -u sshd -n 50
+```
+
+## 📚 下一步
+
+- 下一章：[🐳 容器与虚拟化](./containers) — Docker 日常开发流、Dockerfile、docker-compose
+- 进阶：[🔒 安全实践](./security) — 文件权限、SSH 密钥、secrets 处理
