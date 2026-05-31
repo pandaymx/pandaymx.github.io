@@ -1,0 +1,236 @@
+---
+title: 作用域与闭包
+description: 深入理解 JavaScript 的词法作用域、作用域链，以及闭包的形成原理、应用场景与内存泄漏排查。
+sidebar_position: 10
+---
+
+# 作用域与闭包
+
+引入段落：在 JavaScript 的世界里，**作用域（Scope）**和**闭包（Closure）**是两座必须跨越的高山。它们不仅是前端面试中的“八股文”必考题，更是日常开发中理解变量生命周期、排查“幽灵Bug”、甚至阅读各大前端框架源码的基础。理解作用域，你就懂了变量是如何被查找的；理解闭包，你就掌握了函数如何“携带状态”去执行的魔法。
+
+## 一、作用域体系解析
+
+作用域的核心职责是：**定义一套规则，用于管理引擎如何在当前作用域以及嵌套的子作用域中根据标识符名称进行变量查找。** 简单来说，它决定了你的代码在什么地方能访问到哪些变量。
+
+### 1.1 词法作用域 (Lexical Scope)
+
+这是 JavaScript 采用的作用域模型。所谓“词法（Lexical）”，意味着作用域是在代码**书写阶段（解析/编译阶段）**就已经确定下来的，而不是在函数**运行调用阶段**确定的。
+
+看一个经典的易错例子：
+
+```javascript
+var a = 1;
+
+function foo() {
+  // 查找 a 时，首先在 foo 内部找，没找到。
+  // 接着去 foo 声明的位置的外层（即全局作用域）找，找到了全局变量 a = 1。
+  console.log(a);
+}
+
+function bar() {
+  var a = 2; // 这是 bar 内部的局部变量
+  foo(); // foo 在这里被调用
+}
+
+bar(); // 输出结果是 1，而不是 2！
+```
+
+在这个例子中，即使 `foo` 是在 `bar` 内部被调用的，但因为它是词法作用域，它向外查找变量 `a` 时，只会依据它**被定义的位置**（全局下）去查找。这种机制保证了代码行为的可预测性。
+
+### 1.2 作用域的种类
+
+在 ES6 普及之前，JS 只有两种主要的作用域，后来引入了块级作用域。
+
+1. **全局作用域 (Global Scope)**：在代码最外层定义的变量拥有全局作用域。在浏览器中，顶层全局对象是 `window`。全局变量的生命周期与页面相同，是最容易导致命名冲突和内存问题的。
+2. **函数作用域 (Function Scope)**：使用 `var` 声明的变量，其可见范围严格限制在包含它的那个函数内部。即使你在 `if` 语句内部用 `var` 声明，这个变量也会被“提升”到整个函数的顶部。
+3. **块级作用域 (Block Scope)**：ES6 引入了 `let` 和 `const` 关键字。它们声明的变量，作用域被严格限制在最近的 `{}`（如 `if`, `for`, `while` 或纯代码块）内部。这极大地规范了代码，消除了 `var` 带来的许多反直觉问题。
+
+## 二、作用域链 (Scope Chain)
+
+在多层嵌套的函数结构中，当 JS 引擎需要读取一个变量时，它必须有一套查找规则。
+
+1. 引擎首先在**当前作用域**中寻找该变量。
+2. 如果找不到，引擎会沿着定义时的层级，跳到**外层（父级）作用域**继续寻找。
+3. 如此层层向上，直到抵达最外层的**全局作用域**。
+4. 如果在全局作用域依然找不到，就会抛出 `ReferenceError: xxx is not defined`（在非严格模式下的赋值操作会自动在全局创建一个变量，但严格模式下同样报错）。
+
+这条由内向外、由具体到宏观的查找路径，就是**作用域链**。
+
+```mermaid
+graph TD
+    A[当前执行上下文 (如 inner 函数)] -->|查找失败, 顺着 __outer__ 指针向上| B(父级词法作用域)
+    B -->|查找失败| C(更外层作用域)
+    C -->|查找失败| D((全局作用域 Global))
+    D -.->|依然失败| E[抛出 ReferenceError]
+```
+
+## 三、闭包 (Closure) 的真面目
+
+“闭包”这两个字听起来非常学术。MDN 上的定义是：“闭包是函数和声明该函数的词法环境的组合”。但这个定义不够接地气。
+
+我们可以用一句最通俗的话来总结：**闭包 = 一个函数 + 这个函数记住了它诞生时的外部环境（变量）。**
+
+更具实操性的定义是：**当一个内部函数被返回、赋值或传递到外部的某个地方，并在外部被执行时，由于它仍然“死死抱住”了它定义时所在的那个外部函数的作用域，导致外部函数的变量没有被垃圾回收机制（GC）销毁。这种现象及其产生的实体，就是闭包。**
+
+### 3.1 闭包的经典演示
+
+```javascript
+function makeCounter() {
+  // count 只是 makeCounter 的局部变量
+  let count = 0;
+
+  // 返回的这个匿名函数，就是一个闭包！
+  // 它“打包”并带走了对 count 变量的引用
+  return function () {
+    count++;
+    return count;
+  };
+}
+
+// 调用 makeCounter，它执行完毕并出栈了。
+// 理论上，它的局部变量 count 应该被系统清理掉。
+const counterA = makeCounter();
+
+// 但是，奇迹发生了！
+console.log(counterA()); // 1
+console.log(counterA()); // 2
+
+// 再次调用，会生成一个全新的闭包环境，与前一个互不干扰。
+const counterB = makeCounter();
+console.log(counterB()); // 1
+```
+
+在这个例子中，`counterA` 执行时，它依然能够访问并修改已经弹栈销毁的 `makeCounter` 环境中的 `count` 变量。这就是闭包的魔法：它跨越了时间的限制，维持了局部变量的生命周期。
+
+## 四、闭包的四大高频应用场景
+
+闭包绝不是一个只存在于面试题中的理论，它是现代 JS 编程（甚至 React Hooks）的基石。
+
+### 4.1 数据私有化与封装（模块模式）
+
+在 JavaScript 推出原生的 `#` 私有属性之前，闭包是实现数据私有的唯一安全手段。它可以防止外部恶意篡改状态。
+
+```javascript
+const UserModule = (function () {
+  // 私有变量，外界绝对无法直接访问
+  let username = 'Guest';
+  let _passwordHash = 'xxx';
+
+  // 返回一个对象，暴露公共的 API 接口
+  return {
+    getName: () => username,
+    login: (pwd) => {
+      if (checkHash(pwd, _passwordHash)) {
+        username = 'Admin';
+      }
+    },
+  };
+})();
+
+console.log(UserModule.username); // undefined
+console.log(UserModule.getName()); // "Guest"
+```
+
+### 4.2 函数柯里化 (Currying) 与偏函数 (Partial Application)
+
+柯里化是将一个接受多个参数的函数，改造成一系列只接受单个参数的函数的技术。这完全依赖闭包来“缓存”之前传入的参数。
+
+```javascript
+function multiply(a) {
+  // 闭包记住了 a
+  return function (b) {
+    return a * b;
+  };
+}
+
+const double = multiply(2); // 固定了 a = 2
+console.log(double(5)); // 10
+console.log(double(10)); // 20
+```
+
+### 4.3 经典的 `var` 与定时器问题
+
+这是所有前端新人都踩过的坑。
+
+```javascript
+// 问题代码
+for (var i = 1; i <= 3; i++) {
+  setTimeout(function () {
+    console.log(`第 ${i} 次执行`);
+  }, 1000 * i);
+}
+// 结果：1秒后、2秒后、3秒后，全部输出 "第 4 次执行"！
+```
+
+**原因**：`var` 声明的是函数作用域（这里其实相当于挂在了全局）。当 `setTimeout` 的回调在未来执行时，循环早已经跑完，此时全局变量 `i` 已经变成了 4。所有的回调闭包去查找 `i` 时，找到的都是同一个 4。
+
+**解决方案 1：利用闭包（IIFE 立即执行函数）锁定变量**
+
+```javascript
+for (var i = 1; i <= 3; i++) {
+  (function (j) {
+    // 每次循环都创建一个新的函数作用域
+    setTimeout(function () {
+      console.log(`第 ${j} 次执行`); // 闭包锁定了传入的 j (1,2,3)
+    }, 1000 * j);
+  })(i);
+}
+```
+
+**解决方案 2：利用 ES6 的块级作用域（最优解）**
+
+```javascript
+for (let i = 1; i <= 3; i++) {
+  // let 声明在每次循环迭代时，都会创建一个全新的块级作用域，
+  // setTimeout 的回调分别捕获了这些互不干扰的词法环境中的 i。
+  setTimeout(function () {
+    console.log(`第 ${i} 次执行`);
+  }, 1000 * i);
+}
+```
+
+### 4.4 高频触发控制：防抖 (Debounce) 与节流 (Throttle)
+
+在处理滚动条事件、窗口调整或实时搜索框输入时，直接绑定事件会导致性能灾难。使用闭包保存定时器状态是标准的解决方案。
+
+```javascript
+// 防抖函数：在连续操作停止 n 毫秒后才执行一次
+function debounce(fn, delay) {
+  let timerId = null; // 闭包变量，保存上一次的定时器
+
+  return function (...args) {
+    if (timerId) clearTimeout(timerId); // 如果又输入了，取消上一次的准备执行
+    timerId = setTimeout(() => {
+      fn.apply(this, args); // 执行真正的业务逻辑
+    }, delay);
+  };
+}
+
+const handleInput = debounce((e) => console.log('发请求：', e.target.value), 500);
+document.querySelector('input').addEventListener('input', handleInput);
+```
+
+## 五、闭包与内存泄漏 (Memory Leak)
+
+闭包犹如一把双刃剑，它使得变量长生不老，但如果滥用，这往往就是内存泄漏的罪魁祸首。
+
+### 5.1 为什么会发生内存泄漏？
+
+通常，当一个普通函数执行完毕后，如果没有其他地方引用它的局部变量，V8 引擎的垃圾回收器（GC, Garbage Collector）就会将这些变量占用的内存回收掉。
+
+但是，因为闭包的存在，内部函数维持了对外部环境的引用链。只要这个闭包本身不被销毁（例如，它被赋值给了一个全局变量，或者被注册为了一个不会解绑的 DOM 事件监听器），它所引用的那个庞大的外部环境（包含可能根本没用到的变量）就永远无法被 GC 回收。
+
+### 5.2 如何排查与防范？
+
+1. **及时切断引用**：当你确定不再需要某个闭包时，将引用它的变量显式赋值为 `null`。
+   ```javascript
+   let myFunc = makeCounter();
+   // ... 使用完毕后
+   myFunc = null; // 帮助 GC 回收闭包占用的内存
+   ```
+2. **警惕框架/DOM中的事件绑定**：在单页应用（如 Vue 组件挂载、React `useEffect`）中，如果你用闭包作为事件处理函数绑定到了全局对象（如 `window.addEventListener`）或脱离当前组件生命周期的 DOM 上，**务必在组件销毁时（`beforeDestroy` / return cleanup 函数）执行 `removeEventListener`**。
+3. **使用 Chrome DevTools 排查**：如果发现应用越来越卡，可以在 Chrome 开发者工具的 `Memory` 面板中抓取堆快照（Heap Snapshot），或者记录 Allocation Timeline，通过比较不同时段的对象留存情况，查找未被释放的 `Closure` 对象链。
+
+## 总结
+
+如果说原型链是 JavaScript 面向对象的骨骼，那么作用域与闭包就是 JavaScript 函数式编程的灵魂。理解它们，需要你打破“执行完毕即销毁”的直觉思维，建立起“词法环境引用链”的视角。当你能够熟练地运用闭包实现柯里化、封装私有数据并优雅地避开内存泄漏陷阱时，恭喜你，你已经是一名合格的高级 JavaScript 工程师了。

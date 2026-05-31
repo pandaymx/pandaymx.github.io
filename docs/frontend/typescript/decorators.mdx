@@ -1,0 +1,197 @@
+---
+title: 装饰器
+description: 揭开 TypeScript 装饰器（Decorators）的面纱，探索其在依赖注入、AOP 面向切面编程中的广泛应用及元数据反射。
+sidebar_position: 30
+---
+
+# 装饰器 (Decorators)
+
+引入段落：如果你使用过 NestJS 开发后端，或者早年用 Angular 开发过前端，那你对代码中满天飞的 `@Controller()`, `@Injectable()`, `@Component()` 绝对不会陌生。这些带有 `@` 符号前缀的语法结构，被称为**装饰器（Decorators）**。装饰器本质上是一种特殊的函数，它允许你在**不修改原有类、方法或属性的基础源代码的前提下，动态地拦截它们、向它们注入额外的行为或元数据标记**。这正对应了软件工程中经典的“面向切面编程（Aspect-Oriented Programming, AOP）”思想。
+
+:::warning 历史沿革与前置配置装饰器在 JavaScript/TypeScript 社区中有着极其漫长且坎坷的标准化历史。
+
+1. **实验性装饰器 (Stage 2)**：由于 Angular 等框架的迫切需求，TS 很早就通过一套“实验性规范”实现了装饰器，这也是目前市面上 99% 教程和旧版框架（如 TypeORM, NestJS）所基于的底层规范。
+2. **标准装饰器 (Stage 3)**：直到 TypeScript 5.0，才正式支持了最新的 ECMAScript 标准装饰器提案。两者的底层传参机制发生了巨变。
+
+本文为了配合当前主流工程生态，主要剖析**实验性装饰器**的原理。在你的 `tsconfig.json` 中，必须开启如下魔法开关才能使用它们：
+
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true /* 开启实验性装饰器 */,
+    "emitDecoratorMetadata": true /* 开启自动元数据注入支持 */
+  }
+}
+```
+
+:::
+
+## 一、装饰器的本质与“装饰器工厂”
+
+记住一句话：**所有的装饰器，其本质就是一个普通函数，只不过它是由 TypeScript 引擎在代码编译/加载阶段自动帮你调用的。**
+
+如果你想给装饰器传递参数来定制行为（就像 `@Log('warn')`），你需要使用**装饰器工厂 (Decorator Factory)** 模式：写一个外层函数接收用户的参数，内部再 `return` 一个真正的装饰器函数交给 TS 引擎。
+
+```typescript
+// 1. 这是一个装饰器工厂
+function LogFactory(logPrefix: string) {
+  // 2. 真正会被 TS 引擎调用的装饰器函数
+  return function (target: Function) {
+    console.log(`[${logPrefix}] 装饰器执行了！`);
+    // target 就是被装饰的目标（在这个例子中是类的构造函数）
+    console.log('被装饰的目标是：', target);
+  };
+}
+
+// 使用装饰器
+@LogFactory('DEBUG_SYSTEM')
+class UserService {
+  constructor() {
+    console.log('UserService 实例化');
+  }
+}
+
+// 终端输出顺序极其关键：
+// 1. 先输出 "[DEBUG_SYSTEM] 装饰器执行了！" (这是在类定义阶段执行的！)
+// 2. 如果你在别处 new UserService()，才会输出 "UserService 实例化"
+```
+
+## 二、四大天王：不同位置的装饰器
+
+装饰器可以被贴在四个不同的地方，TS 引擎传给装饰器函数的参数也会完全不同。
+
+### 2.1 类装饰器 (Class Decorators)
+
+- **贴在哪里**：类的 `class` 关键字正上方。
+- **参数**：只会收到一个参数 `constructor`（该类的构造函数本身）。
+- **核心玩法**：重写/劫持构造函数，混入（Mixin）新的属性或方法，改变类实例化时的默认行为。
+
+```typescript
+// 实战：给目标类强行挂载一个时间戳属性
+function WithTimestamp<T extends { new (...args: any[]): {} }>(constructor: T) {
+  // 返回一个匿名的新类，它继承了原先的构造函数！
+  return class extends constructor {
+    createdAt = new Date();
+  };
+}
+
+@WithTimestamp
+class Product {
+  constructor(public name: string) {}
+}
+
+const p = new Product('MacBook');
+// 因为是动态混入的，TS 的静态类型检查不知道这个属性，需要转型绕过检查
+console.log((p as any).createdAt);
+```
+
+### 2.2 方法装饰器 (Method Decorators)
+
+- **贴在哪里**：类内部方法定义的正上方。
+- **参数**：
+  1. `target`：对于静态方法来说是类的构造函数，对于实例方法来说是类的原型对象（`prototype`）。
+  2. `propertyKey`：方法的字符串名字。
+  3. `descriptor`：极其关键的**属性描述符（Property Descriptor）**，包含了 `value` (原本的函数体), `writable` 等配置。
+- **核心玩法**：无侵入式拦截方法执行，做 AOP 编程（如：自动 Try-Catch、执行耗时埋点、权限校验拦截）。
+
+```typescript
+// 实战：自动捕获方法抛出的异常，防止程序奔溃
+function SafeCatch(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  // 1. 保存原有方法的引用
+  const originalMethod = descriptor.value;
+
+  // 2. 暴力替换原有方法为一个新函数
+  descriptor.value = function (...args: any[]) {
+    try {
+      // 3. 在 Try 块中，重新把 this 和参数绑定回去，执行原函数
+      return originalMethod.apply(this, args);
+    } catch (error) {
+      console.error(`[系统告警] 方法 ${propertyKey} 发生崩溃！错误信息：`, error);
+      // 可以统一接入 Sentry 报警，或返回默认降级数据
+      return null;
+    }
+  };
+}
+
+class ApiService {
+  @SafeCatch
+  fetchData() {
+    throw new Error('网络严重超时，服务器无响应');
+  }
+}
+
+const api = new ApiService();
+api.fetchData(); // 报错会被优雅捕获，程序继续运行！
+```
+
+### 2.3 属性装饰器 (Property Decorators)
+
+- **贴在哪里**：类内部属性定义的正上方。
+- **参数**：只有 `target` 和 `propertyKey`（**没有 descriptor！** 这是由于 TS 历史设计遗留原因导致的限制）。
+- **核心玩法**：主要用于依赖注入标记，或者配合后续的 getter/setter 将普通属性转化为响应式属性（早期 Mobx 的 `@observable` 实现思路）。
+
+### 2.4 参数装饰器 (Parameter Decorators)
+
+- **贴在哪里**：方法签名中的参数旁边。
+- **参数**：`target`, `propertyKey` (所属方法的名称), `parameterIndex` (参数在列表中的索引数字)。
+- **核心玩法**：它甚至不能修改参数的值。它唯一的作用就是：记录某个方法的第 N 个参数被贴了特定的标签，提供给外层的系统调度。NestJS 中的 `@Body()`, `@Query()` 就是典型代表。
+
+## 三、神之领域：元数据反射 (Reflect Metadata)
+
+单纯依靠装饰器能做的事其实很受限。在现代重型框架中，装饰器绝大部分时间只扮演一个**“贴标签”**的角色，真正干重活的是框架底层的**“反射机制（Reflect Metadata）”**。
+
+在 JavaScript 中，数据除了自身的值，我们还可以给它附加一些“隐形的贴纸”（元数据）。TypeScript 官方推荐配合 `reflect-metadata` 这个独立的库来实现这一黑魔法。
+
+结合 `emitDecoratorMetadata: true` 配置，TS 编译器会在编译时，自动将你写的类的设计阶段的类型信息（比如某个属性的类型是 String 还是自定义的 Class），作为“隐形贴纸”贴到代码里。
+
+这构成了**控制反转 (IoC) 与 依赖注入 (DI)** 容器的基石：
+
+```typescript
+// 【伪代码演示】NestJS 依赖注入底层的核心简化思路
+import 'reflect-metadata';
+
+// 1. 定义一个单纯贴标签的装饰器
+function Injectable() {
+  return function (target: Function) {
+    // 啥实质逻辑都不做，只要这个类被贴了，TS 就会自动在 target 上挂载元数据
+  };
+}
+
+class DatabaseService {
+  query() {
+    console.log('查询数据库...');
+  }
+}
+
+@Injectable()
+class UserController {
+  // TS 编译时，探测到 @Injectable，且这里类型写了 DatabaseService。
+  // TS 会自动在 UserController 的构造函数上，注入一个隐藏数据：
+  // Reflect.defineMetadata("design:paramtypes", [DatabaseService], UserController);
+  constructor(private db: DatabaseService) {}
+
+  handleUser() {
+    this.db.query();
+  }
+}
+
+// 框架底层的 IoC 容器工厂（比如 NestJS 在启动时做的事）
+function ContainerFactory(targetClass: any) {
+  // 1. 读取隐藏贴纸，发现 UserController 依赖 [DatabaseService]
+  const dependencies = Reflect.getMetadata('design:paramtypes', targetClass);
+
+  // 2. 框架自动去帮我们 new 这些依赖
+  const injections = dependencies.map((Dep: any) => new Dep());
+
+  // 3. 把实例化好的依赖塞回目标类的构造函数里，完成全自动装配！
+  return new targetClass(...injections);
+}
+
+// 我们不再需要手动 new UserController(new DatabaseService()) 了！
+const controller = ContainerFactory(UserController);
+controller.handleUser();
+```
+
+## 总结
+
+TypeScript 装饰器是一套极为硬核、偏向底层架构设计的语言特性。在普通的 React/Vue 业务页面组件开发中，你可能几年也写不了一个自定义装饰器；但如果你有志于编写像 ORM 实体映射、通用的路由鉴权框架、或者是向 Node.js 企业级后端进军，那么深入理解装饰器的 AOP 拦截思想与 `Reflect` 元数据反射机制，将是你开启架构师之路的必修课。

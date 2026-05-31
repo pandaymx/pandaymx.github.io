@@ -1,0 +1,384 @@
+---
+title: HTML5 语义化
+description: 深入理解 HTML5 语义化标签的优势、正确使用方式及其对 SEO 和无障碍访问（A11y）的重要影响。
+sidebar_position: 10
+---
+
+# HTML5 语义化
+
+引入段落：在网页开发的早期，开发者经常使用大量的 `<div>` 和 `<span>` 来构建页面布局。虽然这种方式在视觉上能够实现所有设计，但它缺乏**语义**。引入并正确使用 HTML5 语义化标签，不仅能让代码结构更加清晰，还能极大地提升网站的搜索引擎优化（SEO）效果和无障碍访问（Accessibility, A11y）体验。理解并应用语义化，是现代前端开发的基本功。
+
+## 一、什么是语义化标签
+
+语义化标签（Semantic HTML）是指那些具有明确意义的 HTML 元素，它们不仅告诉浏览器和开发者这部分内容的类型，也告诉搜索引擎和辅助技术（如屏幕阅读器）这里的内容是什么。
+
+### 1.1 语义化 vs 非语义化
+
+- **非语义化标签**：如 `<div>` 和 `<span>`，它们只表示“这里有一个区块”或“这里有一段文本”，没有任何关于内容的线索。
+- **语义化标签**：如 `<article>`、`<nav>`、`<header>`，它们明确表示“这里是一篇文章”、“这里是导航链接”、“这里是页眉”。
+
+我们可以通过以下对比来直观感受两者的差异：
+
+```html
+<!-- 非语义化（div 堆砌） -->
+<div class="header">
+  <div class="logo">My Site</div>
+  <div class="nav">
+    <a href="/">Home</a>
+  </div>
+</div>
+
+<!-- 语义化 -->
+<header>
+  <div class="logo">My Site</div>
+  <nav>
+    <a href="/">Home</a>
+  </nav>
+</header>
+```
+
+### 1.2 语义化对 SEO 的影响
+
+搜索引擎优化（Search Engine Optimization, SEO）的很大一部分依赖于爬虫（Crawler）对页面内容的解析。
+
+- **权重分配**：搜索引擎会认为 `<h1>` 中的内容比 `<p>` 中的内容更重要。
+- **内容识别**：使用 `<article>` 可以明确告诉搜索引擎“这是一篇独立的内容”，而 `<nav>` 则表明“这是导航链接，不要当作核心内容”。
+
+### 1.3 语义化对可访问性 (A11y) 的影响
+
+可访问性（Accessibility, 缩写 A11y，因为 A 和 y 之间有 11 个字母）旨在让残障人士也能顺畅使用网站。
+
+- **屏幕阅读器（Screen Readers）**：视障用户依赖屏幕阅读器浏览网页。语义化标签能被阅读器识别，并提供“跳转到主要内容（main）”、“列出页面所有地标（landmarks）”等高级功能。
+
+## 二、常用语义化标签详解
+
+HTML5 引入了一系列专门用于构建页面结构的语义化标签，下面我们将逐一拆解。
+
+### 2.1 `<header>`：页眉
+
+用于表示页面或一个区块的介绍性内容，通常包含网站的 Logo、主导航、搜索框或作者信息。
+
+```html
+<header>
+  <h1>我的个人博客</h1>
+  <p>分享前端技术的点点滴滴</p>
+</header>
+```
+
+:::warning提示一个页面中可以有多个 `<header>`。比如整个页面有一个主页眉，而每篇文章 `<article>` 内部也可以有自己的页眉。:::
+
+### 2.2 `<nav>`：导航链接区域
+
+用于包裹页面中的主要导航链接（Navigation）。
+
+```html
+<nav>
+  <ul>
+    <li><a href="/">首页</a></li>
+    <li><a href="/articles">文章</a></li>
+    <li><a href="/about">关于</a></li>
+  </ul>
+</nav>
+```
+
+:::tip提示并不是所有的链接组都需要 `<nav>`，通常只用于主导航菜单、侧边栏导航或页脚的快速链接。:::
+
+### 2.3 `<main>`：文档的主体内容
+
+表示文档的主要内容（Main content）。
+
+- **唯一性要求**：一个页面中**只能有一个可见的** `<main>` 元素。
+- **内容限制**：它不应包含在整个网站中重复出现的内容（如侧边栏、导航栏、页脚）。
+
+### 2.4 `<article>`：独立的自成一体的内容块
+
+表示文档中独立的、自成一体的内容块。它的特点是：**即使脱离当前页面上下文，它仍然具有完整的意义**。常用于博客文章、新闻报道、论坛帖子等。
+
+```html
+<article>
+  <header>
+    <h2>理解 CSS Grid</h2>
+    <p>作者：张三</p>
+  </header>
+  <p>CSS Grid 是一个强大的二维布局系统...</p>
+</article>
+```
+
+### 2.5 `<section>`：文档中的章节/段落
+
+表示文档中的一个独立章节（Section）。通常它包含一个标题（`h1`-`h6`），用于将相关内容组合在一起。
+
+:::tip 何时使用 section？如果内容仅仅是为了应用 CSS 样式或执行 JavaScript 脚本进行包裹，请使用 `<div>`。如果内容是一个逻辑上的分组且有明确的主题，使用 `<section>`。:::
+
+### 2.6 `<aside>`：与周围内容间接相关的侧边栏
+
+表示与周围内容间接相关的部分，通常表现为侧边栏（Aside）。例如：
+
+- 在 `<article>` 内部：用作文章的术语解释、相关链接。
+- 在 `<main>` 外部：用作全站的侧边栏广告、分类目录。
+
+### 2.7 `<footer>`：页脚
+
+表示页面或区块的页脚（Footer），通常包含版权信息、相关链接、作者联系方式等。
+
+### 2.8 `<figure>` / `<figcaption>`：图表及其标题
+
+用于包裹图表、代码块、插图等独立内容。`<figcaption>` 用作这些内容的说明/标题。
+
+```html
+<figure>
+  <img src="architecture.png" alt="系统架构图" />
+  <figcaption>图 1. 当前版本的高可用系统架构</figcaption>
+</figure>
+```
+
+### 2.9 `<time>`：标记日期和时间
+
+用于表示 24 小时制的时间或公历日期。配合 `datetime` 属性，可以让机器（如搜索引擎、日历应用）以统一格式读取时间。
+
+```html
+<p>我们的会议在 <time datetime="2023-11-15T14:00">11月15日下午两点</time> 举行。</p>
+```
+
+## 三、标签嵌套规则
+
+编写 HTML 时，必须遵循元素的嵌套规则，以确保浏览器能正确解析和渲染 DOM 树。
+
+### 3.1 块级元素 vs 行内元素
+
+虽然 HTML5 提出了更复杂的“内容模型”（Content Models，如 Flow content, Phrasing content），但传统的“块级”和“行内”概念依然非常实用：
+
+- **块级元素（Block-level elements）**：独占一行，通常用于构建页面结构（如 `div`, `p`, `h1`-`h6`, `section`, `article`, `ul`, `li`）。块级元素通常可以包含其他块级或行内元素。
+- **行内元素（Inline-level elements）**：不会独占一行，宽度由内容决定（如 `span`, `a`, `strong`, `em`, `img`）。行内元素通常只能包含文本或其他行内元素。
+
+### 3.2 嵌套示例对比
+
+**错误嵌套示例：**
+
+```html
+<!-- 错误 1：在行内元素中嵌套块级元素 -->
+<span>
+  <div>这是一个错误的嵌套</div>
+</span>
+
+<!-- 错误 2：<p> 标签内部不能嵌套块级元素（包括 div、ul、甚至其他 p） -->
+<p>
+  这里是一段介绍：
+  <ul>
+    <li>要点 1</li>
+  </ul>
+</p>
+<!-- 浏览器遇到 p 内部的 ul 时，会自动闭合前面的 p，导致结构混乱 -->
+```
+
+**正确嵌套示例：**
+
+```html
+<!-- 正确：将列表独立出来，或者用 div 包裹整个区块 -->
+<section>
+  <p>这里是一段介绍：</p>
+  <ul>
+    <li>要点 1</li>
+  </ul>
+</section>
+
+<!-- 特例：HTML5 允许 a 标签（行内）包裹块级元素，只要 a 标签内部不包含其他交互元素（如按钮、其他链接） -->
+<a href="/post/123" class="card">
+  <article>
+    <h3>文章标题</h3>
+    <p>摘要内容...</p>
+  </article>
+</a>
+```
+
+## 四、实战：用语义化标签重构页面
+
+为了更好地理解语义化标签的组合应用，我们来看一个典型的“Div 堆砌”（Divitis）页面，并逐步将其改写为语义化结构。
+
+### 4.1 旧的 Div 堆砌页面
+
+这是一个典型的博客页面结构：
+
+```html
+<div class="page-wrapper">
+  <div class="header">
+    <div class="logo">我的技术博客</div>
+    <div class="nav">
+      <a href="/">首页</a>
+      <a href="/about">关于</a>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="main-content">
+      <div class="post">
+        <div class="post-title">HTML5 语义化实战</div>
+        <div class="post-meta">发布于 2023-10-01</div>
+        <div class="post-body">这里是正文内容...</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="widget">
+        <div class="widget-title">最新文章</div>
+        <div class="widget-content">
+          <ul>
+            <li>文章 1</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">版权所有 &copy; 2023</div>
+</div>
+```
+
+### 4.2 逐步改写为语义化结构
+
+让我们用 HTML5 的结构标签来重构上述代码：
+
+```html
+<!-- 可以保留一个 div 作为最外层容器（如果样式需要），或者直接挂在 body 上 -->
+<body>
+  <!-- 1. 顶部页眉与导航 -->
+  <header>
+    <!-- logo 通常用标题表示，或者使用 img -->
+    <h1>我的技术博客</h1>
+    <nav>
+      <ul>
+        <li><a href="/">首页</a></li>
+        <li><a href="/about">关于</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- 页面主体容器 -->
+  <div class="content-wrapper">
+    <!-- 2. 主要内容区，使用 main -->
+    <main>
+      <!-- 3. 独立文章，使用 article -->
+      <article>
+        <!-- 文章自己的页眉 -->
+        <header>
+          <h2>HTML5 语义化实战</h2>
+          <p>发布于 <time datetime="2023-10-01">2023-10-01</time></p>
+        </header>
+        <!-- 正文保持用段落或 div，没有专门的 body 标签 -->
+        <div class="post-body">
+          <p>这里是正文内容...</p>
+        </div>
+      </article>
+    </main>
+
+    <!-- 4. 侧边栏，使用 aside -->
+    <aside>
+      <!-- 5. 侧边栏中的独立区块，使用 section -->
+      <section class="widget">
+        <h3>最新文章</h3>
+        <ul>
+          <li><a href="#">文章 1</a></li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <!-- 6. 页脚 -->
+  <footer>
+    <p>版权所有 &copy; 2023</p>
+  </footer>
+</body>
+```
+
+### 4.3 浏览器开发者工具验证结构
+
+重构完成后，我们可以使用浏览器验证结果。
+
+1. **DOM 树结构**：打开 Chrome 开发者工具的 `Elements` 面板。你会发现，去掉了大量的 `<div class="...">` 干扰后，DOM 树变得异常简洁易读。
+2. **辅助功能大纲 (Accessibility Tree)**：
+   - 在 Chrome 开发者工具中，切换到 `Accessibility` 面板。
+   - 查看文档的“地标”（Landmarks）。
+   - 你会看到浏览器清晰地识别出了 `banner` (对应 header), `navigation` (对应 nav), `main`, `complementary` (对应 aside) 和 `contentinfo` (对应 footer)。这就是屏幕阅读器看到的结构！
+
+为了更直观地理解，我们可以用下面的结构图来表示现代 HTML5 页面的典型布局：
+
+```mermaid
+graph TD
+    body[body] --> header[header <br/> (Banner)]
+    header --> h1[h1 Logo]
+    header --> nav[nav <br/> (Navigation)]
+
+    body --> wrapper[div.content-wrapper]
+
+    wrapper --> main[main <br/> (Main Content)]
+    main --> article[article <br/> (Independent Content)]
+    article --> art_header[header]
+    article --> art_content[div / p]
+
+    wrapper --> aside[aside <br/> (Complementary)]
+    aside --> section[section Widget]
+
+    body --> footer[footer <br/> (Content Info)]
+```
+
+## 五、可访问性 (A11y) 补充
+
+虽然使用了 HTML5 语义化标签已经能解决大部分可访问性问题，但在构建复杂的现代 Web 应用程序（如带有自定义下拉菜单、模态弹窗、选项卡式界面的 SPA）时，仅靠原生标签是不够的。这时，我们需要借助 WAI-ARIA（Web Accessibility Initiative - Accessible Rich Internet Applications）。
+
+### 5.1 ARIA 属性的基本使用
+
+ARIA 属性用于补充 HTML 语义，帮助辅助技术理解复杂的 UI 状态。它们分为三大类：
+
+1. **Role（角色）**：定义元素的角色。
+   - 示例：如果因为某种原因，你不得不用 `<div>` 来实现一个按钮，你应该加上 `role="button"`。
+   - 示例：对于模态弹窗，使用 `role="dialog"`。
+2. **State（状态）**：表示元素当前的状态，状态可能会随用户交互而改变。
+   - 示例：`aria-expanded="true/false"` 表示折叠面板当前是展开还是收起。
+   - 示例：`aria-checked="true/false"` 用于自定义的复选框。
+3. **Property（属性）**：表示元素的固有属性或与其他元素的关系。
+   - 示例：`aria-label` 为元素提供一个不可见的文本标签（适用于只有图标没有文字的按钮）。
+   - 示例：`aria-hidden="true"` 告诉屏幕阅读器完全忽略这个元素（适用于纯装饰性的图标或被弹窗遮挡的背景内容）。
+
+```html
+<!-- 带有 ARIA 的自定义按钮示例 -->
+<div
+  class="custom-button"
+  role="button"
+  tabindex="0"
+  aria-label="关闭弹窗"
+  aria-expanded="true"
+  onclick="closeModal()"
+  onkeypress="handleKeyPress(event)"
+>
+  <!-- 纯装饰性图标，隐藏 -->
+  <svg aria-hidden="true" ...></svg>
+</div>
+```
+
+:::warning 重要的 ARIA 规则 **ARIA 永远不能改变元素的原生行为。** 例如，给 `<div>` 加上 `role="button"`，它依然不能像真实的 `<button>` 那样通过键盘的 Enter 键或空格键触发，也不能通过 Tab 键聚焦（除非加上 `tabindex="0"`）。 **首要原则：尽可能使用原生的语义化 HTML 元素，只有在原生元素无法满足需求时，才使用 ARIA 补充。** :::
+
+### 5.2 屏幕阅读器测试建议
+
+为了确保你的网页不仅仅是在代码层面上“看起来”语义化，更要在实际使用中对所有人友好，建议进行以下基础测试：
+
+1. **键盘导航测试（无鼠标测试）**：
+   - 拔掉或不使用鼠标，仅使用键盘的 `Tab` 键在页面内移动。
+   - 确认所有的链接、按钮、表单输入框都能被聚焦，且**焦点轮廓（Focus Outline）可见**。
+   - 确认可以使用 `Enter` 或空格键触发按钮。
+2. **屏幕阅读器测试**：
+   - 如果你是 macOS 用户，可以打开系统自带的 **VoiceOver**（`Command + F5`）。
+   - 如果是 Windows 用户，可以下载免费的 **NVDA**。
+   - 闭上眼睛，尝试听着屏幕阅读器的播报，看是否能理解页面的结构，是否能顺利完成核心交互流程（如登录、提交表单）。
+3. **自动化测试工具**：
+   - 使用 Chrome 插件如 **Lighthouse** 或 **axe DevTools** 运行自动化可访问性审查。
+
+## 总结
+
+HTML5 语义化是构建高质量、专业 Web 应用的基石。通过使用正确的标签（如 `<main>`、`<article>`、`<time>` 等）以及遵循合理的嵌套规则，我们不仅能编写出人类可读性极高、易于维护的代码，更重要的是，我们让内容对机器（搜索引擎爬虫）和辅助技术（屏幕阅读器）变得透明易懂。
+
+在后续的开发中，请养成“优先思考内容结构，其次再考虑 CSS 样式”的思维习惯，并在需要时合理补充 ARIA 属性。
+
+延伸阅读：
+
+- [MDN Web Docs: HTML elements reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Element)
+- [W3C: ARIA in HTML](https://www.w3.org/TR/html-aria/)

@@ -1,0 +1,178 @@
+---
+title: React Hooks 深入
+description: 深度剖析 React Hooks 的核心运行机制、闭包陷阱的根源、生命周期演变，以及性能优化 Hooks 的使用误区。
+sidebar_position: 10
+---
+
+# React Hooks 深入
+
+引入段落：自 React 16.8 抛出一颗名为 **Hooks** 的核弹之后，函数组件（Function Components）彻底摆脱了“无状态”、“只能做纯 UI 渲染”的卑微地位。Hooks 以前所未有的优雅方式解决了类组件（Class Components）中逻辑复用困难（如 HOC 嵌套地狱）、生命周期中业务逻辑割裂以及令人抓狂的 `this` 指向问题。然而，灵活性总是伴随着极高的心智负担。Hooks 看似简单的 API 背后，隐藏着由“闭包（Closure）”和“依赖数组（Dependency Array）”构成的重重陷阱。不深入理解它的工作机制，写出的代码将充满无限循环和“总是拿到旧数据”的灵异 Bug。
+
+## 一、Hooks 运行规则的两大铁律
+
+任何学习 Hooks 的开发者，第一课都必须死记硬背官方的这两条严格规则，并始终依靠 `eslint-plugin-react-hooks` 插件来保驾护航。
+
+### 1.1 只在最顶层调用 Hooks
+
+**绝对不要在循环体（`for`）、条件判断（`if`）或嵌套的回调函数中调用 Hooks。**
+
+```jsx
+// ❌ 灾难示范：在 if 语句中调用 useState
+function UserProfile({ isLoggedIn }) {
+  if (isLoggedIn) {
+    const [user, setUser] = useState(null); // 这将摧毁 React 内部的数据结构！
+  }
+  const [theme, setTheme] = useState('dark');
+}
+```
+
+**为什么有这条匪夷所思的规定？** 因为 React 内部并没有通过变量名（如 `user` 或 `theme`）来记录状态！在 React 源码的实现中，一个组件的所有 Hooks 是以一个**链表（Linked List）**的形式依次串联起来的。React 仅仅依赖于**每一次渲染时 Hooks 被调用的绝对顺序**，来将旧状态树中的值正确地分配回变量。如果你的 `useState` 包裹在一个 `if` 中，某次重新渲染时这个 `if` 进不去了，这个 Hook 被跳过了。那么后续所有的 Hook（如上面的 `theme`）去拿状态时，指针就会发生严重错位，导致张冠李戴，整个组件直接崩溃。
+
+### 1.2 只在 React 函数组件或自定义 Hook 中调用
+
+Hooks 不是普通的 JavaScript 工具库，它们需要依附于 React 核心调度器（Fiber 架构）的运行上下文。在普通的 JS 原生函数、或者非 React 体系的代码中强行调用，会得到 `Invalid hook call` 错误。
+
+## 二、`useState` 进阶：批处理与闭包的暗礁
+
+`useState` 表面上只是替代了 `this.setState`，但它的行为在异步场景下大相径庭。
+
+### 2.1 状态更新的自动批处理 (Automatic Batching)
+
+在老版本的 React（17 及以前）中，如果你在一个 Promise 或 `setTimeout` 的回调中连续多次调用 `setState`，React 会极其愚蠢地触发多次完整的重渲染。 **在 React 18 之后**，官方引入了自动批处理。无论你的 `setState` 写在哪里（原生事件、Promise 链、setTimeout），只要它们处于同一个微任务/宏任务执行栈中，React 都会将它们合并起来，只触发一次最终的渲染，这极大地提升了应用的性能。
+
+### 2.2 “过时闭包”引发的状态不一致陷阱
+
+这是 Hooks 开发中最令人头疼的问题。如果你发现状态更新似乎“落后了一步”，或者定时器里打印出来的值永远是最初始的值，你就是掉进了闭包的陷阱。
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  const handleDelayedClick = () => {
+    setTimeout(() => {
+      // 假设我们在这 2 秒内疯狂点击了按钮 5 次
+      // 结果 2 秒后，count 并没变成 5，只变成了 1！
+      // 因为这个回调函数（闭包）在被创建的瞬间，就把当次渲染的 count (值为 0) 给永远冻结在记忆里了。
+      setCount(count + 1);
+    }, 2000);
+  };
+}
+```
+
+**终极解法：使用函数式更新（Functional Updater）**。不要把旧的值传进去计算，而是传一个函数进去。React 保证在真正执行状态更新时，这个函数能接收到状态树中最精准的、实时的上一代状态（`prev`）。
+
+```jsx
+const handleSafeClick = () => {
+  setTimeout(() => {
+    setCount((prevCount) => prevCount + 1); // 完美解决过时闭包问题
+  }, 2000);
+};
+```
+
+### 2.3 性能优化点：惰性初始化 (Lazy Init)
+
+当你赋予 `useState` 初始值时，如果这个计算过程非常沉重（比如解析了 1 万行 JSON），或者需要读取缓慢的 `localStorage`，直接传值会导致**每次组件重渲染时，这个耗时计算都会毫无意义地重复执行一遍**。
+
+```jsx
+// ❌ 每次渲染，都会执行耗时的读取操作，哪怕读取结果最后被丢弃
+const [token, setToken] = useState(localStorage.getItem('user_token'));
+
+// ✅ 正确姿势：传入一个“工厂函数”。React 保证这个函数只在组件首次挂载（Mount）时执行一次
+const [token, setToken] = useState(() => localStorage.getItem('user_token'));
+```
+
+## 三、`useEffect` 深度解析：不要用生命周期的视角
+
+React 官方布道师 Dan Abramov 曾写过一篇万字长文解释 `useEffect`。它的核心思想是：**停止用 `componentDidMount` 和 `componentDidUpdate` 这种时间维度的生命周期去思考 Effect，你要用“状态同步（Synchronization）”的视角来理解它。**
+
+Effect 的目的是让组件内部的 React 状态与外部世界（DOM、网络请求、事件监听器、第三方图表库）保持数据同步。
+
+### 3.1 依赖数组 (Dependency Array) 的铁律
+
+依赖数组告诉 React：“只要这几个变量的值，相较于上一次渲染没有发生任何改变（使用 `Object.is` 浅比较），这次渲染完成后就请跳过执行这段副作用逻辑。”
+
+- **省略不写 `[]`**：每次渲染后都会执行。通常极少出现，容易导致无限死循环请求。
+- **写空数组 `[]`**：只在组件首次挂载时执行。这也是模拟 `componentDidMount` 的标准做法。
+- **写具体的变量 `[id, name]`**：只有当 `id` 或 `name` 改变时才执行。
+
+:::warning 永远对 Linter 诚实如果你在 effect 的回调体内部，使用了一个组件作用域内的变量（不论是 state 还是 props 甚至是普通函数），Linter 会强烈要求你将它加入依赖数组。如果你为了“阻止”代码的无限循环执行而故意漏填依赖项，这就是在给未来埋下状态不同步的超级地雷。遇到循环问题，你应该去修复“为什么这个变量一直在变化”，比如用 `useCallback` 缓存外部函数，而不是强行去欺骗 Linter。:::
+
+### 3.2 完美的清理函数 (Cleanup Function)
+
+如果副作用里涉及了事件监听器的绑定或定时器，如果不加以清理，必定导致严重的内存泄漏。`useEffect` 可以 `return` 一个函数作为清理工。
+
+它的执行时机极其特殊：不仅在组件最终被销毁（Unmount）时执行，更重要的是，**它会在下一次副作用执行之前，被抢先执行，用于清空上一次遗留的痕迹！**
+
+```jsx
+useEffect(() => {
+  // 1. 每次 query 改变，发起新的搜索请求
+  const controller = new AbortController();
+
+  fetch(`/api/search?q=${query}`, { signal: controller.signal })
+    .then((res) => res.json())
+    .then(setData);
+
+  // 2. 清理函数：如果用户手速极快，输入了 "a" 紧接着输入 "ab"
+  // 在发起关于 "ab" 的请求前，这个清理函数会先触发，果断终止 (abort) 上面那个关于 "a" 且还没返回的慢请求！
+  // 彻底消除了竞态条件 (Race Condition) 导致的错乱！
+  return () => {
+    controller.abort();
+  };
+}, [query]);
+```
+
+## 四、不渲染的数据保险箱：`useRef`
+
+`useRef` 是一个经常被低估的强大武器。它返回一个带 `.current` 属性的可变容器。
+
+它有两个截然不同的应用场景：
+
+1. **获取 DOM 元素的实体引用**：传递给 `<input ref={myInputRef} />` 后，可以通过 `myInputRef.current.focus()` 来直接操作 DOM。
+2. **跨渲染周期的安全存储**：与 `useState` 不同，**修改 `ref.current` 的值，绝对不会触发组件的重新渲染！** 这使得它成为了绝佳的“实例变量”仓库。非常适合存放：定时器的 ID、记录上一帧的某种中间状态、或者是防止某些逻辑被重复触发的标记位（Flag）。
+
+```jsx
+// 使用 ref 保存定时器 ID，这样在卸载组件时可以安全清除，又不会引发不必要的视图刷新
+const timerRef = useRef(null);
+
+const startTimer = () => {
+  timerRef.current = setInterval(() => { ... }, 1000);
+}
+```
+
+## 五、性能双刃剑：`useMemo` 与 `useCallback`
+
+在 React 的函数组件体系中，只要父组件发生了重新渲染，其内部调用的所有子组件都会被迫跟着走一遍渲染流程。哪怕你用 `React.memo` 包裹了子组件，如果父组件传递下去的 Prop 是一个引用类型（对象或函数），由于每次父组件渲染都会生成全新内存地址的函数，浅比较必然失败，子组件依旧会徒劳地重新渲染。
+
+为了阻断这条无效更新链，引入了两个缓存神药。
+
+### 5.1 `useCallback`：保护函数引用
+
+它用来缓存一个**函数体本身**。只有当其依赖数组里的值发生变化时，它才会返回一个指向新内存地址的函数，否则永远返回老函数的引用。
+
+```jsx
+// 这个点击处理函数被传给了极度消耗性能的大型图表组件
+// 使用 useCallback 锁定其引用，阻止大型图表的无意义重绘
+const handleChartClick = useCallback(
+  (data) => {
+    submitAnalytics(userId, data);
+  },
+  [userId],
+); // 只有当切换了 userId 时，才允许重新生成函数
+```
+
+### 5.2 `useMemo`：保护计算结果
+
+它用来缓存一个**高开销的计算结果值**。它可以是一个复杂的对象、一个几万条数据的过滤后数组，甚至是返回一段 JSX 结构。
+
+```jsx
+const heavySortedList = useMemo(() => {
+  // 假设这是一个耗时极长的多字段排序与过滤算法
+  return rawList.filter((item) => item.active).sort((a, b) => b.score - a.score);
+}, [rawList]); // 除非原始列表发生增删改，否则绝对不重新进行运算
+```
+
+:::warning反模式：别把它们当膏药贴新手最常见的反模式就是“大锅乱炖”，把组件里的每个普通函数都包上 `useCallback`，每个简单计算都包上 `useMemo`。这大错特错！这两个 Hook 本身也有不可忽视的性能开销：它们需要在内存中维护旧值的闭包，并在每次渲染时花时间去循环对比依赖数组里的每一项。 **黄金原则**：只有当你要把这个值作为 Props 传给一个明确使用了 `React.memo` 优化的高级子组件，或者这个计算确实肉眼可见地拖慢了渲染速度时，才应该动用它们。:::
+
+## 总结
+
+React Hooks 的哲学是一场从“面向对象与生命周期”向“数据流响应式与副作用管理”的伟大迁徙。它要求开发者具备极其严谨的闭包意识，并深刻理解单向数据流的每一帧变化。当你不再为了通过 Linter 的检查而随意加减依赖项，当你能本能地运用自定义 Hooks 将那些与 UI 剥离的核心业务逻辑（如表单校验库、网络请求轮询）抽离得干干净净时，你就真正掌握了现代 React 开发的真谛。

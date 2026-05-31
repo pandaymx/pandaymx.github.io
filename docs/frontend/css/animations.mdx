@@ -1,0 +1,179 @@
+---
+title: CSS 动画与过渡
+description: 全面掌握 CSS 过渡 (Transitions)、关键帧动画 (Keyframes) 及 3D 变形 (Transform)，并学习如何优化动画性能以达到 60fps。
+sidebar_position: 40
+---
+
+# CSS 动画与过渡
+
+引入段落：在现代 Web 界面设计中，动画早已不再是花里胡哨的视觉点缀。克制、流畅且恰到好处的动画和微交互（Microinteractions），能够极大地改善用户体验。它们可以在页面状态切换时提供上下文连贯性（如弹窗平滑滑出），在耗时操作时缓解焦虑（优雅的 Loading 效果），或者提供即时的视觉反馈（按钮按下的凹陷感）。在过去，复杂的动画需要借助 Flash 或重度的 JavaScript 库（如 jQuery `animate()`）实现。而今天，CSS 提供了一套原生、硬件加速且极其强大的动画引擎，主要由两大部分构成：**过渡（Transition）**与**关键帧动画（Animation）**。
+
+## 一、过渡 (Transition)：状态间的平滑桥梁
+
+`transition` 允许我们将 CSS 属性值在一个确定的时间段内平滑地过渡到另一个值，而不是生硬地瞬间突变。它通常在元素的状态发生改变时被触发（最常见的是鼠标悬停 `:hover`，或者通过 JavaScript 动态增加/移除一个 Class 类名）。
+
+### 1.1 核心属性解析
+
+过渡效果由四个核心属性控制：
+
+1. **`transition-property`**：指定你要让哪个 CSS 属性执行过渡动画（如 `background-color`, `transform`）。如果你写 `all`，代表监听所有发生改变的可动画属性（出于性能考虑，强烈建议只明确指定需要动画的属性）。
+2. **`transition-duration`**：过渡持续的时间。单位可以是秒（如 `0.3s`）或毫秒（如 `300ms`）。
+3. **`transition-timing-function`**：缓动函数（速度曲线）。决定了动画在这段时间内是匀速、加速还是减速进行的。这是让动画看起来“自然”的灵魂所在。
+   - `linear`：匀速运动，像机械移动，通常比较生硬。
+   - `ease` (默认)：慢启动 - 快中间 - 慢结束（非常自然）。
+   - `ease-in`：慢启动，然后逐渐加速（适用于元素离开视口，如丢掉垃圾）。
+   - `ease-out`：快速启动，然后在最后减速（适用于元素进入视口，让人感觉平稳落地）。
+   - `cubic-bezier(x1, y1, x2, y2)`：高度自定义的贝塞尔曲线，可以实现弹簧、回弹等极具张力的效果。
+4. **`transition-delay`**：延迟多久才开始执行过渡。
+
+### 1.2 简写语法与多重属性
+
+在实际开发中，我们几乎总是使用 `transition` 的简写形式。 **语法顺序**：`property duration timing-function delay`
+
+```css
+.btn {
+  background-color: #3498db;
+  color: white;
+  transform: translateY(0);
+
+  /*
+     精细控制：背景色 0.3秒减速变化；
+     位移 0.4秒弹性变化，且延迟 0.1秒开始
+  */
+  transition:
+    background-color 0.3s ease-out,
+    transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s;
+}
+
+/* 状态改变触发源 */
+.btn:hover {
+  background-color: #2980b9;
+  transform: translateY(-5px); /* 悬停时向上浮起 */
+}
+```
+
+## 二、变形 (Transform)：改变空间维度
+
+`transform` 是现代 CSS 动画的基石。它允许我们修改元素的空间坐标和形态（平移、缩放、旋转、倾斜）。最关键的是：**`transform` 变换不会脱离文档流，它仅仅是改变了元素的视觉渲染位置，绝对不会影响或推挤周围的其他元素！** 这使得它在做动画时性能极佳。
+
+### 2.1 常用的 2D 变换
+
+- **平移 `translate(x, y)`**：常用于做滑入滑出效果，或者配合绝对定位做居中（`transform: translate(-50%, -50%)`）。
+- **缩放 `scale(x, y)`**：如 `scale(1.2)` 表示将元素放大 1.2 倍。
+- **旋转 `rotate(angle)`**：如 `rotate(45deg)` 表示顺时针旋转 45 度。
+- **倾斜 `skew(x-angle, y-angle)`**：产生平行四边形的拉伸效果。
+
+:::tip Transform Origin (变换原点) 默认情况下，所有变换都是围绕元素的**正中心点**进行的。你可以通过 `transform-origin` 改变这个基点。例如：`transform-origin: top left;` 会让元素像一扇门一样围绕左上角的门轴进行旋转。:::
+
+### 2.2 开启 3D 透视
+
+CSS 同样支持 3D 空间的翻转效果（如酷炫的卡片正反面翻转）。要产生真实的近大远小的透视感，必须在父元素上“架设一台摄像机”。
+
+```css
+.card-container {
+  /* 摄像机距离屏幕的视距，数值越小，透视畸变越强烈，3D效果越夸张 */
+  perspective: 1000px;
+}
+
+.card {
+  /* 告诉浏览器子元素将处于真实的 3D 空间中，而不是被拍扁到 2D 平面上 */
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+
+.card:hover {
+  /* 围绕 Y 轴（垂直中心轴）翻转 180 度 */
+  transform: rotateY(180deg);
+}
+```
+
+## 三、关键帧动画 (Keyframes)：完全自主掌控
+
+`transition` 虽然好用，但它有两个致命弱点：
+
+1. 只能定义起点和终点（A 到 B）两个状态，无法控制中间过程。
+2. 必须依靠外部干预（如 hover 或 JS 触发）才能启动，无法网页一加载就自动无限播放。
+
+遇到这些需求，就需要召唤 CSS 动画界的大佬：`@keyframes` 和 `animation` 属性。
+
+### 3.1 定义生命周期状态 `@keyframes`
+
+你可以用百分比或关键字（`from` / `to`）定义动画在特定时间节点应该处于什么状态。
+
+```css
+/* 定义一个名为 heartbeat 的心跳动画 */
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.3);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.3);
+  }
+  70% {
+    transform: scale(1);
+  }
+  /* 70% 到 100% 保持不动，制造心跳间隙 */
+}
+```
+
+### 3.2 调用动画：`animation` 属性群
+
+定义好了剧本（`@keyframes`），现在要在具体的演员（元素）上播放它。
+
+- **`animation-name`**：绑定对应的 `@keyframes` 名字。
+- **`animation-duration`**：跑完一轮剧本需要多少时间（如 `2s`）。
+- **`animation-iteration-count`**：循环播放的次数，`infinite` 表示无限循环。
+- **`animation-direction`**：播放方向。如果设为 `alternate`，动画将交替正向反向播放（0->100->0->100），这在做钟摆或呼吸灯效果时能避免动画在 100% 突然跳回 0% 的生硬突变。
+- **`animation-fill-mode`**：定义动画在播放前（delay 期间）和播放后（完成最后一次循环后）的状态。设为 `forwards` 会让元素在动画结束后停留在最后一帧的状态，而不是瞬间重置为最初的 CSS 样式。
+
+**简写应用示例**：
+
+```css
+.heart-icon {
+  /* 名字 时长 匀速 延迟 无限循环 交替播放 */
+  animation: heartbeat 1.5s ease-in-out 0s infinite;
+}
+```
+
+## 四、黄金铁律：如何打造 60fps 的丝滑动画
+
+如果在移动端网页中发现你的动画掉帧、卡顿，往往是因为你触碰了性能禁忌。
+
+浏览器渲染一个帧大致需要经过三个核心步骤：**布局重排（Layout/Reflow） -> 绘制（Paint/Repaint） -> 合成（Composite）**。
+
+### 4.1 禁忌：对触发布局的属性做动画
+
+如果你尝试对 `width`, `height`, `margin`, `padding`, `top`, `left` 甚至 `font-size` 属性进行动画过渡，浏览器每一帧都必须重新计算页面中**所有**受影响元素的位置和大小！这会榨干 CPU，必然导致严重卡顿。
+
+### 4.2 正解：只对 GPU 加速（Compositor-only）属性做动画
+
+为了达到电竞级的 60fps（每帧 16ms 渲染时间），你的动画必须跳过 Layout 和 Paint 阶段，直接在 Composite 阶段交由 GPU（图形处理器）完成层合成。
+
+目前安全可靠的、能开启 GPU 硬件加速的属性只有两个：
+
+1. **`transform`** （无论平移、缩放、旋转）
+2. **`opacity`** （透明度，用于淡入淡出）
+
+:::tip替代思维想做元素滑出效果？千万不要用 `transition: margin-top` 或 `top`，请使用 `transition: transform` 结合 `translateY`！想做元素变大效果？千万不要用 `width`，请使用 `transform: scale()`！:::
+
+### 4.3 终极优化：`will-change`
+
+在面对极度复杂的动画时，可以提前告知浏览器某元素即将发生变化。浏览器会为其分配一个独立的复合层（Layer），并将它直接上传到 GPU 显存中待命，从而省去动画开始时的准备时间。
+
+```css
+.heavy-element {
+  will-change: transform, opacity;
+}
+```
+
+_警告：不可滥用！过多的独立层会耗尽移动设备的内存导致崩溃。只给确实存在性能瓶颈的少数元素添加，且最好在动画结束后通过 JS 将该属性移除。_
+
+## 总结
+
+CSS 过渡与关键帧动画赋予了前端界面鲜活的生命力。在实际开发中，我们应当优先采用简单的 `:hover` + `transition` 来处理用户微交互，利用 `@keyframes` 来实现独立的 Loading 和复杂视差效果。最重要的是，将“只改变 `transform` 和 `opacity`”刻在骨子里，这是写出世界级流畅交互界面的基石。

@@ -1,0 +1,239 @@
+---
+title: 原型链与继承
+description: 深入解析 JavaScript 基于原型的面向对象机制，探索从痛苦的原型链修补到 ES6 Class 语法糖的演进历程与安全陷阱。
+sidebar_position: 30
+---
+
+# 原型链与继承
+
+引入段落：如果说闭包是 JavaScript 函数的灵魂，那么**原型（Prototype）**就是 JavaScript 对象的基因。在 Java、C++ 等传统的面向对象语言中，存在着明确的“类（Class）”和“实例（Instance）”的鸿沟：你必须先画一张图纸（Class），然后照着图纸去生产汽车（Instance），汽车之间没有血缘关系。然而在 ES6 之前，JavaScript 语言设计之初为了保持极其轻量级的特性，并没有引入传统的类机制，而是采用了**基于原型的委托（Prototypal Delegation）**。在这种机制下，对象之间不是“图纸和汽车”的关系，而是“父亲和儿子”的血脉传承——对象可以直接从另一个对象那里继承属性和行为。即使后来 ES6 推出了华丽的 `class` 关键字，其底层骨架依然是原型机制。理解原型链，是洞悉前端各种库和框架底层运转规律的关键。
+
+## 一、原型机制的三大基石
+
+要彻底搞懂这套机制，你必须理清构造函数、实例对象和原型对象这三者之间的三角关系，并牢记两个特殊的属性：`prototype` 和 `__proto__`。
+
+### 1.1 `prototype` (显式原型)
+
+- **谁拥有它？** 只有**函数（Function）**拥有这个属性（注意，ES6 的箭头函数没有它）。
+- **它是什么？** 它指向一个默认生成的空对象（也就是我们常说的“原型对象”）。
+- **它的作用？** 它是用来存放公共财产的“公共仓库”。当你用这个函数去创建出几十个实例对象时，你不希望某些通用的方法在每个实例里都复制一份占据内存，你希望把它放在 `prototype` 这个仓库里，让所有实例去共享。
+
+```javascript
+function Person(name) {
+  this.name = name; // 独享的实例属性
+}
+// 将通用的行为放在公共仓库里
+Person.prototype.sayHi = function () {
+  console.log('Hello, I am ' + this.name);
+};
+```
+
+### 1.2 `__proto__` (隐式原型)
+
+- **谁拥有它？** 几乎**每一个对象**都拥有这个隐藏属性（在现代浏览器中也可以通过标准化 API `Object.getPrototypeOf(obj)` 获取）。
+- **它的作用？** 它是寻宝的地图指针。它指向了**创建该对象的那个构造函数的 `prototype` 公共仓库**。
+
+```javascript
+const alice = new Person('Alice');
+
+// 实例对象的隐式原型，严格等于，它的制造者(构造函数)的显式原型
+console.log(alice.__proto__ === Person.prototype); // true
+```
+
+### 1.3 `constructor` 属性
+
+在公共仓库（原型对象）里，默认有一个 `constructor` 属性，它“指路”回那个构造函数本身。形成了一个完美的闭环。 `Person.prototype.constructor === Person`
+
+我们可以用 ASCII 图来形象地表达这个经典的三角关系：
+
+```text
+               +----------------------+
+               |    构造函数 Person    |
+               +----------------------+
+                 |                 ^
+  .prototype 属性 |                 | .constructor 属性
+                 v                 |
++------------------------------------------+
+|          原型对象 Person.prototype         |
+|------------------------------------------|
+| sayHi: function() {...}                  |
+| constructor: Person                      |
++------------------------------------------+
+                 ^
+                 |
+                 | .__proto__ 属性
++------------------------------------------+
+|          实例对象 alice = new Person()    |
+|------------------------------------------|
+| name: "Alice"                            |
++------------------------------------------+
+```
+
+## 二、原型链 (Prototype Chain)：属性的查找之旅
+
+当你在对象上读取某个属性时，JavaScript 引擎会开始一段“顺藤摸瓜”的旅程，这段藤蔓就是**原型链**。
+
+1. **当前对象**：引擎首先在 `alice` 对象自己的内部查找。如果有（比如 `name`），直接返回。
+2. **第一层原型**：如果找不到（比如试图调用 `alice.sayHi()`），引擎不会放弃，它会顺着 `alice.__proto__` 指针，去到 `Person.prototype` 这个公共仓库里找。在这里找到了 `sayHi` 方法，执行它。
+3. **更上层原型**：如果试图调用 `alice.toString()` 呢？仓库里也没有！引擎会继续顺着仓库的隐式原型 `Person.prototype.__proto__` 往上找。因为原型本身也是个普通对象，普通对象都是由最顶级的 `Object` 构造函数创建的，所以它指向了宇宙的尽头——`Object.prototype`。
+4. **终点站**：在 `Object.prototype` 中找到了 `toString()`。如果连这里都没有，再去尝试找 `Object.prototype.__proto__` 时，会发现它是 `null`。旅程结束，引擎无奈地返回 `undefined`。
+
+这条由 `__proto__` 链条贯穿的寻宝路径，就是大名鼎鼎的原型链。它解释了为什么一个普通的数组能调用 `.map()` 方法，为什么字符串能调用 `.slice()`，它们都是顺着原型链找到了老祖宗留下的遗产。
+
+## 三、继承模式的血泪演进史
+
+在 ES5 漫长的岁月中，开发者们为了在 JS 中实现类似 Java 的类继承机制，硬生生逼出了多种设计模式（各种奇技淫巧）。
+
+### 3.1 原型链继承：灾难的开始
+
+最粗暴的想法：既然能顺藤摸瓜，那我直接让子类的原型，指向父类的一个实例不就行了？
+
+```javascript
+function Animal() {
+  this.colors = ['黑', '白']; // 这是一个引用类型的属性
+}
+function Dog() {}
+
+// 核心：强行修改 Dog 的原型仓库
+Dog.prototype = new Animal();
+
+const dog1 = new Dog();
+const dog2 = new Dog();
+
+dog1.colors.push('黄'); // dog1 去染了个黄色
+console.log(dog2.colors); // 输出 ['黑', '白', '黄']。灾难！dog2 莫名其妙也被染色了！
+```
+
+**致命缺陷**：来自父类的引用类型属性（如数组、对象）被所有子类实例**彻底共享**了。牵一发而动全身。且实例化子类时，无法给父类构造函数传参。
+
+### 3.2 借用构造函数继承 (Constructor Stealing)
+
+为了解决共享问题，利用 `call` 强行改变 `this` 指向。
+
+```javascript
+function Animal(name) {
+  this.name = name;
+  this.colors = ['黑', '白'];
+}
+Animal.prototype.eat = function () {
+  console.log('eating');
+};
+
+function Dog(name, breed) {
+  // 核心：在子类中，假装自己是父类去执行一次它的初始化逻辑
+  Animal.call(this, name);
+  this.breed = breed;
+}
+
+const dog1 = new Dog('旺财', '柴犬');
+dog1.colors.push('黄'); // 安全了，只修改 dog1 自己的数组
+```
+
+**致命缺陷**：它根本没有牵涉到原型链！所以子类实例 `dog1` 无法访问 `Animal.prototype` 仓库里的 `eat()` 方法。
+
+### 3.3 寄生组合式继承 (ES5 的最优解)
+
+融合前两者的优点，同时摒弃它们的缺点。这是一种近乎完美的方案，也是后来 ES6 `class extends` 经过 Babel 编译后的底层实现核心。
+
+```javascript
+function Animal(name) {
+  this.name = name;
+}
+Animal.prototype.eat = function () {
+  console.log('eating');
+};
+
+function Dog(name, breed) {
+  Animal.call(this, name); // 第一步：借用构造函数，继承实例属性，并解决传参问题
+  this.breed = breed;
+}
+
+// 第二步：极其关键！利用 Object.create 凭空捏造一个干净的对象，
+// 它的隐式原型指向 Animal.prototype。将这个对象设为 Dog 的新原型。
+// 这完美避开了使用 new Animal() 时可能带来的副作用和性能开销。
+Dog.prototype = Object.create(Animal.prototype);
+
+// 第三步：修复由于强行替换原型导致的 constructor 迷失问题
+Dog.prototype.constructor = Dog;
+
+Dog.prototype.bark = function () {
+  console.log('woof!');
+};
+```
+
+## 四、救世主降临：ES6 Class 语法糖
+
+上述 ES5 的继承代码不仅冗长，而且违反人类直觉。ES6 终于推出了 `class` 和 `extends` 关键字，让面向对象编程变得极其优雅。 **但请永远记住：在 JS 引擎内部，根本没有真正的 Class，它只是一层甜美的语法糖，底层骨架仍然是上一节提到的寄生组合式继承及原型链映射。**
+
+### 4.1 优雅的代码表现
+
+```javascript
+class Animal {
+  // constructor 会在 new 的时候自动调用
+  constructor(name) {
+    this.name = name;
+  }
+
+  // 这句话等同于挂载在 Animal.prototype.eat 上！
+  eat() {
+    console.log(`${this.name} 正在吃饭`);
+  }
+}
+
+// 使用 extends 轻松实现继承
+class Dog extends Animal {
+  constructor(name, breed) {
+    // 强制规定：子类构造函数中，使用 this 之前必须调用 super()
+    // 它等同于之前的 Animal.call(this, name)
+    super(name);
+    this.breed = breed;
+  }
+
+  bark() {
+    console.log('汪汪汪！');
+  }
+}
+
+const myDog = new Dog('大黄', '金毛');
+myDog.eat(); // 大黄 正在吃饭
+```
+
+### 4.2 `super` 的严格规则
+
+在 ES6 继承中，子类其实是没有自己的 `this` 对象的，它必须等待父类的构造函数通过 `super()` 把 `this` 塑造好，然后借用过来，再在上面添加自己的属性（这与 ES5 先创建自己的 `this` 再应用父类方法的顺序是完全相反的）。如果不调用 `super()`，直接报错 `ReferenceError`。
+
+## 五、黑暗森林法则：原型链污染与安全威胁
+
+由于原型机制极其动态和开放，任何在运行时修改 `Object.prototype` 或 `Array.prototype` 的行为，都会瞬间影响到全局的所有对象和数组。这被称为“修改原生原型”，是一种广受抵制的反模式（Anti-Pattern）。
+
+比这更恐怖的是**原型链污染 (Prototype Pollution)** 漏洞。
+
+在处理从前端表单或 API 传入的恶意 JSON 字符串并进行对象深度合并（Deep Merge）时，如果防范不当，黑客可以通过构造特殊的 payload 发起攻击：
+
+```javascript
+// 黑客精心构造的恶意 JSON 数据
+// 它利用了几乎所有对象都有 __proto__ 这个特性
+const maliciousPayload = '{"__proto__": {"isAdmin": true, "role": "superuser"}}';
+
+const parsedData = JSON.parse(maliciousPayload);
+
+// 假设我们有一个不严谨的深度合并/克隆函数 merge()
+// 它没有过滤对 __proto__ 键的操作，将恶意数据合并到了一个空对象中
+let userState = {};
+merge(userState, parsedData);
+
+// 灾难发生：黑客成功修改了全局的 Object.prototype！
+// 此时，系统中随便新创建一个空对象，它莫名其妙就拥有了超级管理员权限！
+let newRandomUser = {};
+console.log(newRandomUser.isAdmin); // 竟然输出 true ！！
+```
+
+:::warning防御策略
+
+1. **阻断原型链**：使用 `Object.create(null)` 创建没有原型的干净字典对象，或者使用 ES6 `Map` 来存储不受信任的键值对。
+2. **过滤危险键名**：在编写或使用递归的工具函数（深拷贝、深合并）时，严格拦截并忽略键名为 `__proto__` 或 `constructor` 的处理。
+3. **冻结核心对象**：在关键系统中调用 `Object.freeze(Object.prototype)`，彻底锁死全局原型的修改途径。:::
+
+## 总结
+
+JavaScript 的原型系统是一个极具创造性但又充满历史包袱的杰作。我们探索了从令人费解的 `prototype` 与 `__proto__` 的寻宝图，到令人痛苦的 ES5 手动修补继承，再到今天光鲜亮丽的 `class` 语法糖，甚至触及了最隐秘的原型污染安全漏洞。掌握这一切，你不仅能够读懂现代框架底层组件的派生逻辑，更能避免在复杂业务中写出牵一发而动全身的脆弱代码。

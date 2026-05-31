@@ -1,0 +1,142 @@
+---
+title: Vue 响应式原理
+description: 深度剖析 Vue 响应式底层的魔法机制，对比 Vue 2 defineProperty 与 Vue 3 Proxy 的差异，掌握依赖收集与派发更新的核心流程。
+sidebar_position: 20
+---
+
+# Vue 响应式原理
+
+引入段落：如果你去问一个初学 Vue 的人：“Vue 最让你感到惊艳的功能是什么？” 他大概率会回答：“我只要在 JavaScript 里修改一下变量的值，不用写任何繁琐的 DOM 操作代码（比如 `document.getElementById().innerText = ...`），页面上的内容就奇迹般地自动变了！”这种将数据层（Model）和视图层（View）紧密绑定、数据驱动视图的机制，就是 Vue 引以为傲的**响应式系统（Reactivity System）**。如果你只停留在“会用”的层面，当你遇到“我给对象新增了一个属性，怎么视图死活不更新”这类幽灵 Bug 时，你将束手无策。唯有深入源码底层的拦截与追踪机制，才能让你对框架的行为拥有绝对的掌控感。
+
+## 一、旧时代的妥协：Vue 2 与 `Object.defineProperty`
+
+Vue 2 之所以能实现响应式，其底层的核心支柱是 ES5 提供的一个高级 API：`Object.defineProperty`。
+
+### 1.1 劫持与重写
+
+当你把一个普通的 JS 数据对象传递给 Vue 2 的 `data` 选项时，Vue 在组件初始化阶段（`created` 之前），会调用一个叫 `Observer` 的模块，极其粗暴地遍历这个对象的所有层级，把每一个属性都拎出来，强行用 `Object.defineProperty` 重写它们的 `getter`（读取器）和 `setter`（设置器）。
+
+- **依赖收集（track）**：当 Vue 开始初次渲染模板（走 `render` 函数）时，它会去读取页面上用到的变量（比如 `{{ message }}`）。这就一定会触发该属性重写后的 `getter` 函数。此时，`getter` 会像个登记员一样，把当前正在盯着这个变量看的“观察者（Watcher）”登记到一个小本本（`Dep` 订阅中心）上。这就叫建立依赖关系。
+- **派发更新（trigger）**：当你执行 `this.message = 'Hello'` 修改数据时，必然会触发重写后的 `setter` 函数。`setter` 发现值变了，就会立刻拿出刚才那个登记的小本本，通知上面记录的所有 Watcher：“数据变了，你们赶紧去通知框架重新渲染页面！”
+
+### 1.2 无法逾越的致命缺陷
+
+这套机制看似完美，但在 JavaScript 语言本身的限制下，它存在三大无法根治的先天顽疾：
+
+1. **“查无此人”的属性新增/删除**：`defineProperty` 顾名思义，它只能拦截**已经定义好**的具体属性。如果组件初始化完成后，你突然心血来潮执行 `this.user.newAge = 25`。Vue 完全不知道你干了这个事，因为 `newAge` 这个属性根本没有经历过当初那个重写劫持的洗礼。解决办法是极其丑陋的全局 API 补丁：必须写成 `this.$set(this.user, 'newAge', 25)`。
+2. **失控的数组索引操作**：处于性能考量，Vue 2 放弃了利用 `defineProperty` 对数组的每个数字索引进行拦截。这意味着你写 `this.arr[0] = 'new value'` 或者 `this.arr.length = 0`，视图是绝对不会更新的。Vue 2 被迫去魔改重写了数组的 7 个变更方法（`push`, `pop`, `splice` 等），你必须调用这些方法，才能触发响应式更新。
+3. **沉重的初始化开销**：如果你的 `data` 里有一个层积极其深、数据量极其庞大的嵌套对象结构，Vue 2 会在组件挂载前，傻乎乎地去递归遍历它的每一寸肌肤，给几千个属性全部加上劫持。这极大地拖累了大型列表组件的首屏渲染性能。
+
+## 二、新纪元的降临：Vue 3 与原生 `Proxy`
+
+为了彻底铲除 Vue 2 响应式系统的毒瘤，尤雨溪在 Vue 3 中做出了一个壮士断腕的决定：全面抛弃老旧浏览器（IE 11 及以下），拥抱 ES6 的原生超级特性——**`Proxy`（代理）**。
+
+### 2.1 拦截整个对象的魔法网
+
+`Proxy` 与 `defineProperty` 有着本质的区别。`defineProperty` 像是一个狙击手，必须精确瞄准某一个特定的属性进行拦截；而 `Proxy` 则像是一张巨大的天罗地网，**它直接包裹在整个对象的外面**。不论你在这个对象上执行什么千奇百怪的操作（读取、设置、新增属性、删除属性，甚至枚举遍历），只要动作经过这张网，都会被瞬间拦截下来。
+
+这是一个极度简化的 Vue 3 `reactive` 原理模型：
+
+```javascript
+// 假设我们要把 target 对象变成响应式的
+function reactive(target) {
+  // 如果不是对象，直接返回（Proxy 只能代理引用类型）
+  if (typeof target !== 'object' || target === null) return target;
+
+  const handler = {
+    // 拦截一切读取操作：收集依赖
+    get(target, key, receiver) {
+      // 1. 调用依赖收集中心（Track 机制）
+      // track(target, key);
+
+      // 2. 利用 Reflect 获取原始数据，保证 this 指向不出偏差
+      const res = Reflect.get(target, key, receiver);
+
+      // 3. 极其聪明的“懒代理 (Lazy Proxy)”性能优化：
+      // 只有当我们读取到的这个内部属性碰巧也是一个对象时，
+      // 我们才会在这一刻，临时去把这个内部子对象也包装成 Proxy！
+      // 这彻底干掉了 Vue 2 那个在初始化时全量深度递归的性能地雷。
+      if (typeof res === 'object' && res !== null) {
+        return reactive(res);
+      }
+      return res;
+    },
+
+    // 拦截一切写入和【新增】操作：派发更新
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      // 真正执行修改动作
+      const result = Reflect.set(target, key, value, receiver);
+
+      // 如果值真的发生了改变，通知大家干活
+      if (oldValue !== value) {
+        // trigger(target, key);
+        console.log(`[响应式天网警告] 检测到 ${key} 被修改为 ${value}，立即通知框架重新渲染！`);
+      }
+      return result;
+    },
+
+    // 拦截删除操作
+    deleteProperty(target, key) {
+      const result = Reflect.deleteProperty(target, key);
+      // trigger(target, key);
+      return result;
+    },
+  };
+
+  // 生成一张代理大网返回
+  return new Proxy(target, handler);
+}
+```
+
+在 Proxy 的加持下，Vue 3 的响应式堪称无死角。你可以随意给对象挂载新属性，可以随意通过索引修改数组 `arr[10] = xxx`，一切都会完美、如预期般触发更新。
+
+## 三、依赖追踪数据结构 (The Tracking System)
+
+当 Proxy 拦截到操作后，Vue 是如何精准知道该去通知哪些组件更新的？这套机制（位于源码的 `@vue/reactivity` 独立包中）设计得非常精妙，它依靠一个三层嵌套的数据结构来建立全球索引。
+
+1. **第一层 `WeakMap`**：它的键名（Key）是那个被包装的**目标原始对象（target）**。使用 WeakMap 是为了防止内存泄漏，如果这个对象在外面被销毁了，这里的记录会自动蒸发。它的值是一个普通的 `Map`。
+2. **第二层 `Map`**：它的键名是对象内部的**具体属性名（key）**。它的值是一个存放了所有需要通知的人员名单的 `Set`。
+3. **第三层 `Set`**：存放的都是一个个具体的 **副作用函数（Effect）**。当你写了 `computed`、`watch` 或者组件模板在渲染时，它们实质上都是一个个包裹在 `effect` 里的执行实体。
+
+**通俗的工作流模拟**：当你的组件渲染时，碰到了 `user.name` 变量。
+
+- 触发 Proxy 的 `get` 拦截。
+- Vue 立刻翻阅档案记录（`track`）：找到 `WeakMap` 里 `user` 对象的档案柜 -> 拉出 `name` 属性的抽屉 -> 把当前正在渲染的组件（Effect）名字丢进这个抽屉里保存（`Set.add`）。
+- 两分钟后，你点了一个按钮，执行了 `user.name = 'Bob'`。
+- 触发 Proxy 的 `set` 拦截。
+- Vue 去档案库（`trigger`）精确查找：找到 `user` -> `name` 抽屉，把里面所有的组件名字全掏出来，挨个打电话通知：“重绘吧，兄弟们！”
+
+## 四、深入思辨：既然 Proxy 这么强，为何还要设计 `ref`？
+
+这是很多从 Vue 2 刚转到 Vue 3 的开发者经常发出的灵魂拷问。既然 `reactive()` 直接代理对象那么完美，为什么官方还要弄一个看起来很丑陋、每次使用都必须带个 `.value` 尾巴的 `ref()` 出来折磨大家？
+
+**答案是：JavaScript 语言特性底层的悲哀与无奈。**
+
+`Proxy` 的全称是**对象代理**。它只能，也绝对只允许拦截复杂的对象类型（Object, Array 等引用类型）。如果你试图写出 `const age = reactive(25)` 这种代码，引擎会直接瘫痪。因为像数字 `25`、布尔值 `true`、字符串 `'Hello'` 这种基础数据类型（Primitive Types），在 JavaScript 引擎底层是直接按**值（Value）传递**的。当你把它们传来传去时，它们根本没有“壳子”能让你罩上一层拦截网。
+
+尤雨溪团队为了让基础数据类型也能享受响应式的待遇，不得不采用一种**包装盒（Boxing）**的妥协策略。 `ref()` 内部其实非常简单，它就是手工打造了一个拥有唯一属性 `.value` 的特殊对象，把你的数字和字符串塞进这个抽屉里。
+
+```javascript
+// ref 底层极简伪代码
+function ref(raw) {
+  const wrapper = {
+    // 依然利用面向对象的 getter/setter 语法来劫持对 .value 的访问
+    get value() {
+      // track(wrapper, 'value');
+      return raw;
+    },
+    set value(newVal) {
+      raw = newVal;
+      // trigger(wrapper, 'value');
+    },
+  };
+  return wrapper;
+}
+```
+
+这就是为什么你在 JS 中操作 `ref` 数据时，永远摆脱不掉 `.value` 的原因。这绝不是框架设计者的恶趣味，而是基于 JavaScript 底层语法做出的唯一可行且优雅的妥协方案。
+
+## 总结
+
+Vue 响应式系统的演进史，就是一部与底层语言特性博弈的战斗史。从 Vue 2 时代利用 `defineProperty` 苦心孤诣地修补对象原型，到 Vue 3 时代借用现代浏览器红利 `Proxy` 实现降维打击，不仅解决了痛点，还大幅提升了框架执行性能。彻底理解这张 Proxy 的天罗地网和背后的三层追踪机制，对于你在复杂业务中排查组件非预期更新、或者使用 `shallowRef` 进行极限性能调优，都将提供直接的理论指导。
