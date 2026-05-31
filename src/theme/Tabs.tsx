@@ -24,9 +24,9 @@ function TabsWrapper(props: React.ComponentProps<typeof Tabs>) {
       }
 
       const ua = window.navigator.userAgent.toLowerCase();
-      // @ts-expect-error - userAgentData 是现代浏览器新 API，类型定义可能不全
+      // @ts-ignore - userAgentData 是现代浏览器新 API，类型定义可能不全
       const userAgentDataPlatform =
-        window.navigator.userAgentData?.platform?.toLowerCase();
+        (window.navigator as any).userAgentData?.platform?.toLowerCase();
 
       let detected = defaultValue;
 
