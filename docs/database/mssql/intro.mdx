@@ -1,50 +1,191 @@
 ---
-title: SQL Server 基础与操作
+title: SQL Server 基础教程
+description: 面向初学者的 SQL Server (MSSQL) 数据库安装、管理与 T-SQL 基础。
 sidebar_position: 1
 ---
 
-# 🪟 SQL Server (MSSQL) 基础与操作
+# SQL Server 基础教程
 
-Microsoft SQL Server 是一款由微软开发的关系型数据库管理系统。在 Windows 生态系统中，它拥有无与伦比的集成度。
+Microsoft SQL Server（通常简称 SQL Server 或 MSSQL）是微软推出的强大商用关系型数据库管理系统。它与 Windows 生态和 .NET 框架深度整合，但近年来也全面支持了 Linux 和 Docker。本文档面向初学者，介绍 SQL Server 的基础使用。
 
-## 简介
+## 1. SQL Server 简介
 
-SQL Server 提供了丰富的企业级功能、直观的管理工具（如 SSMS）以及强大的商业智能（BI）组件。近年来，SQL Server 也开始支持在 Linux 和容器中运行。
+### 版本体系
 
-## 安装
+- **Enterprise (企业版)**：包含所有最高端的功能（如 Always On 可用性组、内存优化表等），授权费用高昂。
+- **Standard (标准版)**：满足大多数中小型企业需求的核心数据库功能。
+- **Developer (开发者版)**：包含企业版的所有功能，但**完全免费**，仅限开发和测试环境使用，严禁用于生产。
+- **Express (快捷版)**：免费用于轻量级生产环境，但有硬件限制（最大 1GB 内存，10GB 数据库大小）。
 
-### 使用 Docker 快速启动
+### Azure SQL Database
+
+微软云 (Azure) 提供的完全托管的数据库服务（PaaS），与本地 SQL Server 几乎完全兼容，是云原生应用的首选。
+
+## 2. 安装与连接
+
+### Docker 快速启动
+
+在非 Windows 环境或本地开发时，使用 Docker 是最方便的选择：
 
 ```bash
-docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=YourStrong!Passw0rd" \
-   -p 1433:1433 --name mssql-dev -d \
-   mcr.microsoft.com/mssql/server:2022-latest
+# 启动最新版的 SQL Server 2022 开发者版容器
+docker run -e "ACCEPT_EULA=Y" \
+           -e "MSSQL_SA_PASSWORD=MyStrong!Passw0rd" \
+           -p 1433:1433 \
+           --name sqlserver \
+           -d mcr.microsoft.com/mssql/server:2022-latest
 ```
 
-## 基础操作
+### 客户端管理工具
 
-可以使用内置的 `sqlcmd` 工具，或推荐使用客户端工具如 SQL Server Management Studio (SSMS) 或 Azure Data Studio 连接。
+- **SSMS (SQL Server Management Studio)**：Windows 平台下最强大、官方的图形化管理工具，功能包罗万象。
+- **Azure Data Studio**：跨平台（Windows, macOS, Linux）的现代化轻量级工具，界面类似 VS Code。
+- **sqlcmd**：官方的命令行连接工具。
 
-### 基础 T-SQL 示例
+## 3. 数据库创建与管理
+
+### 创建数据库
+
+在 SQL Server 中，一个数据库主要由两个物理文件组成：数据文件 (`.mdf`) 和日志文件 (`.ldf`)。
 
 ```sql
--- 创建数据库
-CREATE DATABASE RetailDB;
-GO
+-- 最简单的创建语句
+CREATE DATABASE CompanyDB;
 
-USE RetailDB;
-GO
+-- 切换上下文到新数据库
+USE CompanyDB;
+```
 
--- 创建表
-CREATE TABLE Products (
-    ProductID INT IDENTITY(1,1) PRIMARY KEY,
-    ProductName NVARCHAR(100) NOT NULL,
-    Price DECIMAL(18,2)
+### 备份与分离
+
+```sql
+-- 完整备份数据库到指定磁盘路径
+BACKUP DATABASE CompanyDB
+TO DISK = '/var/opt/mssql/data/CompanyDB.bak';
+
+-- 分离数据库（将其从实例中移除，但保留物理文件，方便移动文件）
+EXEC sp_detach_db 'CompanyDB';
+
+-- 附加数据库（将移动后的文件重新挂载回实例）
+CREATE DATABASE CompanyDB
+ON (FILENAME = '/new_path/CompanyDB.mdf'),
+   (FILENAME = '/new_path/CompanyDB_log.ldf')
+FOR ATTACH;
+```
+
+## 4. 表与数据类型
+
+### 常用数据类型
+
+- **整数**：`INT`, `BIGINT`, `SMALLINT`, `TINYINT`
+- **小数**：`DECIMAL(p, s)`
+- **字符串**：`VARCHAR(n)` (非 Unicode), **`NVARCHAR(n)`** (Unicode，推荐存储中文等多语言数据)
+- **日期与时间**：`DATETIME` (旧), **`DATETIME2`** (新标准，精度更高), `DATE`
+- **唯一标识**：`UNIQUEIDENTIFIER` (对应 C# 的 GUID)
+
+### 创建表与约束
+
+```sql
+CREATE TABLE Employees (
+    -- IDENTITY(1,1) 表示自增列，从 1 开始，每次增加 1
+    EmployeeID INT IDENTITY(1,1) PRIMARY KEY,
+
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) UNIQUE,
+    HireDate DATETIME2 DEFAULT GETDATE(), -- GETDATE() 返回当前时间
+
+    DepartmentID INT,
+    -- 外键约束
+    CONSTRAINT FK_Department FOREIGN KEY (DepartmentID)
+        REFERENCES Departments(DepartmentID)
 );
-GO
+```
 
--- 插入与查询
-INSERT INTO Products (ProductName, Price) VALUES ('Laptop', 1200.00);
-SELECT * FROM Products;
+## 5. T-SQL 基础
+
+T-SQL (Transact-SQL) 是微软在 ANSI SQL 基础上扩展的专有语言。
+
+### CRUD 操作
+
+```sql
+-- 插入数据
+INSERT INTO Employees (FirstName, LastName, Email, DepartmentID)
+VALUES ('John', 'Doe', 'john@example.com', 1);
+
+-- 插入并返回刚刚生成的自增 ID (OUTPUT 子句)
+INSERT INTO Employees (FirstName, LastName)
+OUTPUT INSERTED.EmployeeID
+VALUES ('Jane', 'Smith');
+
+-- 更新数据
+UPDATE Employees SET DepartmentID = 2 WHERE EmployeeID = 1;
+
+-- 删除数据
+DELETE FROM Employees WHERE EmployeeID = 2;
+```
+
+### 基础查询
+
+```sql
+-- TOP 子句 (替代 LIMIT 的作用)
+SELECT TOP 10 * FROM Employees ORDER BY HireDate DESC;
+
+-- 字符串模糊查询 (使用方括号匹配字符集)
+SELECT * FROM Employees WHERE LastName LIKE '[A-C]%';
+
+-- JOIN 查询
+SELECT e.FirstName, d.DepartmentName
+FROM Employees e
+INNER JOIN Departments d ON e.DepartmentID = d.DepartmentID;
+```
+
+## 6. 存储过程入门
+
+存储过程是将一段复杂的 T-SQL 脚本预编译并存储在数据库中，以供应用程序调用。它能提升性能并增强安全性。
+
+### 创建存储过程
+
+```sql
+CREATE PROCEDURE GetEmployeesByDept
+    @DeptID INT -- 输入参数声明，以 @ 开头
+AS
+BEGIN
+    -- 防止返回受影响的行数消息，略微提升性能
+    SET NOCOUNT ON;
+
+    SELECT EmployeeID, FirstName, LastName
+    FROM Employees
+    WHERE DepartmentID = @DeptID
+    ORDER BY LastName;
+END;
 GO
 ```
+
+### 执行存储过程
+
+```sql
+EXEC GetEmployeesByDept @DeptID = 1;
+```
+
+## 7. 索引基础
+
+### 创建聚集索引与非聚集索引
+
+- **聚集索引 (Clustered Index)**：决定了数据在磁盘上的物理排序。一张表**只能有一个**聚集索引（通常就是主键）。
+- **非聚集索引 (Non-Clustered Index)**：类似于书的目录，带有指向实际数据行的指针。一张表可以有多个。
+
+```sql
+-- 创建普通的非聚集索引
+CREATE NONCLUSTERED INDEX IX_Employees_LastName
+ON Employees(LastName);
+
+-- 包含列 (Included Columns) 索引：避免回表查询，极大提升性能
+CREATE NONCLUSTERED INDEX IX_Employees_Dept
+ON Employees(DepartmentID)
+INCLUDE (FirstName, LastName);
+```
+
+---
+
+:::tip 总结 SQL Server 的 T-SQL 语法直观且强大。掌握 `NVARCHAR` 等关键数据类型，理解 `IDENTITY` 自增机制，以及熟悉 SSMS 工具的使用，是迈入微软数据库生态的第一步。:::

@@ -1,32 +1,158 @@
 ---
-title: MongoDB 进阶与调优
+title: MongoDB 进阶指南
+description: 面向大规模应用开发者的 MongoDB 索引策略、复制集高可用与分片集群深度解析。
 sidebar_position: 2
 ---
 
-# 🍃 MongoDB 进阶与调优
+# MongoDB 进阶指南
 
-MongoDB 并非只能用于简单的数据存储，它同样具备强大的分析和分布式能力。
+本文档深入剖析 MongoDB 适应企业级大规模高并发场景的核心能力，包括复杂的索引设计、高级聚合操作、以及用于保障高可用与水平扩展的分布式架构方案。
 
-## 聚合管道 (Aggregation Pipeline)
+## 1. 索引进阶与调优
 
-聚合管道是 MongoDB 中用于数据处理和分析的强大框架，类似于 SQL 中的 `GROUP BY` 和多表连接。
+正确设计索引是 MongoDB 性能优化的核心。
+
+### 索引基本操作
+
+默认情况下，MongoDB 在 `_id` 字段上有一个唯一索引。
 
 ```javascript
-// 聚合示例：统计每个部门的平均年龄
-db.employees.aggregate([
-  { $match: { status: 'Active' } },
-  { $group: { _id: '$department', avgAge: { $avg: '$age' } } },
+// 在 age 字段上创建单键升序索引
+db.users.createIndex({ age: 1 });
+
+// 查看查询计划：检查是否使用了索引 (IXSCAN) 还是全表扫描 (COLLSCAN)
+db.users.find({ age: 30 }).explain('executionStats');
+```
+
+### 复合索引与 ESR 原则
+
+当查询涉及多个条件时，应当建立复合索引（Compound Index）。设计复合索引顺序时，强烈推荐遵循 **ESR 原则**：
+
+1. **E (Equality)**：等值匹配字段放在最前面。
+2. **S (Sort)**：排序字段放中间，利用索引实现无损排序。
+3. **R (Range)**：范围查询字段（如 `>`, `<`）放在最后。
+
+### 多键索引 (Multikey Index)
+
+MongoDB 允许对数组字段建立索引，它会为数组中的每一个元素创建一个索引项。
+
+- 限制：一个复合索引中，最多只能包含一个数组字段。
+
+### 稀疏索引与 TTL 索引
+
+- **稀疏索引 (Sparse Index)**：只针对文档中含有该字段的记录建立索引，极大节省那些存在大量缺失字段的集合的索引空间。
+- **TTL 索引 (Time-To-Live)**：常用于会话管理或日志清理。设定过期时间后，后台线程会自动删除过期的文档。
+  ```javascript
+  // 记录将在 createdAt 时间点 3600 秒后被自动删除
+  db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 });
+  ```
+
+## 2. 聚合管道深度利用
+
+掌握高级的聚合操作能大幅度减少应用层的内存计算负担。
+
+### 连表查询 (`$lookup`)
+
+从 MongoDB 3.2 起，支持左外连接。
+
+```javascript
+db.orders.aggregate([
+  {
+    $lookup: {
+      from: 'users', // 关联目标集合
+      localField: 'user_id', // 本集合中用于关联的字段
+      foreignField: '_id', // 目标集合中的字段
+      as: 'user_info', // 存放关联结果的数组字段名
+    },
+  },
 ]);
 ```
 
-## 索引策略
+### 结构重塑与多路并行
 
-除了基础的单字段和复合索引，MongoDB 还支持：
+- **`$unwind`**：将文档中的一个数组字段拆分成多条文档记录，常配合 `$group` 或 `$lookup` 使用。
+- **`$project`**：除了过滤字段，还可以用于增加计算字段、重命名字段。
+- **`$facet`**：允许在一个管道中并行执行多个不同的子管道。常用于电商网站一次性获取商品列表以及左侧的分类统计信息。
 
-- **地理空间索引 (Geospatial Indexes)**：用于基于位置的查询。
-- **文本索引 (Text Indexes)**：用于全文搜索。
+## 3. 副本集 (Replica Set) 与高可用
 
-## 高可用与分布式
+在生产环境中，**绝对不要部署单节点 MongoDB**，必须使用副本集（至少 3 个节点）来保证数据的高可用。
 
-1. **副本集 (Replica Set)**：提供数据冗余和高可用性，自动故障转移。
-2. **分片集群 (Sharded Cluster)**：将数据水平切分到多台机器上，以支持海量数据和超高吞吐量。
+### 副本集架构
+
+- **Primary (主节点)**：唯一可以接受写操作的节点，并将操作记录在 **Oplog** 中。
+- **Secondary (从节点)**：通过不断拉取并重放 Primary 的 Oplog 保持数据同步，可配置为只处理读请求。
+- **Arbiter (仲裁节点)**：不存储数据，仅在选举中投票，用于打破平局（节省资源时使用）。
+
+### 选举机制与自动故障恢复
+
+当 Primary 宕机或网络隔离时，剩余节点若能在通信中占据大多数（Majority），便会自动触发选举（通常基于 Raft 变种的选举算法），根据 Oplog 新旧程度推选出新的 Primary。客户端的 Driver 会自动感知并切换连接路由，业务层基本无感。
+
+### 读写分离偏好 (Read Preference)
+
+客户端连接时可以指定：
+
+- `primary`：默认值，所有读写都在主节点。
+- `primaryPreferred`：首选主库读，主库宕机读从库。
+- `secondary`：强制读从节点（实现读写分离扩展读能力）。
+- `nearest`：选择网络延迟最低的节点读。
+
+### 数据安全级别 (Write Concern)
+
+控制写操作的确认级别：
+
+- `w: 1`：只要 Primary 写内存成功即返回成功（默认，快但有丢失风险）。
+- `w: "majority"`：必须等待大多数节点将数据持久化到日志才返回成功（推荐，强一致防数据丢失）。
+
+## 4. 分片集群 (Sharding)
+
+当数据量突破 TB 级，或者读写吞吐量超过单机极限，就需要通过分片将数据水平拆分到多台机器。
+
+### 分片架构核心组件
+
+1. **Shard Server (分片节点)**：实际存储数据的副本集。
+2. **Config Server (配置节点)**：存储整个集群的元数据（哪段数据存在哪个 Shard 上）。
+3. **Mongos (路由节点)**：轻量级代理进程，应用层只连接 Mongos，它负责将请求路由到正确的 Shard。
+
+### 分片键 (Shard Key) 的选择
+
+**这是设计 MongoDB 分片最重要、且不可逆的决定。**
+
+- **范围分片 (Range Sharding)**：按键值的范围划分（如基于日期）。利于范围查询，但容易造成写入热点（数据总往最新的块写）。
+- **哈希分片 (Hashed Sharding)**：对分片键求哈希值后再划分。保证数据绝对均匀分布，适合高并发写入，但无法进行高效的范围查询。
+
+良好的分片键应具备高基数（唯一值多）、读写分布均匀等特点。
+
+## 5. 事务与存储引擎优化
+
+### 多文档事务 (ACID)
+
+MongoDB 从 4.0 开始支持副本集多文档事务，4.2 支持分片集群跨节点事务。
+
+```javascript
+// 简单示例（使用驱动程序通常会有更易用的 API）
+const session = db.getMongo().startSession();
+session.startTransaction();
+try {
+  // 必须传入 session
+  db.accounts.updateOne({ _id: 'A' }, { $inc: { balance: -100 } }, { session });
+  db.accounts.updateOne({ _id: 'B' }, { $inc: { balance: 100 } }, { session });
+  session.commitTransaction();
+} catch (error) {
+  session.abortTransaction();
+} finally {
+  session.endSession();
+}
+```
+
+_提示：事务会消耗较多资源并引发锁竞争，应将 MongoDB 的使用场景尽量设计为对单个文档的原子操作，将事务作为少数情况下的兜底方案。_
+
+### WiredTiger 存储引擎
+
+目前默认的高性能存储引擎。核心参数调优：
+
+- **`wiredTigerCacheSizeGB`**：控制引擎使用的内存上限。默认使用 `(系统总内存 - 1GB) 的 50%`。如果服务器专供 MongoDB，这通常是合理的；若有其他服务（如共存 Redis），则必须手动限制，否则容易引发系统 OOM。
+
+---
+
+:::tip 进阶总结掌握 MongoDB 的高级使用，核心在于：**精通索引与聚合解决查询性能问题，依靠副本集解决高可用问题，通过精细规划的分片架构解决海量数据的扩展问题**。:::

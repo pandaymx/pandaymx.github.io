@@ -1,28 +1,152 @@
 ---
-title: PostgreSQL 进阶与调优
+title: PostgreSQL 进阶指南
+description: 面向中高级开发者的 PostgreSQL 原理分析、性能调优与集群架构实践。
 sidebar_position: 2
 ---
 
-# 🐘 PostgreSQL 进阶与调优
+# PostgreSQL 进阶指南
 
-深入理解 PostgreSQL 的内部机制，能够帮助我们更好地进行架构设计和性能调优。
+本文档面向中高级开发者和 DBA，深入剖析 PostgreSQL 的核心原理、性能调优技巧、高级特性以及高可用架构。
 
-## JSON 与复杂数据类型
+## 1. MVCC 与事务隔离
 
-PostgreSQL 原生支持 JSON 和 JSONB 类型，允许在关系型数据库中执行类似于 NoSQL 的文档存储和查询操作。
+PostgreSQL 优秀的高并发处理能力很大程度上归功于其 MVCC（Multi-Version Concurrency Control）机制。
+
+### MVCC 原理
+
+每次更新或删除一行数据时，PostgreSQL 并不会立即物理删除它，而是创建该行的一个新版本（Tuple），同时保留旧版本。每个版本都有隐藏的事务 ID (`xmin` 和 `xmax`) 记录其创建和废弃的时间。查询操作会结合当前的数据库**快照 (Snapshot)**，决定哪一个版本对当前事务是可见的。
+
+### 事务隔离级别
+
+- **Read Committed (读已提交)**：PostgreSQL 的默认级别。查询只能看到在查询开始前已提交的数据。
+- **Repeatable Read (可重复读)**：同一事务内的所有查询看到的是事务开始时的快照，避免了不可重复读，PG 这一层面上还能防止幻读。
+- **Serializable (可串行化)**：最严格的级别，模拟串行执行，完全避免事务间的读写冲突。
+
+### VACUUM 与表膨胀
+
+由于 MVCC 的特性，废弃的元组如果不及时清理，会导致“表膨胀”(Table Bloat)。
+
+- **VACUUM**：标记死元组空间可重用。
+- **Autovacuum**：后台自动运行的守护进程，定期进行 VACUUM 和 ANALYZE。建议保持开启并根据业务量调优。
+- **VACUUM FULL**：不仅清理，还会重写全表并压缩空间，但会获取排他锁，生产环境需谨慎使用。
+
+## 2. 查询优化与 EXPLAIN
+
+### EXPLAIN 分析
+
+使用 `EXPLAIN`（或 `EXPLAIN ANALYZE` 执行并计时）是分析慢查询的利器：
 
 ```sql
--- JSONB 上的 GIN 索引示例
+EXPLAIN ANALYZE SELECT * FROM users WHERE age = 30;
+```
+
+### 执行计划解读
+
+- **Seq Scan (全表扫描)**：遍历表中的每一行。小表快，大表极慢。
+- **Index Scan (索引扫描)**：通过索引找到数据行的位置，再回表获取数据。
+- **Index Only Scan (仅索引扫描)**：查询所需的列都在索引中，无需回表读取数据页。
+- **Bitmap Scan**：当匹配大量数据时，PG 会先通过索引建立一个位图，然后根据位图一次性读取数据，减少随机 I/O。
+- **Nested Loop / Hash Join / Merge Join**：常见的表连接算法，根据表大小和是否有序，优化器会智能选择。
+
+### 优化技巧
+
+- 避免使用 `SELECT *`，只查询需要的字段。
+- 确保有适当的索引，并注意避免在索引列上使用函数导致索引失效（或者使用表达式索引）。
+- 定期执行 `ANALYZE` 确保统计信息准确，防止优化器选错执行计划。
+
+## 3. JSON 与文档存储
+
+PostgreSQL 是传统关系型数据库中 JSON 支持最好的之一。
+
+### JSON vs JSONB
+
+- **JSON**：纯文本存储，保留空格和键的顺序。每次查询都需要重新解析，性能较差。
+- **JSONB**：二进制格式存储，去除多余空格并重排键，虽然写入稍微慢一点，但查询极快，**绝大多数场景应首选 JSONB**。
+
+### JSONB 操作与索引
+
+```sql
+-- 提取 JSON 对象中的值 (返回文本)
+SELECT metadata->>'role' FROM users;
+
+-- 判断是否包含键值对 (@>)
+SELECT * FROM users WHERE metadata @> '{"role": "admin"}';
+
+-- 创建 GIN 索引加速 JSONB 查询
 CREATE INDEX idx_users_metadata ON users USING GIN (metadata);
 ```
 
-## 并发控制 (MVCC)
+## 4. 分区表 (Partitioning)
 
-多版本并发控制（MVCC）允许数据库在无需锁定表的情况下提供高并发访问。了解事务隔离级别（Read Committed, Repeatable Read, Serializable）对于保证数据一致性非常重要。
+对于 TB 级别的大表，分区可以极大地改善管理和查询性能。
 
-## 性能调优
+### 分区策略
 
-1. **`EXPLAIN ANALYZE`**：分析查询执行计划的核心工具。
-2. **连接池 (Connection Pooling)**：使用 PgBouncer 或类似工具管理大量并发连接。
-3. **VACUUM 和 Autovacuum**：定期清理死元组以回收空间和防止表膨胀。
-4. **内存参数配置**：调整 `shared_buffers`, `work_mem`, `maintenance_work_mem` 等参数以适应服务器硬件。
+- **Range (范围分区)**：通常按时间分区（如按月、按年）。
+- **List (列表分区)**：按特定的枚举值分区（如地区、状态）。
+- **Hash (哈希分区)**：对键值进行哈希，将数据均匀分布。
+
+### 创建与管理分区表
+
+```sql
+-- 创建主表 (不存储数据)
+CREATE TABLE logs (
+    id SERIAL,
+    created_at TIMESTAMP NOT NULL,
+    message TEXT
+) PARTITION BY RANGE (created_at);
+
+-- 创建分区表
+CREATE TABLE logs_2024_01 PARTITION OF logs
+FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+
+CREATE TABLE logs_2024_02 PARTITION OF logs
+FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
+```
+
+_分区裁剪 (Partition Pruning)_ 会让优化器自动跳过不相关的分区。
+
+## 5. 连接池与性能配置
+
+### PgBouncer
+
+PostgreSQL 为每个连接创建一个独立的进程，消耗内存较大。在微服务等高并发短连接场景下，需要引入 **PgBouncer** 作为连接池。
+
+- **Session 模式**：客户端保持连接直到断开。
+- **Transaction 模式**：事务完成后连接即释放回池，最为常用。
+- **Statement 模式**：每条 SQL 执行完后释放连接，不适合多语句事务。
+
+### 关键配置调优 (`postgresql.conf`)
+
+- `shared_buffers`：PostgreSQL 使用的共享内存缓冲区，通常设置为系统总内存的 25%。
+- `work_mem`：排序、哈希等操作使用的内存，设置过小会导致频繁的磁盘临时文件读写。
+- `maintenance_work_mem`：VACUUM、CREATE INDEX 使用的内存。
+- `effective_cache_size`：提示优化器系统可用于磁盘缓存的总内存估算值，通常设为总内存的 50%-75%。
+
+## 6. 主从复制与高可用
+
+### 流复制 (Streaming Replication)
+
+PostgreSQL 通过 WAL（Write-Ahead Logging）日志实现流复制，这是搭建高可用集群的基础。主节点持续将 WAL 发送给备节点（Standby），备节点接收后重放日志。
+
+- **异步复制**：主库不等待备库确认，性能好但极端情况下可能丢失少量数据。
+- **同步复制**：主库等待至少一个同步备库确认接收日志后才提交事务，保证零数据丢失。
+
+### 逻辑复制 vs 物理复制
+
+- **物理复制（流复制）**：基于块级别的复制，备库必须与主库完全一致，且通常只读。
+- **逻辑复制**：基于逻辑数据更改（如 INSERT/UPDATE），可以跨不同版本的 PostgreSQL 同步，并且可以选择性同步单张表，备库支持写入。
+
+## 7. 扩展与插件生态
+
+PostgreSQL 极其强大的扩展系统允许它不断引入前沿特性：
+
+- **PostGIS**：最强的开源地理信息系统扩展。
+- **pgvector**：为 AI 应用量身定制的扩展，支持高维向量存储与相似性搜索，用于大模型 RAG 场景。
+- **pg_partman**：自动化管理和维护分区表。
+- **Citus**：将 PostgreSQL 转换为分布式数据库，实现水平扩展。
+- **TimescaleDB**：强大的时序数据库扩展，适合 IoT 和监控数据。
+
+---
+
+:::tip 总结深入掌握 PostgreSQL 需要理解其底层的 MVCC 和日志机制，灵活运用执行计划分析进行 SQL 调优，并在生产环境中合理部署连接池和高可用架构。:::

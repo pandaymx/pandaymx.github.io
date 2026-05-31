@@ -1,50 +1,296 @@
 ---
-title: PostgreSQL 基础与操作
+title: PostgreSQL 基础教程
+description: 面向初学者的 PostgreSQL 安装、基础操作与高频使用指南。
 sidebar_position: 1
 ---
 
-# 🐘 PostgreSQL 基础与操作
+# PostgreSQL 基础教程
 
-PostgreSQL 是一个强大的、开源的对象-关系型数据库系统。它有着超过30年的活跃开发历史，在可靠性、数据完整性和正确性方面赢得了极高的声誉。
+PostgreSQL 是一种强大的、开源的、对象-关系型数据库系统（Object-Relational Database System）。本文档面向初次接触 PostgreSQL 的开发者，侧重安装部署、基础操作和高频 SQL 命令。
 
-## 简介
+## 1. PostgreSQL 简介
 
-PostgreSQL 支持大量的高级特性，包括复杂的 SQL 查询、外键、触发器、视图、事务完整性以及多版本并发控制（MVCC）。它还支持多种扩展，如地理空间数据（PostGIS）、JSON 文档查询等。
+### 发展历史与版本演进
 
-## 安装
+PostgreSQL 起源于 1986 年加州大学伯克利分校的 POSTGRES 项目。经过数十年的发展，它已经成为最先进的开源关系型数据库之一。当前主流使用的版本主要是 14、15 和 16，每个大版本在性能优化、逻辑复制和 JSON 处理方面都有显著提升。
 
-### 使用 Docker 快速启动
+### 核心特性
+
+- **MVCC (Multi-Version Concurrency Control)**：多版本并发控制，确保在高并发情况下的读写性能。
+- **JSONB**：原生支持 JSON 和二进制 JSON（JSONB），使其在处理半结构化数据时非常高效。
+- **PostGIS**：业界领先的地理空间数据扩展，支持复杂的地理信息查询。
+- **FDW (Foreign Data Wrappers)**：外部数据包装器，允许直接从 PostgreSQL 查询其他数据库（如 MySQL、Redis、MongoDB 等）的数据。
+- **丰富的扩展生态**：支持各种自定义函数、数据类型、索引和插件。
+
+### PG vs MySQL：架构差异与选型建议
+
+| 特性 | PostgreSQL | MySQL |
+| --- | --- | --- |
+| **SQL 标准兼容性** | 非常高 | 相对较低，但不断提升 |
+| **并发处理** | 多进程架构，更适合复杂查询和高并发写 | 多线程架构，更适合高并发读 |
+| **数据类型** | 支持数组、JSONB、GIS 空间数据等 | 原生数据类型相对传统 |
+| **选型建议** | 适合复杂业务逻辑、数据分析、需要强一致性和地理空间应用的场景 | 适合传统的 Web 应用、以读为主、需要极致性能的简单事务场景 |
+
+## 2. 安装与启动
+
+### Docker 快速启动
+
+对于本地开发，使用 Docker 是最快捷的方式：
 
 ```bash
+# 启动一个 postgres 容器，设置密码并映射端口
 docker run -d \
-  --name postgres-dev \
+  --name my-postgres \
   -e POSTGRES_PASSWORD=mysecretpassword \
   -p 5432:5432 \
   postgres:latest
 ```
 
-## 基础操作
-
-进入 PostgreSQL 命令行 (psql)：
+### Linux 包管理器安装 (Ubuntu/Debian)
 
 ```bash
-docker exec -it postgres-dev psql -U postgres
+sudo apt update
+sudo apt install postgresql postgresql-contrib
 ```
 
-### 基础 SQL 示例
+### Windows 安装
+
+可以从 [PostgreSQL 官方网站](https://www.postgresql.org/download/windows/) 下载安装包进行可视化安装，或者使用 Chocolatey 包管理器：
+
+```bash
+choco install postgresql
+```
+
+### 服务管理
+
+在 Linux 系统中，使用 `systemctl` 管理服务：
+
+```bash
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+sudo systemctl status postgresql
+```
+
+### psql 连接工具
+
+`psql` 是 PostgreSQL 提供的强大命令行工具：
+
+```bash
+# 使用默认的 postgres 用户连接本地数据库
+psql -U postgres -d postgres
+```
+
+## 3. 数据库与表管理
+
+### 创建数据库
 
 ```sql
--- 创建表
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 插入数据
-INSERT INTO users (username, email) VALUES ('alice', 'alice@example.com');
-
--- 查询数据
-SELECT * FROM users WHERE username = 'alice';
+CREATE DATABASE mydb;
+-- 连接到新数据库 (在 psql 命令行下)
+\c mydb
 ```
+
+### 创建表与数据类型
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,              -- 自增主键
+    username VARCHAR(50) UNIQUE NOT NULL, -- 字符串，唯一且非空
+    age INT CHECK (age >= 0),           -- 整数，带 CHECK 约束
+    email VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,     -- 布尔值，带默认值
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 日期时间
+    metadata JSONB                      -- JSONB 数据类型
+);
+```
+
+### 约束介绍
+
+- `PRIMARY KEY`：主键，唯一标识表中的一行。
+- `FOREIGN KEY`：外键，用于建立表之间的关系。
+- `UNIQUE`：唯一约束，确保列中的值不重复。
+- `NOT NULL`：非空约束，确保列不能有 NULL 值。
+- `CHECK`：检查约束，确保列中的值满足特定条件。
+- `DEFAULT`：默认值，当插入数据未指定该列时使用。
+
+## 4. CRUD 基础操作
+
+### INSERT (插入数据)
+
+```sql
+-- 单行插入
+INSERT INTO users (username, age, email)
+VALUES ('alice', 25, 'alice@example.com');
+
+-- 批量插入
+INSERT INTO users (username, age, email)
+VALUES
+    ('bob', 30, 'bob@example.com'),
+    ('charlie', 35, 'charlie@example.com');
+
+-- 插入并返回主键 (RETURNING)
+INSERT INTO users (username) VALUES ('david') RETURNING id;
+```
+
+### SELECT (查询数据)
+
+```sql
+-- 基本查询
+SELECT id, username FROM users;
+
+-- 带条件查询 (WHERE)
+SELECT * FROM users WHERE age > 25;
+
+-- 排序与限制 (ORDER BY, LIMIT, OFFSET)
+SELECT * FROM users
+ORDER BY created_at DESC
+LIMIT 10 OFFSET 0;
+```
+
+### UPDATE (更新数据)
+
+```sql
+-- 带条件更新
+UPDATE users
+SET age = 26, is_active = false
+WHERE username = 'alice';
+
+-- 更新并返回更新后的数据
+UPDATE users SET age = age + 1 WHERE id = 1 RETURNING *;
+```
+
+### DELETE (删除数据)
+
+```sql
+-- 按条件删除
+DELETE FROM users WHERE age < 18;
+
+-- 清空全表数据 (TRUNCATE 比 DELETE 更快，但不记录每一行的事务日志)
+TRUNCATE TABLE users;
+```
+
+## 5. 查询进阶
+
+### 多表连接 (JOIN)
+
+```sql
+-- INNER JOIN (内连接)
+SELECT u.username, p.post_title
+FROM users u
+INNER JOIN posts p ON u.id = p.user_id;
+
+-- LEFT JOIN (左连接，即使右表没有匹配也返回左表数据)
+SELECT u.username, p.post_title
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id;
+```
+
+### 子查询
+
+```sql
+-- 标量子查询 (返回单个值)
+SELECT username,
+       (SELECT COUNT(*) FROM posts WHERE user_id = users.id) as post_count
+FROM users;
+
+-- EXISTS (判断子查询是否有结果，通常比 IN 更高效)
+SELECT username FROM users u
+WHERE EXISTS (SELECT 1 FROM posts p WHERE p.user_id = u.id);
+```
+
+### 聚合函数
+
+```sql
+-- COUNT, SUM, AVG, MIN, MAX
+SELECT
+    COUNT(*) as total_users,
+    AVG(age) as average_age
+FROM users;
+
+-- GROUP BY 和 HAVING (分组及分组后的过滤)
+SELECT age, COUNT(*)
+FROM users
+GROUP BY age
+HAVING COUNT(*) > 1;
+```
+
+### 常用函数
+
+```sql
+-- COALESCE: 返回第一个非 NULL 的值
+SELECT COALESCE(email, 'no_email_provided') FROM users;
+
+-- NULLIF: 如果两个参数相等则返回 NULL
+SELECT NULLIF(age, 0) FROM users;
+
+-- CASE WHEN: 条件表达式
+SELECT username,
+       CASE
+           WHEN age < 18 THEN 'Minor'
+           WHEN age >= 18 THEN 'Adult'
+           ELSE 'Unknown'
+       END as age_group
+FROM users;
+```
+
+## 6. 索引基础
+
+### B-tree 索引
+
+B-tree 是 PostgreSQL 的默认索引类型，适用于处理等值和范围查询（如 `<`, `<=`, `=`, `>=`, `>`）。
+
+### 创建索引
+
+```sql
+-- 在 email 列上创建常规索引
+CREATE INDEX idx_users_email ON users(email);
+
+-- 并发创建索引 (不锁表，适合在生产环境的大表上操作)
+CREATE INDEX CONCURRENTLY idx_users_username ON users(username);
+```
+
+### 索引设计技巧
+
+- **复合索引**：当查询经常同时使用多列作为条件时。
+  ```sql
+  CREATE INDEX idx_users_age_active ON users(age, is_active);
+  ```
+- **表达式索引**：基于函数的返回值建立索引。
+  ```sql
+  CREATE INDEX idx_users_lower_email ON users(LOWER(email));
+  ```
+- **部分索引**：只对满足条件的行建立索引，节省空间并提高效率。
+  ```sql
+  CREATE INDEX idx_active_users ON users(id) WHERE is_active = true;
+  ```
+
+## 7. 用户与权限
+
+在生产环境中，合理分配权限是保障数据库安全的关键。
+
+### 创建用户/角色
+
+```sql
+-- 创建一个具有登录权限的用户并设置密码
+CREATE ROLE myuser WITH LOGIN PASSWORD 'mypassword';
+```
+
+### 权限管理
+
+```sql
+-- 授予权限 (允许 myuser 查询和插入 users 表)
+GRANT SELECT, INSERT ON users TO myuser;
+
+-- 授予整个 schema 的权限
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO myuser;
+
+-- 回收权限
+REVOKE DELETE ON users FROM myuser;
+```
+
+---
+
+:::tip 延伸阅读
+
+- [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
+- [Docker Hub - Postgres](https://hub.docker.com/_/postgres) :::
