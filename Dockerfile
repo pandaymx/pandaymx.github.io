@@ -23,13 +23,13 @@ RUN npm run build && \
 
 
 # 4. Brotli module builder (Using Alpine-based Nginx to ensure apk availability)
-FROM nginx:1.29.8-alpine AS brotli-builder
+FROM nginx:1.31.1-alpine AS brotli-builder
 
 WORKDIR /app
 
 # Install build dependencies, download source, compile Brotli, and cleanup in one layer
 USER root
-ENV NGINX_VERSION=1.29.8
+ENV NGINX_VERSION=1.31.1
 
 RUN apk add --no-cache --virtual .build-deps \
   gcc libc-dev make openssl-dev pcre2-dev pcre-dev zlib-dev \
@@ -51,7 +51,7 @@ RUN apk add --no-cache --virtual .build-deps \
   apk del .build-deps
 
 # 5. Production running stage
-FROM nginxinc/nginx-unprivileged:alpine AS prod
+FROM nginxinc/nginx-unprivileged:1.31.1-alpine AS prod
 
 LABEL maintainer="blog-owner"
 LABEL description="Static blog server with Brotli support"
