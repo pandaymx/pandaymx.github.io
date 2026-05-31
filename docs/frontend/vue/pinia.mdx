@@ -1,0 +1,179 @@
+---
+title: Pinia 状态管理
+description: 全面认识 Vue3 时代的官方状态管理王者 Pinia，丢弃 Vuex 冗余架构，掌握更为轻量、响应式且对 TS 完美支持的组合式 Store 机制。
+sidebar_position: 30
+---
+
+# Pinia 状态管理
+
+引入段落：在任何中大型的 Vue 应用程序中，跨组件、跨页面的全局状态共享（例如用户的鉴权 Token、复杂电商平台的全局购物车数据、系统的主题配置）始终是一个核心命题。在过去的很长一段时间里，**Vuex** 凭借其与 Vue 生态深度绑定的官方身份，统治了所有的企业级项目。然而，凡是深度使用过 Vuex 3/4 的开发者，几乎都会对它产生生理上的抗拒：必须定义冗长的字符串魔法来派发动作（`commit('SET_DATA')`）、被生硬拆分的 `Mutations` 和 `Actions`（仅仅是为了区分同步和异步）、极其薄弱且配置痛苦的 TypeScript 类型推断，以及为了模块化而引入的心智负担极高的 `namespaced`（命名空间）嵌套树模型。
+
+当 Vue 3 带来了彻底解放思想的 Composition API 之后，Vue 官方团队重启炉灶，推出了一款代号为“菠萝”的全新状态管理工具——**Pinia**。它不仅仅是 Vuex 5 的精神续作，更是通过极其轻量优雅的设计，正式被官方确立为新一代的默认状态管理解决方案。
+
+## 一、Pinia 的降维打击：告别 Vuex 的沉重包袱
+
+Pinia 并不是简单的语法翻新，它从根本上重构了状态管理的架构逻辑：
+
+1. **废弃繁琐的 `Mutations` 机制**：这是最令人拍手叫好的改变。在 Pinia 中，你认为要改数据？直接在 `actions` 里写正常的业务函数去修改 `state` 即可，甚至可以在组件里直接拿着 `state.count++` 赋值。再也不用走那种“为了同步而同步”的冗余提交流程了。
+2. **极速开箱即用的 TypeScript 支持**：Pinia 在底层设计时就将类型推断放在了首位。它的 API 结构天然对 TS 友好，你甚至不需要写哪怕一行额外的类型标注，只要你在 store 里定义了变量，在任何组件里使用它时，编辑器都会立刻为你提供极其丝滑的代码补全提示。
+3. **彻底抛弃树状嵌套的 Modules 概念**：再也没有什么 `modules: { cart: { namespaced: true } }` 这种反人类的结构了。Pinia 将应用程序的 Store 扁平化，**每一个 Store 都是完全独立、平级的“部门”**（比如独立的购物车 Store、独立的用户 Store）。当它们需要互相联动时，直接在彼此的代码里引入实例化即可，简单得犹如普通的 JS 模块互相 `import`。
+4. **极致的轻量化**：整个库的打包体积仅仅在 1KB 左右，对于优化项目的首屏加载时间毫无负担。
+
+## 二、Store 的定义与实例化：拥抱 Setup 风格
+
+Pinia 依然保留了类似 Vuex 的选项式（Options API）写法，但官方和社区目前最强烈推荐的做法，是使用与 Vue 3 `<script setup>` 心智模型完全同频共振的**组合式（Setup API）风格**。
+
+### 2.1 全局注册
+
+在项目的主入口挂载极其简单：
+
+```javascript
+// src/main.js
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+
+// 实例化一个全局的菠萝并塞进应用即可
+const pinia = createPinia();
+const app = createApp(App);
+
+app.use(pinia);
+app.mount('#app');
+```
+
+### 2.2 定义你的业务 Store
+
+我们要深刻理解 Setup 风格下，普通 Vue 响应式 API 与 Store 概念的一一映射关系：
+
+- **`ref()` / `reactive()`** 就是用来存数据的 **State**。
+- **`computed()`** 就是基于数据派生计算的 **Getters**。
+- **普通 `function`** 就是包含核心业务逻辑（发请求、修改数据）的 **Actions**。
+
+```javascript
+// src/stores/counter.js
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { api } from '@/utils/request';
+
+// 第一个参数 'counter' 是整个应用中的唯一 ID 标识符
+export const useCounterStore = defineStore('counter', () => {
+  // 1. 定义 State
+  const count = ref(0);
+  const loading = ref(false);
+
+  // 2. 定义 Getters
+  const doubleCount = computed(() => count.value * 2);
+
+  // 3. 定义 Actions
+  // 可以直接执行普通的同步数据修改
+  function increment() {
+    count.value++;
+  }
+
+  // 也可以非常自然地包含异步的各种网络请求逻辑
+  async function fetchRemoteCount() {
+    loading.value = true;
+    try {
+      const res = await api.get('/server-count');
+      count.value = res.data; // 直接给 ref 赋值修改状态！极其直观！
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 最后，必须显式把想要给外部（组件）暴露的数据和方法 return 出去
+  return { count, loading, doubleCount, increment, fetchRemoteCount };
+});
+```
+
+## 三、在组件中优雅消费 Store
+
+在 Vue 3 的组件中使用定义好的 Store 时，唯有一个关键的陷阱需要警惕：**解构带来的响应式丢失**。
+
+```vue
+<script setup>
+import { useCounterStore } from '@/stores/counter';
+import { storeToRefs } from 'pinia';
+
+// 执行 hook 拿到具体的 store 实例对象
+const counterStore = useCounterStore();
+
+// ❌ 灾难示范：如果你想少写一点前缀，直接使用原生 ES6 解构。
+// 这会直接切断 count 与 Store 内部的联系，一旦后续数据变了，页面死活不会更新！
+// const { count, doubleCount } = counterStore;
+
+// ✅ 正确提取 State 姿势：必须依靠官方救生圈 storeToRefs
+// 它会在底层把所有的属性妥善地转换成保持着联系的 ref 对象
+const { count, doubleCount, loading } = storeToRefs(counterStore);
+
+// ✅ 至于 Actions 方法，它们只是普通的纯函数，永远不会失去绑定，可以直接无脑原生解构
+const { increment, fetchRemoteCount } = counterStore;
+</script>
+
+<template>
+  <div class="dashboard">
+    <!-- 你可以直接操作带有层级前缀的原对象 -->
+    <p>直接访问：当前计数值为 {{ counterStore.count }}</p>
+
+    <!-- 也可以使用经过 storeToRefs 安全解构出来的简写变量 -->
+    <p>优雅简写：双倍值为 {{ doubleCount }}</p>
+
+    <!-- 绑定按钮事件 -->
+    <button :disabled="loading" @click="increment">本地加一</button>
+    <button :disabled="loading" @click="fetchRemoteCount">从云端同步数据</button>
+  </div>
+</template>
+```
+
+## 四、高阶操作：状态的批量补丁与跨 Store 联动
+
+除了通过调用业务 Action 去一层层改数据，Pinia 提供了更底层的“外科手术”级 API，应对极其复杂的应用场景。
+
+### 4.1 使用 `$patch` 执行状态的批量轰炸
+
+当你的组件在某一个瞬间，需要同时修改 Store 里的四五个毫不相关的数据状态时。如果你一行行去赋值修改，在底层会导致依赖追踪系统触发多次无意义的组件重渲染波浪。使用 `$patch` 可以把所有的修改打包，对应用进行一次性更新推送。
+
+```javascript
+// 直接传入对象形式的补丁包
+userStore.$patch({
+  name: '超级管理员',
+  age: 30,
+  roles: ['admin', 'editor'],
+});
+
+// 如果状态结构非常复杂深层，支持传入一个回调函数，让你可以像手术刀一样精准变异内部数据
+cartStore.$patch((state) => {
+  // 轻松为数组推入新元素，标记状态修改完毕
+  state.items.push({ id: 101, title: '机械键盘' });
+  state.hasUnsavedChanges = true;
+});
+```
+
+### 4.2 打破孤岛：Store 之间的自然穿梭
+
+在过去的 Vuex 中，如果要从 `A 模块` 触发一个 `B 模块` 的更新操作，要写一堆诸如 `dispatch('B/someAction', null, { root: true })` 这样犹如绕口令般的恶心代码。而在 Pinia 扁平化的架构中，Store 之间调用没有任何障碍。
+
+```javascript
+import { defineStore } from 'pinia';
+// 直接把隔壁的用户 Store 引进来
+import { useAuthStore } from './authStore';
+
+export const useCartStore = defineStore('cart', () => {
+  function checkoutAndPay() {
+    // 就像在组件里用一样，直接实例化它！
+    const authStore = useAuthStore();
+
+    // 直接读取隔壁的登录状态
+    if (!authStore.isLoggedIn) {
+      throw new Error('未授权！请先去登录页！');
+    }
+    // ...放行，执行扣款结账的复杂逻辑
+  }
+
+  return { checkoutAndPay };
+});
+```
+
+## 总结
+
+如果说 Vuex 是一个庞大、笨重、规矩繁多的官僚机构，那么 Pinia 就是一个现代、敏捷、沟通毫无壁垒的高效突击队。它彻底清除了过时架构带来的样板代码噪音，借助组合式函数的强大威力，将响应式编程理念延伸到了框架的每一个角落。掌握 Pinia 并养成良好的 Setup 风格代码组织习惯，是构建现代强壮 Vue 3 工程架构的关键一步。

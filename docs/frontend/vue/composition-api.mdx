@@ -1,0 +1,222 @@
+---
+title: Composition API 实战
+description: 深刻理解 Vue 3 的心智模型大换血，掌握响应式核心（ref/reactive）及基于 Setup 语法糖的高度逻辑抽离与复用。
+sidebar_position: 10
+---
+
+# Composition API 实战
+
+引入段落：如果要评选 Vue 从 v2 跨越到 v3 时代最具颠覆性、也最具争议性的改变，那绝对非 **Composition API（组合式 API）** 莫属。在过去长达数年的时间里，Vue 开发者们早已习惯了那个温床般的 Options API（选项式 API）——把数据放进 `data`，把方法塞进 `methods`，把监听器挂在 `watch` 下。这种高度结构化的填空题模式，让 Vue 赢得了“极易上手”的美名。然而，当你的业务代码突破千行大关，当一个组件被迫承担四五个毫不相干的业务逻辑（比如同时处理搜索过滤、下拉分页、用户权限检查）时，Options API 那“逻辑强制被物理拆散”的弊端就如同一场噩梦。Composition API 的诞生，就是为了在企业级的大型应用中，重新夺回代码组织与逻辑复用的绝对控制权。
+
+## 一、破局者：为何要抛弃选项，拥抱组合？
+
+### 1.1 灾难级的逻辑碎片化 (Fragmentation)
+
+想象一个传统的 Vue 2 复杂组件，你要阅读一段关于“获取和过滤用户列表”的代码逻辑。你必须先在 `data` 里面找到它的定义，然后滚动鼠标翻越几百行，在 `methods` 里面找到获取接口的方法，再继续向下翻，在 `computed` 里面找到基于搜索框的过滤逻辑。
+
+**同一核心业务关注点（Concern）的代码，被框架强制肢解，散落在天涯。** 当你需要把这套“用户列表”逻辑提取出来复用到另一个组件时，你就像在做一场高难度的器官移植手术，极易出错。
+
+### 1.2 高度内聚的重组
+
+Composition API 的核心思想极其纯粹：**打破人为设定的选项壁垒，让关于同一个业务逻辑的所有代码（不管它是状态、计算还是方法）紧紧地挨在一起，形成一个高内聚的逻辑块。**
+
+## 二、响应式系统基石：一切皆函数的 `setup`
+
+Vue 3 不再将数据隐式地挂载在神秘的 `this` 上下文中。所有的响应式魔法，都变成了需要显式导入并执行的**纯函数**。这也是 Vue 拥抱良好 TypeScript 推论的前提。
+
+### 2.1 区分 `ref` 与 `reactive` 的使用边界
+
+这是初学者最容易懵圈的地方：为什么 Vue 3 搞出了两个创建响应式数据的 API？
+
+- **`reactive`**：它是底层引擎的直系亲属。它接收一个普通的 JavaScript 对象或数组，并返回一个被 Proxy 深度代理过的全新对象。**它只能用于复杂引用类型（Object, Array, Map, Set等）**。如果你用它包装普通类型如字符串，会直接失效。
+- **`ref`**：它是万能胶囊。因为 Proxy 无法拦截像数字、布尔值这样的基础值传递，`ref` 通过创建一个带有 `.value` 属性的对象包装器（Wrapper）来变相实现拦截。它既能包装基础类型，如果传入复杂对象，底层依然会悄悄调用 `reactive`。
+
+```javascript
+import { ref, reactive } from 'vue';
+
+// 场景 1：基础数据类型的独立变量
+const count = ref(0);
+const isModalOpen = ref(false);
+
+// 极其注意：在 JS 代码操作 ref 时，永远不能忘记加上 .value 后缀！
+function increment() {
+  count.value++;
+}
+
+// 场景 2：具有强烈业务关联性的聚合状态对象
+const userForm = reactive({
+  username: 'admin',
+  password: '',
+  age: 25,
+});
+
+function submit() {
+  // 操作 reactive 对象如同操作普通对象一样自然，无需 .value
+  console.log(`正在提交：${userForm.username}`);
+}
+```
+
+:::warning致命的解构陷阱如果你对一个 `reactive` 包装的对象进行 ES6 原生解构操作，解构出来的变量**会瞬间丧失所有的响应式追踪能力**，沦为死气沉沉的普通变量。如果非要解构，请务必使用官方提供的 `toRefs` 或 `toRef` 工具函数包裹一层。
+
+```javascript
+import { reactive, toRefs } from 'vue';
+const state = reactive({ x: 1, y: 2 });
+// 正确安全的解构姿势
+const { x, y } = toRefs(state);
+```
+
+:::
+
+### 2.2 响应式的计算与侦听
+
+`computed` 和 `watch` 也被抽离成了独立的函数。
+
+```javascript
+import { ref, computed, watch, watchEffect } from 'vue';
+
+const price = ref(100);
+const discount = ref(0.8);
+
+// 1. computed：只要内部依赖的值发生变化，就会自动重新计算，并缓存结果
+const finalPrice = computed(() => price.value * discount.value);
+
+// 2. watch：极度精准的监听器，只有指定的依赖变化时才触发
+// 注意第一个参数如果是 reactive 对象的某个属性，必须写成 getter 形式：() => state.xxx
+watch(finalPrice, (newVal, oldVal) => {
+  if (newVal > 1000) alert('价格超标了！');
+});
+
+// 3. watchEffect：更加聪明的“懒人监听”。
+// 你不需要告诉它监听谁，它在初始化时会自动执行一次回调内部的代码，
+// 凡是代码里读取到的响应式依赖，都会被自动收集。以后只要它们任何一个变化，该回调都会重新执行。
+watchEffect(() => {
+  console.log(`当前购物车商品价格是：${price.value}，这句日志会被自动更新。`);
+});
+```
+
+## 三、终极形态：Setup 语法糖 `<script setup>`
+
+在 Vue 3 早期版本中，我们必须写一个笨重的 `setup(props, context) {}` 函数，并且要在结尾写上长长的 `return { count, increment, ... }`，模板才能识别这些变量。这种体验极其糟糕。
+
+Vue 官方在随后推出了终极解决方案：**`<script setup>` 编译时宏语法糖**。它彻底接管了整个开发体验。
+
+**三大逆天优势：**
+
+1. **彻底告别 Return**：任何你在 `<script setup>` 顶层声明的变量、函数、哪怕是 `import` 进来的外部组件，都会**自动暴漏给 `<template>` 模板使用**，极其清爽。
+2. **极佳的性能**：由于是在编译环节直接处理，它生成的渲染函数不需要在运行时再去动态解析上下文代理，执行效率更高。
+3. **完美丝滑的 TypeScript 体验**。
+
+```vue
+<template>
+  <div class="card">
+    <!-- 直接使用顶层变量和引入的组件 -->
+    <HeaderTitle :title="pageTitle" />
+    <button @click="increment">点击次数：{{ count }}</button>
+  </div>
+</template>
+
+<script setup>
+// 1. 引入直接可用，无需在 components 字段里注册！
+import HeaderTitle from './components/HeaderTitle.vue';
+import { ref } from 'vue';
+
+// 2. 声明的数据和函数直接可用，无需 return！
+const pageTitle = ref('Vue 3 魔法演示');
+const count = ref(0);
+
+function increment() {
+  count.value++;
+}
+</script>
+```
+
+## 四、组件间通信的异变：宏指令 (Macros)
+
+既然没有了传统的组件配置对象，那我们怎么接收父组件传来的 `props`？怎么向上 `emit` 触发事件？Vue 提供了一组特殊的“编译器宏（Compiler Macros）”。**它们不需要 `import` 导入，直接在 `<script setup>` 顶层调用即可，它们在编译后会被自动抽离剔除。**
+
+### 4.1 接收属性：`defineProps`
+
+```vue
+<script setup>
+// 使用 TS 的泛型写法，获得极致的类型推断与自动补全
+const props = defineProps<{
+  title: string;
+  count?: number; // 问号表示可选
+}>();
+
+// 如果在 script 内部需要使用传进来的值：
+console.log("父组件传来的标题是：", props.title);
+</script>
+
+<template>
+  <!-- 在模板中也可以直接省略 props 前缀使用 -->
+  <h1>{{ title }}</h1>
+</template>
+```
+
+### 4.2 触发事件：`defineEmits`
+
+```vue
+<script setup>
+// 声明该组件会抛出哪些事件，并严格定义抛出的数据类型
+const emit = defineEmits<{
+  (e: 'update', id: number, value: string): void;
+  (e: 'delete', id: number): void;
+}>();
+
+function handleDelete(id: number) {
+  // 触发父组件的 @delete 事件
+  emit('delete', id);
+}
+</script>
+```
+
+## 五、真正的王牌：Composables (组合式函数)
+
+这才是 Vue 3 不惜一切代价推出 Composition API 的终极目的。它完美替代了 Vue 2 时代那个饱受诟病、会引发命名冲突且数据来源极其不透明的幽灵：`Mixins`。
+
+所谓的 **Composable**，就是一个利用 Vue 的组合式 API 来封装和复用**有状态逻辑**的普通 JavaScript 纯函数。业界约定俗成以 `use` 开头命名。
+
+例如，我们封装一个监听鼠标当前坐标的通用逻辑：
+
+```javascript
+// /composables/useMouse.js
+import { ref, onMounted, onUnmounted } from 'vue';
+
+export function useMouse() {
+  // 被封装在函数内部的私有响应式状态
+  const x = ref(0);
+  const y = ref(0);
+
+  function update(event) {
+    x.value = event.pageX;
+    y.value = event.pageY;
+  }
+
+  // 组件生命周期钩子，也可以随意在这里使用！
+  onMounted(() => window.addEventListener('mousemove', update));
+  onUnmounted(() => window.removeEventListener('mousemove', update));
+
+  // 只把外界关心的状态暴露出去
+  return { x, y };
+}
+```
+
+任何组件，只需要极简的一行代码，就能瞬间获得这个功能：
+
+```vue
+<script setup>
+import { useMouse } from '../composables/useMouse.js';
+
+// 极其清爽的解构调用，数据来源一目了然（解决了 Mixin 的痛点）
+const { x, y } = useMouse();
+</script>
+
+<template>
+  <div>鼠标当前位置：X: {{ x }}, Y: {{ y }}</div>
+</template>
+```
+
+## 总结
+
+Composition API 并非是要消灭 Options API，事实上在简单的组件中，选项式依然是很好的选择。但组合式的伟大之处在于它赋予了开发者一种极其强大的架构自由：你可以将庞大的业务代码拆解成一个个精悍小巧的 Composables，就像乐高积木一样，在需要的组件中随意组合、即插即用。通过 `<script setup>` 语法糖扫清了一切样板代码的障碍后，Vue 3 的开发体验达到了前所未有的工业级高效。

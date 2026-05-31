@@ -1,0 +1,310 @@
+---
+title: HTML5 表单与验证
+description: 全面解析 HTML5 表单元素、内置验证机制及其在实际开发中的应用与安全考量，掌握无需复杂 JS 的前端验证技巧。
+sidebar_position: 20
+---
+
+# HTML5 表单与验证
+
+引入段落：表单是 Web 页面与用户进行数据交互的最核心组件。无论是简单的用户登录、注册，还是复杂的后台管理系统数据录入、在线问卷调查，都离不开表单。在过去，前端开发者为了实现良好的表单体验和数据校验，不得不编写大量繁琐的 JavaScript 逻辑。而 HTML5 极大地丰富了表单元素，并引入了强大的内置验证机制（Constraint Validation API），使得开发者可以利用声明式的 HTML 属性，用更少的代码实现更健壮的表单功能。
+
+## 一、表单元素全面盘点
+
+HTML5 引入了许多专门针对不同数据类型的 `<input>` `type`，这不仅让代码语义更加清晰，还有一个巨大的优势：**在移动端设备上，不同的输入类型会唤起针对性优化的虚拟键盘**，从而大幅提升移动端用户的输入体验。
+
+### 1.1 Input 类型：从基础到专属
+
+传统的 HTML 只提供了诸如 `text`, `password`, `radio`, `checkbox` 等基础类型。HTML5 则将其扩展到了细分领域：
+
+- **联系方式**：
+  - `email`：要求输入必须符合基础的邮箱格式。在移动端会唤起带有 `@` 符号和 `.com` 等快捷键的键盘。
+  - `url`：要求输入符合网址格式（必须带有协议，如 `http://`）。移动端会唤起带有 `/` 和 `.com` 的键盘。
+  - `tel`：用于电话号码。注意，由于全球电话号码格式差异巨大，浏览器**不会**对其进行自动格式验证，但它在移动端必定会唤起纯数字键盘（带 `*` 和 `#`）。若要验证，需配合 `pattern` 属性。
+
+- **数值与范围**：
+  - `number`：专用于数字输入，桌面端浏览器会附带上下微调按钮（Spinner）。可以配合 `min`, `max`, `step` 属性使用。
+  - `range`：表现为一个滑块（Slider）控件。适用于对精确度要求不高、只需在一个大概范围内选择的数值场景（如音量调节、亮度调节）。
+
+- **日期与时间**：
+  - `date`, `time`, `datetime-local`, `month`, `week`：这组类型允许浏览器唤起其原生的日期或时间选择器（Date Picker），取代了过去必须依赖庞大第三方 JS 库（如 jQuery UI）的日子。
+
+- **其他专属类型**：
+  - `color`：唤起系统原生的颜色拾取器。
+  - `file`：文件上传控件。可通过 `accept` 属性限制上传类型（如 `accept="image/png, image/jpeg"`），通过 `multiple` 允许选择多个文件。
+
+### 1.2 textarea, select, option, optgroup
+
+除了 `<input>`，还有一些处理大段文本和列表选择的重要元素：
+
+- **`<textarea>`**：用于多行文本输入。通过 `rows`（可见行数）和 `cols`（可见列数）控制初始大小。CSS 的 `resize` 属性可以控制用户是否可以拖拽改变其大小。
+- **`<select>` 与 `<option>`**：创建下拉选择列表。
+- **`<optgroup>`**：当下拉选项非常多时，可以使用 `<optgroup>` 对选项进行逻辑分组，提升可读性。
+
+```html
+<label for="car-select">请选择您喜欢的汽车品牌：</label>
+<select name="car" id="car-select">
+  <option value="">--请选择--</option>
+  <optgroup label="德国品牌">
+    <option value="audi">奥迪 (Audi)</option>
+    <option value="bmw">宝马 (BMW)</option>
+    <option value="benz">奔驰 (Mercedes-Benz)</option>
+  </optgroup>
+  <optgroup label="日本品牌">
+    <option value="toyota">丰田 (Toyota)</option>
+    <option value="honda">本田 (Honda)</option>
+  </optgroup>
+</select>
+```
+
+### 1.3 button 的不同类型
+
+在表单内，按钮的行为常常引发新手的困惑。`<button>` 标签的 `type` 属性决定了它的行为：
+
+- **`submit`（默认值）**：如果 `<button>` 在 `<form>` 内部，且没有指定类型，它就是提交按钮。点击它会触发整个表单的提交和验证流程。
+- **`reset`**：点击后将表单内所有的输入控件重置为初始值（不是清空，而是恢复到 HTML 编写时的 `value` 状态）。
+- **`button`**：普通按钮，点击不会触发任何默认行为，专门用来绑定自定义的 JavaScript 事件。
+
+:::warning最佳实践在表单内明确写出 `type="submit"` 或 `type="button"`，不要依赖默认行为，这能避免很多意外的表单跳转 Bug。:::
+
+### 1.4 状态与结果展示标签
+
+- **`<output>`**：用于展示用户的操作或计算结果，语义上与输入控件相关联。
+- **`<progress>`**：展示一个任务的进度条（如文件上传进度），通常配合 JavaScript 动态更新 `value` 和 `max` 属性。
+- **`<meter>`**：展示已知范围内的标量值或分数值（如磁盘使用量、密码强度）。与进度条不同，它表示的是一个静态的“度量”状态。
+
+## 二、内置验证机制 (Constraint Validation)
+
+HTML5 提供了一套声明式的约束验证 API，让我们仅用 HTML 属性就能完成大部分校验工作。当用户尝试提交表单时，浏览器会自动检查这些约束，如果不满足，会阻止提交并显示默认的错误提示气泡。
+
+### 2.1 常见声明式验证属性
+
+- **`required`**：最基础的校验，表示该字段必填，不能为空。
+- **`minlength` / `maxlength`**：限制输入字符串的最小和最大长度（如密码要求至少 8 位）。
+- **`min` / `max`**：限制数值（`number`, `range`）或日期（`date` 等）的范围。
+- **`step`**：限制数值或日期的步进值（如 `step="2"` 表示只能输入偶数）。
+- **`pattern`**：杀手锏功能，基于正则表达式的复杂验证。只有输入内容完全匹配该正则时才算通过。
+
+```html
+<!-- 使用 pattern 验证中国大陆手机号 -->
+<label for="phone">手机号码：</label>
+<input
+  type="tel"
+  id="phone"
+  name="phone"
+  required
+  pattern="^1[3-9]\d{9}$"
+  title="请输入有效的11位中国大陆手机号码"
+/>
+<!-- 注意：title 属性的值往往会作为正则校验失败时的辅助提示信息显示给用户 -->
+```
+
+### 2.2 自定义错误消息（setCustomValidity）
+
+虽然浏览器原生提供的错误提示很方便，但有两个缺点：UI 样式难以统一定制，且错误文案通常是浏览器内置的默认语言（如“请填写此字段”），不够人性化。
+
+我们可以通过 JavaScript 监听控件的验证事件，调用 `setCustomValidity()` 方法覆盖默认提示。
+
+```javascript
+const usernameInput = document.getElementById('username');
+
+// 监听 invalid 事件，当表单提交触发验证且失败时执行
+usernameInput.addEventListener('invalid', function (event) {
+  // this.validity 是一个 ValidityState 对象，包含了具体的失败原因
+  if (this.validity.valueMissing) {
+    this.setCustomValidity('用户名绝对不能空着哦！');
+  } else if (this.validity.tooShort) {
+    this.setCustomValidity('名字太短啦，至少需要4个字符。');
+  } else {
+    // 必须清空自定义错误，否则即使输入正确了，表单也永远无法提交
+    this.setCustomValidity('');
+  }
+});
+
+// 为了更好的体验，当用户开始修改输入时，应立即清除之前的错误状态
+usernameInput.addEventListener('input', function () {
+  this.setCustomValidity('');
+});
+```
+
+## 三、表单重要属性与控制
+
+### 3.1 自动填充与自动聚焦
+
+- **`autocomplete`**：指示浏览器是否应该尝试自动填充该字段。
+  - `on` / `off`：简单开启或关闭。
+  - 特定语义值：如 `autocomplete="email"`、`autocomplete="new-password"`（告诉密码管理器这是新密码，避免填充旧密码并建议强密码）、`autocomplete="cc-number"`（信用卡号）。这对于提升电商或注册流程的转化率至关重要。
+- **`autofocus`**：页面加载完毕后，浏览器会自动将光标焦点定位于拥有该属性的输入框。一个页面只能有一个。
+
+### 3.2 表单外部按钮控制 (formaction/formmethod)
+
+传统的表单提交按钮必须嵌套在 `<form>` 标签内部。如果因为复杂的页面布局，提交按钮必须放在表单外部，HTML5 提供了 `form` 属性来将它们关联起来。同时，还可以覆盖表单默认的提交行为。
+
+```html
+<!-- 表单定义在某处 -->
+<form id="article-form" action="/api/publish" method="POST">
+  <input type="text" name="title" required />
+  <textarea name="content"></textarea>
+</form>
+
+<!-- 按钮定义在页面的另一个角落（如顶部操作栏） -->
+<div class="top-action-bar">
+  <!-- 关联 ID，点击执行发布，触发表单默认的 action 和 method -->
+  <button type="submit" form="article-form">立刻发布</button>
+
+  <!-- 覆盖行为：点击保存草稿，将数据提交到另一个接口，且不进行验证 -->
+  <button type="submit" form="article-form" formaction="/api/save-draft" formnovalidate>
+    保存为草稿
+  </button>
+</div>
+```
+
+### 3.3 禁用默认验证 (novalidate)
+
+在现代单页应用 (SPA) 开发中（特别是在 React/Vue 中），我们通常使用第三方表单库（如 Formik, React Hook Form, Element UI 等）来接管极其复杂的验证逻辑和友好的 UI 提示。此时，我们需要在 `<form>` 标签上添加 **`novalidate`** 属性。
+
+这会告诉浏览器：“我知道怎么验证，请你闭嘴，不要再弹出原生的气泡提示了。”
+
+## 四、表单安全基础
+
+作为前端开发者，你必须牢记一条铁律：**前端是数据输入的第一道防线，但它也是最脆弱的防线。永远不要信任用户的任何输入！**所有的安全控制和终极验证都必须在后端完成。
+
+### 4.1 CSRF (跨站请求伪造)
+
+CSRF 是一种利用用户在当前网站的已登录状态，诱导其在恶意网站发起对目标网站表单提交的攻击。
+
+- **防御概念**：后端通常会在渲染页面（或通过 API）时，生成一个一次性的、无法预测的 **CSRF Token**。前端在提交敏感表单数据时，必须将这个 Token 作为隐藏字段或 HTTP Header 一并携带。后端比对 Token 一致后才予以放行。
+
+```html
+<form action="/transfer-money" method="POST">
+  <input type="hidden" name="csrf_token" value="后端生成的随机哈希串9f8a7e6d..." />
+  <input type="number" name="amount" />
+  <button type="submit">转账</button>
+</form>
+```
+
+### 4.2 输入内容清洗 (Sanitization) 与 XSS 防御
+
+恶意用户可能会在文本框中输入包含恶意 JavaScript 代码的内容（如 `<script>alert('XSS')</script>`）。如果这段内容被原封不动地存入数据库，并在其他用户的页面上直接渲染，就会引发跨站脚本攻击（XSS）。
+
+- **前端应对**：对于富文本编辑器等场景，前端可以使用如 `DOMPurify` 等库对内容进行清洗，剥离危险的标签和属性。但在回显普通文本时，现代前端框架（如 React 的 `{}` 或 Vue 的 `{{}}`）默认已经做了 HTML 实体转义，防止了基本的 XSS。**切忌滥用 `dangerouslySetInnerHTML` 或 `v-html`。**
+
+## 五、实战：构建一个完整注册表单
+
+下面我们将上述知识点融会贯通，构建一个结构语义化、具备完整验证规则、考虑了移动端体验的注册表单。
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      /* 简单的验证状态伪类样式，提升体验 */
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+      }
+      /* 输入有效时显示绿边框 */
+      input:valid:not(:placeholder-shown) {
+        border-color: green;
+      }
+      /* 输入无效且非空时显示红边框 */
+      input:invalid:not(:placeholder-shown) {
+        border-color: red;
+      }
+      .error-message {
+        color: red;
+        font-size: 0.8em;
+        display: none;
+      }
+      input:invalid:not(:placeholder-shown) + .error-message {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <form action="/api/register" method="POST" class="register-form">
+      <h2>新用户注册</h2>
+
+      <!-- 用户名：文本，必填，长度限制，无自动填充 -->
+      <div class="form-group">
+        <label for="reg-username">用户名 (必填)：</label>
+        <input
+          type="text"
+          id="reg-username"
+          name="username"
+          required
+          minlength="4"
+          maxlength="16"
+          autocomplete="off"
+          autofocus
+          placeholder="4-16位英文字母或数字"
+        />
+        <span class="error-message">用户名长度必须在 4 到 16 个字符之间。</span>
+      </div>
+
+      <!-- 邮箱：email 类型，移动端专用键盘 -->
+      <div class="form-group">
+        <label for="reg-email">电子邮箱 (必填)：</label>
+        <input
+          type="email"
+          id="reg-email"
+          name="email"
+          required
+          autocomplete="email"
+          placeholder="example@domain.com"
+        />
+        <span class="error-message">请输入有效的邮箱地址。</span>
+      </div>
+
+      <!-- 密码：password 类型，配合强大的正则校验 -->
+      <div class="form-group">
+        <label for="reg-password">密码 (必填)：</label>
+        <input
+          type="password"
+          id="reg-password"
+          name="password"
+          required
+          minlength="8"
+          pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+          title="必须包含数字、小写字母、大写字母，且至少8位"
+          autocomplete="new-password"
+          placeholder="至少8位，包含大小写字母和数字"
+        />
+        <span class="error-message">密码强度不足，请参考提示要求。</span>
+      </div>
+
+      <!-- 年龄：number 类型，范围限制 -->
+      <div class="form-group">
+        <label for="reg-age">年龄 (选填)：</label>
+        <input type="number" id="reg-age" name="age" min="18" max="100" placeholder="18-100之间" />
+        <span class="error-message">抱歉，您必须年满18岁。</span>
+      </div>
+
+      <!-- 提交与重置按钮 -->
+      <div class="form-actions">
+        <button type="submit">注 册</button>
+        <!-- 重置按钮谨慎使用，以免用户误触丢失所有输入 -->
+        <button type="reset">清 空</button>
+      </div>
+    </form>
+  </body>
+</html>
+```
+
+## 总结
+
+HTML5 表单通过引入丰富的控件类型和内置校验 API，将大量本该由 JavaScript 承担的繁杂工作下沉到了浏览器原生层面。这不仅使我们的代码更加简洁和语义化，更为移动设备带来了质的体验飞跃。熟练掌握这些原生特性，是深入理解现代前端框架表单封装原理的必经之路。
+
+延伸阅读：
+
+- [MDN Web Docs: Client-side form validation](https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation)
+- [Web.dev: Forms that work for everyone](https://web.dev/learn/forms/)

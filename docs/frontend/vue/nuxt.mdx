@@ -1,0 +1,129 @@
+---
+title: Nuxt.js 框架
+description: 深度剖析 Vue 生态系中的终极全栈解决方案 Nuxt 3，解析基于 Nitro 引擎的混合渲染模式、自动导入黑魔法与同构数据获取方案。
+sidebar_position: 40
+---
+
+# Nuxt.js 框架
+
+引入段落：尽管通过 Vite + Vue 3 能够极其快速地搭建出一个现代化的单页应用（SPA），但在真实的商业级 C 端项目中，纯客户端渲染应用往往会撞上一面叹息之墙：首屏需要等待漫长的 JS 下载导致页面白屏时间过长，以及搜索引擎爬虫（Googlebot / 百度蜘蛛）对其一无所知的 SEO 黑洞。为了在 Vue 生态中完美攻克这两大痛点，**Nuxt.js** 这一重型全栈框架应运而生。
+
+进化到基于 Vue 3 的 **Nuxt 3** 之后，它已经远超出了早期“只是一个套壳的 Vue SSR 辅助工具”的范畴。借助底层跨时代的 **Nitro 服务器引擎**，Nuxt 3 提供了一套涵盖极速冷启动、多层次混合渲染策略、基于文件夹约定自动路由甚至包含后端 API 构建能力的超级工业化流水线。
+
+## 一、工业级效率杀手锏：基于约定与自动导入
+
+Nuxt 的核心哲学是**“约定大于配置 (Convention over Configuration)”**。它通过死板但极其规范的目录层级结构，抹平了开发者在项目初期无尽的配置内耗。
+
+### 1.1 疯狂的自动导入黑魔法 (Auto-imports)
+
+如果你刚接触 Nuxt 3，最大的震撼莫过于你会发现你的代码里几乎没有任何 `import` 语句，但一切竟然都能完美运行，甚至连 TS 的类型补全都没失效！
+
+- **Vue 内置 API**：在你代码的任何地方，直接敲下 `ref()`, `computed()`, `watchEffect()`，不需要你写 `import { ref } from 'vue'`，Nuxt 在构建时会自动帮你补全。
+- **自定义组件**：只要你把写好的 Vue 组件丢进根目录的 `components/` 文件夹下。在任意页面模板中，直接写 `<MyAwesomeHeader />`，Nuxt 会全自动寻址并注入挂载。如果文件夹有层级如 `components/Base/Button.vue`，使用时只需写 `<BaseButton />`。
+- **共享工具逻辑**：放在 `composables/` 目录下的 Hook 函数（如 `export function useAuth() {}`）和放在 `utils/` 下的普通函数，都会自动变为全域可见的全局可用函数。
+
+这套魔法极大地缩减了组件头部的模板代码干扰，让你能 100% 专注于核心业务逻辑的编写。
+
+### 1.2 `pages/` 目录：文件即路由
+
+彻底抛弃那些长达数百行的 `vue-router` 配置数组。在 Nuxt 中，路由的拓扑图完全由你在 `pages/` 文件夹下创建的文件物理层级决定：
+
+- `pages/index.vue` 自动映射为网站首页 `/`
+- `pages/about/team.vue` 自动映射为路径 `/about/team`
+- **动态路由捕获**：使用方括号包裹。比如 `pages/products/[id].vue` 会被编译为动态路径 `/products/:id`。在组件内部，你可以极其优雅地通过 `const route = useRoute(); console.log(route.params.id)` 拿到这个动态参数。
+
+## 二、攻克 SSR 核心难题：同构数据获取
+
+在普通 Vue 应用中，我们习惯在 `onMounted` 钩子中写 `axios.get` 发请求拿数据。但在 SSR （服务端渲染）的世界里，这会导致灾难：由于 `onMounted` 只会在浏览器端（客户端）触发，如果你的请求写在里面，服务器在吐出首屏 HTML 时根本等不到数据，吐出的依然是一个空壳页面，SEO 优化彻底泡汤。
+
+如果想在服务端就拿到数据并塞进 HTML 里发给浏览器，就必须使用 Nuxt 专属的同构网络请求函数，它们保证了代码在服务器和浏览器双端执行时的数据一致性，这就是**同构（Isomorphic）数据获取**。
+
+### 2.1 终极武器：`useFetch` 与状态脱水 (Hydration)
+
+这是 Nuxt 3 提供的一个极其强大的核心 API，它的内部执行逻辑堪称艺术：
+
+1. 用户在地址栏敲击回车。
+2. Nuxt 服务器接管请求，立刻在**服务器后台**执行 `useFetch('/api/posts')`。拿到数据后，将文章列表直接渲染进 HTML 字符串。
+3. 关键动作来了：Nuxt 会把请求回来的原始数据，静默地序列化成一段 JSON（这称为脱水 Dehydration），塞进 HTML 底部的一个隐藏 `<script>` 标签里，一起发送给用户的浏览器。
+4. 浏览器渲染出带内容的页面。随后 Vue 的 JS 脚本加载并启动。它会去那个隐藏标签里直接捞起那份数据“复水（Hydration）”，这就意味着在浏览器端，**同样的 `useFetch` 不会再白白去发一次重复的网络请求了！**
+
+```vue
+<script setup>
+// 一行代码，处理请求触发、加载状态、错误捕获与双端状态同步
+const { data: posts, pending, error } = await useFetch('https://api.example.com/posts');
+</script>
+
+<template>
+  <div class="post-list">
+    <!-- 如果请求还挂在半空中，展示骨架屏提示 -->
+    <div v-if="pending">正在跨越网线搬运文章...</div>
+
+    <!-- 灾难降临时的降级展示 -->
+    <div v-else-if="error">糟糕，服务器罢工了：{{ error.message }}</div>
+
+    <!-- 完美渲染 -->
+    <ul v-else>
+      <li v-for="post in posts" :key="post.id">{{ post.title }}</li>
+    </ul>
+  </div>
+</template>
+```
+
+_(注意：如果你纯粹是在客户端因用户点击某个按钮去发起请求，而不是为了给首屏准备数据，请使用系统底层的 `$fetch` 函数，而不要滥用 `useFetch`。)_
+
+## 三、渲染模式的万花筒：路由级别混合渲染
+
+如果整个网站死磕 SSR，会导致服务器压力极大；如果全做静态生成（SSG），面对几十万商品的高频电商网站又显得过于僵化。
+
+Nuxt 3 借助底层极为激进的 Nitro 引擎，实现了惊人的**混合渲染策略（Hybrid Rendering / Route Rules）**。你可以在 `nuxt.config.ts` 这个总指挥部里，为不同的路由频道，定制完全不同的物理渲染形态。
+
+```typescript
+export default defineNuxtConfig({
+  routeRules: {
+    // 1. 公司介绍页是纯静态的：在打包阶段直接生成死 HTML 文件，部署到 CDN 上。访问速度达到物理极限 (SSG)。
+    '/about': { prerender: true },
+
+    // 2. 后台管理面板完全不需要 SEO，且全是强交互：关闭 SSR，回退成普通的单页应用 (SPA)。极大地节省了昂贵的服务器计算资源。
+    '/admin/**': { ssr: false },
+
+    // 3. 跨域 API 网关：允许通过特定的前缀直接暴露 CORS。
+    '/api/**': { cors: true },
+
+    // 4. 重磅杀手锏 (ISR 增量静态再生)：博客文章详情页。
+    // 首次访问生成 HTML 后放入缓存，接下来的 3600 秒内所有人访问直接秒回缓存。
+    // 过期后如果有新访问，后台再悄悄重新生成一份最新的覆盖掉旧的。
+    '/blog/**': { isr: 3600 },
+  },
+});
+```
+
+这种粒度精细到 URL 级别的渲染策略划分，是打造抗千万级高并发、且体验完美的现代企业级架构的核心阵地。
+
+## 四、全栈能力拓展：Server API
+
+如果你需要为前端写几个轻量级的接口（比如查询数据库、连接 Redis 甚至调用 OpenAI 的大模型 API），你根本不需要再单独去搭一个 Express 或是 SpringBoot 后端项目。
+
+在 Nuxt 根目录下创建一个 `server/api/` 文件夹。里面写的 `.ts` 文件，将直接跑在服务器的 Node.js/Nitro 引擎上，与你的前端项目同生共死。
+
+```typescript
+// server/api/hello.ts
+import { defineEventHandler } from 'h3'; // 底层基于极其轻量的高性能 h3 引擎
+
+export default defineEventHandler(async (event) => {
+  // 这是纯正的后端运行环境
+  const dbData = await fakeDatabaseQuery();
+
+  // 甚至不用写 res.json()，直接 return 对象即可返回 application/json
+  return {
+    success: true,
+    message: '这是来自服务端深处的问候',
+    data: dbData,
+  };
+});
+```
+
+在前端页面中，只需无脑调用 `useFetch('/api/hello')` 即可获取。
+
+## 总结
+
+Nuxt 3 是一台为现代化 Web 战争打造的重型机甲。它用极致的自动导入规范清空了开发者的样板代码负担，用智能同构 API 解决了最令人头疼的数据流转问题，最后以惊艳的混合路由规则和内置 Server 引擎，一举打破了传统前端与后端的隔离壁垒。对于每一位希望冲破单纯“页面还原师”桎梏、探索更广阔 Web 架构宇宙的 Vue 开发者而言，掌握 Nuxt 3 已经不再是可选项，而是通向资深大前端之路的必修课。

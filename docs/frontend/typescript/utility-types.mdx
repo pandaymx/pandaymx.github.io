@@ -1,0 +1,208 @@
+---
+title: 内置工具类型
+description: 掌握 TypeScript 提供的如 Partial、Pick、Omit 等核心内置工具类型（Utility Types），大幅度消灭重复的接口定义。
+sidebar_position: 20
+---
+
+# 内置工具类型 (Utility Types)
+
+引入段落：在真实的业务开发中，数据模型总是千变万化的。比如针对一个 `User`（用户实体），在数据库中它拥有几十个字段；在更新用户信息的表单里，也许所有的字段都是可选的；而在返回给普通游客的展示列表中，我们又需要剔除掉敏感的密码和邮箱字段。如果为这些场景各自定义一个全新的 `interface`，代码中将充斥着大量冗余且难以同步维护的类型定义。**为了解决这个问题，TypeScript 提供了一整套“工具库”——内置工具类型（Utility Types）**。它们就像是类型的“瑞士军刀”，可以通过变形、挑选、过滤已有类型，快速组合出你需要的任何衍生类型。
+
+_核心前提：所有的内置工具类型，其底层实现原理完全依赖于上一章介绍的“泛型”、“条件类型”和“映射类型”。_
+
+## 一、属性修饰类：大批量改造对象结构
+
+这类工具针对的是对象类型（Interface / Type alias），主要用于批量修改对象属性的可选状态或可写状态。
+
+### 1.1 `Partial<T>`：全部转为可选
+
+将类型 `T` 中的**所有属性**变为可选属性（即在属性名后加上 `?`）。这在处理 HTTP 的 `PATCH` 请求更新数据，或者处理 React 组件复杂的默认配置对象时极其常用。
+
+```typescript
+interface TodoItem {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+// 在更新一条 Todo 时，通常只传需要修改的字段
+// 这里不需要重新写一个 { title?: string, ... } 的接口
+function updateTodo(todo: TodoItem, fieldsToUpdate: Partial<TodoItem>) {
+  return { ...todo, ...fieldsToUpdate };
+}
+
+// 合法：只传了 description，其余省略
+updateTodo(todo1, { description: '买点牛奶' });
+```
+
+### 1.2 `Required<T>`：全部转为必填
+
+行为与 `Partial` 恰好相反，它会将 `T` 中所有属性的 `?` 修饰符无情抹除，强制所有属性必须存在。
+
+```typescript
+interface UserConfig {
+  theme?: string;
+  autoSave?: boolean;
+}
+
+// 经过配置初始化函数处理后，确保所有配置项都有值
+const finalConfig: Required<UserConfig> = {
+  theme: 'dark',
+  autoSave: true,
+};
+```
+
+### 1.3 `Readonly<T>`：全部转为只读
+
+将 `T` 的所有属性设置为只读（添加 `readonly` 修饰符）。这也就意味着该类型的变量一旦初始化赋值完毕，就再也不允许被重新赋值。这对于维护纯函数（Pure Functions）和 React Redux 中的不可变状态（Immutable State）非常有帮助。
+
+```typescript
+type FrozenTodo = Readonly<TodoItem>;
+const item: FrozenTodo = { id: 1, title: '学习 TS', description: '', completed: false };
+
+// item.title = "打游戏"; // 编译器立刻报错：无法为“title”赋值，因为它是只读属性。
+```
+
+## 二、属性裁剪类：精准的外科手术
+
+这是日常开发中出场率最高的工具类型族。它们允许我们基于一个“巨无霸”主模型，精准切割出各种轻量级的派生模型。
+
+### 2.1 `Pick<T, K>`：精心挑选
+
+从类型 `T` 中，挑选出一组由 `K`（属性名的字符串字面量联合类型）指定的属性，构造并返回一个纯净的新类型。
+
+```typescript
+interface FullUser {
+  id: number;
+  username: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+}
+
+// 场景：在页面顶部导航栏仅仅展示用户的头像和名字
+type NavBarUser = Pick<FullUser, 'id' | 'username'>;
+
+/*
+等同于你手写了：
+interface NavBarUser {
+  id: number;
+  username: string;
+}
+*/
+```
+
+### 2.2 `Omit<T, K>`：无情剔除
+
+逻辑与 `Pick` 相反。它从类型 `T` 中，直接**剔除**所有在 `K` 中列出的属性，保留剩下的一切。当我们面对拥有三十个字段的模型，仅仅想隐藏掉其中两个敏感字段（比如密码和安全令牌）时，用 `Omit` 比用 `Pick` 一一列举剩下二十八个字段要优雅得多。
+
+```typescript
+// 场景：构建供前端渲染的公开用户信息，坚决不能包含敏感数据
+type PublicProfile = Omit<FullUser, 'passwordHash' | 'phone'>;
+
+/*
+等同于保留了：
+interface PublicProfile {
+  id: number;
+  username: string;
+  email: string;
+}
+*/
+```
+
+## 三、联合类型操作类：集合的交与差
+
+这类工具不操作对象内部的键值对，而是专门对付**联合类型（Union Types，如 `"a" | "b" | "c"`）**。
+
+### 3.1 `Extract<T, U>`：提取交集
+
+从联合类型 `T` 中，提取出所有能够赋值给类型 `U` 的子类型。如果毫无交集，返回 `never`。
+
+```typescript
+type AvailableColors = 'red' | 'green' | 'blue' | 'yellow';
+type PrimaryColors = 'red' | 'blue' | 'black';
+
+// 只保留同时存在于两边的颜色
+type Intersection = Extract<AvailableColors, PrimaryColors>;
+// 结果推导为："red" | "blue"
+```
+
+### 3.2 `Exclude<T, U>`：排除子集
+
+从联合类型 `T` 中，剔除所有能够赋值给类型 `U` 的子类型。
+
+```typescript
+// 比如我们要把 "yellow" 从颜色库中去掉
+type RemainingColors = Exclude<AvailableColors, 'yellow'>;
+// 结果推导为："red" | "green" | "blue"
+```
+
+### 3.3 `NonNullable<T>`：净化空值
+
+非常实用的一个类型！它能直接将 `null` 和 `undefined` 这种捣乱的空值从联合类型中驱逐出去。
+
+```typescript
+type FormInput = string | number | undefined | null;
+
+type ValidInput = NonNullable<FormInput>;
+// 结果推导为：string | number
+```
+
+## 四、函数签名推断类
+
+有时候，我们使用的第三方库并没有显式导出它的数据模型类型，只导出了一个操作函数。我们可以利用以下工具“反向推导”出它的内部结构。
+
+### 4.1 `ReturnType<T>`：获取返回值类型
+
+通过传入一个函数的 `typeof`，自动推导并抓取这个函数的返回值结构。
+
+```typescript
+// 假设这是一个非常复杂的处理函数，返回一个层级很深的嵌套对象
+function generateComplexConfig() {
+  return {
+    moduleA: { enable: true, retry: 3 },
+    moduleB: { endpoints: ['/api/v1', '/api/v2'] },
+  };
+}
+
+// 极其方便地将函数返回的对象结构，直接提取成一个独立的类型供后续使用！
+type ConfigResult = ReturnType<typeof generateComplexConfig>;
+```
+
+### 4.2 `Parameters<T>`：获取参数类型元组
+
+以元组（Tuple）的形式获取目标函数所有的参数类型。
+
+```typescript
+function registerUser(username: string, age: number, roles: string[]) {}
+
+type RegisterArgs = Parameters<typeof registerUser>;
+// 结果推导为：[username: string, age: number, roles: string[]]
+```
+
+## 五、面试常考：深度嵌套如何处理？
+
+上面介绍的很多工具（如 `Partial` 和 `Readonly`）都有一个致命的盲区：它们都是**浅层（Shallow）**操作的。也就是说，如果对象的属性值依然是一个嵌套的复杂对象，工具类型对内层对象无能为力。
+
+想要实现 `DeepPartial`（深度可选），我们就必须结合**泛型、条件类型与递归**来手写：
+
+```typescript
+// 神仙操作：手写 DeepPartial
+type DeepPartial<T> = T extends Function
+  ? T // 如果是函数，不处理
+  : T extends Array<infer U>
+    ? _DeepPartialArray<U> // 如果是数组，递归处理数组元素
+    : T extends object
+      ? _DeepPartialObject<T> // 如果是对象，递归处理所有属性
+      : T | undefined; // 基础类型直接加 undefined
+
+interface _DeepPartialArray<T> extends Array<DeepPartial<T>> {}
+type _DeepPartialObject<T> = { [P in keyof T]?: DeepPartial<T[P]> };
+```
+
+_这段代码虽然晦涩，但它展示了 TypeScript 类型系统图灵完备的强大计算能力。_
+
+## 总结
+
+内置的 Utility Types 是 TypeScript 赐予前端开发者的效率倍增器。优秀的 TS 代码，绝不是堆砌一页又一页冗余的 Interface，而是精心设计一套严密的基础核心模型（Core Model），然后利用 `Pick`, `Omit`, `Partial` 在各个不同的业务边界处（API、组件 Props、状态库）动态派生出适用的数据结构。这种“一处修改，全线自动推导更新”的体验，正是 TypeScript 工程化的核心魅力所在。

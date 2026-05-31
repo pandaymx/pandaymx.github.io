@@ -1,0 +1,228 @@
+---
+title: 异步编程模式
+description: 掌握 JavaScript 单线程模型与事件循环，深入解析从 Callback、Promise 到 async/await 的演进史与高阶实战技巧。
+sidebar_position: 20
+---
+
+# 异步编程模式
+
+引入段落：JavaScript 诞生于网景浏览器，最初的使命只是为了在网页上做一些简单的表单验证和 DOM 交互。这决定了它的基因：**它必须是单线程（Single-threaded）的**。为什么？想象一下，如果 JS 有两个并发线程，一个线程试图在 `<body>` 里插入一个节点，另一个线程同时试图删除整个 `<body>`，浏览器该听谁的？为了避免复杂且极易出错的 DOM 互斥锁机制，单线程是唯一的选择。
+
+然而，单线程意味着所有任务必须排队。如果你在请求一个耗时 5 秒钟的 API，整个页面不仅会停止执行所有脚本，甚至连用户的滚动、点击等 UI 响应也会全部卡死。为了解决这个致命缺陷，JavaScript 发展出了一套精妙绝伦的**异步编程模型（Asynchronous Programming）**。
+
+## 一、同步 vs 异步机制概览
+
+- **同步（Synchronous）**：代码就像单行道上的车，排队依次通过。下一行代码必须死死等待上一行代码执行完毕（即便它耗时巨大）才能开始。
+- **异步（Asynchronous）**：遇到耗时的“网络请求”、“定时器”或“文件读取”时，JavaScript 引擎会将其作为**外包任务**交给宿主环境（浏览器提供的 Web APIs，或 Node.js 的 C++ 底层库）去后台处理，主线程则一秒都不耽搁，立刻继续执行后续的同步代码。当后台任务完成后，宿主环境会将预先写好的**回调函数（Callback）**推入任务队列，等待主线程空闲时再拿出来执行。
+
+## 二、时代的眼泪：回调函数 (Callbacks)
+
+回调函数是最古老、最基础的异步解决方案。简而言之，你把一个函数作为参数传给另一个函数，并要求对方在任务完成时“打电话通知你（Call back）”。
+
+### 2.1 Node.js 经典的 Error-First 风格
+
+在早期的 Node.js 和旧版浏览器 API 中，约定俗成的规范是：回调函数的第一个参数永远是错误对象 `err`（如果没有错误则为 null），后续参数才是获取的数据。
+
+```javascript
+const fs = require('fs');
+
+fs.readFile('/path/to/user.json', 'utf-8', function (err, userData) {
+  // 必须先做错误检查
+  if (err) {
+    console.error('读取用户文件失败', err);
+    return;
+  }
+
+  console.log('读取成功，数据为：', userData);
+});
+```
+
+### 2.2 臭名昭著的“回调地狱 (Callback Hell)”
+
+当我们只有一次异步操作时，回调函数看起来还不错。但真实的业务逻辑往往是关联的：比如，你需要先获取用户信息，再用用户 ID 获取他的订单列表，再用订单 ID 获取具体的商品详情。
+
+```javascript
+// 这就是被戏称为“波动拳”的代码结构
+getUser(123, function (err, user) {
+  if (err) return handleError(err);
+
+  getOrders(user.id, function (err, orders) {
+    if (err) return handleError(err);
+
+    getOrderDetail(orders[0].id, function (err, detail) {
+      if (err) return handleError(err);
+
+      console.log('终于拿到商品详情了：', detail);
+      // 如果再嵌套两层，代码将完全失去可读性，并且极难捕捉异常
+    });
+  });
+});
+```
+
+除了代码横向发展（嵌套过深）导致的难以阅读外，回调模式最致命的问题是**控制反转带来的信任危机**：你把回调函数交给了第三方库，它可能会被调用多次、一次都不调用，或者吞掉错误。
+
+## 三、规范的救赎：Promise 深度解析
+
+为了拯救回调地狱，社区（如 jQuery 的 Deferred）经过漫长探索，最终在 ES6 中将 `Promise` 纳入了官方标准。Promise 代表了一个尚未完成，但预期在未来会完成的异步操作的最终结果。
+
+### 3.1 Promise 的三种不可逆状态
+
+Promise 内部是一个严格的状态机。它必定处于以下三种状态之一：
+
+1. **Pending（进行中）**：实例刚刚被创建时的初始状态。
+2. **Fulfilled（已成功，有时称 Resolved）**：代表操作成功，携带最终数据。
+3. **Rejected（已失败）**：代表操作失败，携带错误原因。
+
+**铁律**：状态的改变只能发生一次，且方向不可逆（只能从 Pending -> Fulfilled，或从 Pending -> Rejected）。一旦决议（Settled），它的状态和数据就被永远冻结了。
+
+### 3.2 链式调用：化层级为线性的魔法
+
+Promise 最大的贡献在于它通过 `.then()` 返回一个**全新的 Promise 实例**，从而允许我们将深层的嵌套“拍平”成线性的链式调用。
+
+```javascript
+fetch('https://api.example.com/user/123')
+  .then((response) => {
+    // 处理成功：返回的这个 json() 本身也是一个 Promise，它会被无缝传递给下一个 then
+    return response.json();
+  })
+  .then((user) => {
+    // 拿到上一步的结果，发起新的请求
+    return fetch(`https://api.example.com/orders?userId=${user.id}`);
+  })
+  .then((response) => response.json())
+  .then((orders) => {
+    console.log('订单获取成功', orders);
+  })
+  .catch((error) => {
+    // 集中错误处理：上面长长的链条中，任何一个环节抛出异常（或者发生网络断开），都会直接击穿跳到这里被捕获！
+    console.error('发生严重错误，流程终止', error);
+  })
+  .finally(() => {
+    // 无论成功还是失败，都会执行。极度适合用于关闭 Loading 动画或断开数据库连接
+    hideLoadingSpinner();
+  });
+```
+
+### 3.3 掌控全局的静态并发方法
+
+当你有多个无关的异步请求时，让它们串行排队是非常愚蠢的。Promise 提供了强大的并发控制工具：
+
+- **`Promise.all([p1, p2, p3])`**：**一荣俱荣，一损俱损**。启动所有 Promise，只有等它们**全部成功**，才返回一个结果数组。只要有**任何一个失败**，整个 Promise 立刻走向 rejected。
+- **`Promise.race([p1, p2])`**：**极限竞速**。哪个 Promise 跑得最快（无论是成功还是失败），就直接采用谁的结果。这是给原本没有超时控制的 fetch 请求增加超时逻辑的最佳手段（将正常请求和一个内部抛错的定时器 Promise 比赛）。
+- **`Promise.allSettled([p1, p2])` (ES2020)**：**稳如泰山**。等待所有的 Promise 都执行完毕，不管它们是成功还是失败，最终返回一个包含每个 Promise 状态和结果的数组。在批量操作（如发邮件、上传多张图片）中极为实用。
+- **`Promise.any([p1, p2])` (ES2021)**：**有奶便是娘**。只要有一个 Promise 成功，就返回成功结果。只有当所有 Promise 全部失败时，才会抛出一个聚合错误（AggregateError）。适用于向多个 CDN 节点同时请求资源，哪个最快连上用哪个。
+
+## 四、终极优雅：async / await
+
+Promise 虽然解决了嵌套问题，但 `.then()` 的不断衔接仍然带有明显的函数式编程痕迹，阅读起来依然不如传统的同步代码（上一步执行完，再写下一行）直观。
+
+ES2017 引入了 `async/await`，它被公认为 JavaScript 异步编程的终极解决方案。**它本质上只是 Promise + Generator 状态机的语法糖**，但它带来了颠覆性的体验。
+
+### 4.1 书写同步风格的异步代码
+
+使用 `await` 关键字，可以强迫 JS 引擎在这里“暂停”等待 Promise 的结果（注意，这只是在当前函数内部暂停，主线程依然会去执行别的任务），拿到结果后再执行下一行。
+
+```javascript
+// 函数必须标记为 async，它将默认包装并返回一个 Promise
+async function getUserProfileAndOrders() {
+  try {
+    // 同步语法的清爽感！
+    const response = await fetch('/api/user/123');
+
+    // 如果上面的 fetch 失败抛出 404/500，代码不会继续往下走，直接跳入 catch
+    if (!response.ok) throw new Error('网络响应异常');
+
+    const user = await response.json();
+    const ordersRes = await fetch(`/api/orders?userId=${user.id}`);
+    const orders = await ordersRes.json();
+
+    return { user, orders };
+  } catch (error) {
+    // 终于又能使用经典的 try/catch 来统一捕获同步和异步错误了！
+    console.error('业务逻辑处理失败：', error.message);
+    throw error; // 抛给更上层的调用者处理
+  }
+}
+```
+
+### 4.2 性能陷阱：警惕不必要的串行
+
+新手在使用 `await` 时最容易犯的错误是“过度同步化”。
+
+```javascript
+// ❌ 灾难性的串行写法
+async function getDashboardData() {
+  // 假设获取用户需要 2 秒
+  const user = await fetchUser();
+  // 假设获取统计需要 3 秒，它白白等待了前面 2 秒。总耗时 5 秒！
+  const stats = await fetchStats();
+  return { user, stats };
+}
+
+// ✅ 正确的并行写法
+async function getDashboardData() {
+  // 同时发起请求，使用 Promise.all 将其合并，总耗时仅取决于最慢的那个请求（3秒）
+  const [user, stats] = await Promise.all([fetchUser(), fetchStats()]);
+  return { user, stats };
+}
+```
+
+## 五、深入引擎底层：Event Loop 与宏微任务
+
+理解了语法还不够，想要在复杂的异步场景（如面试中的输出顺序题）中不迷失，必须彻底理解浏览器的**事件循环（Event Loop）机制**。
+
+JavaScript 的异步任务被放入队列中，但这个队列并不是只有一个，而是分为两类优先级截然不同的队伍：
+
+1. **宏任务 (Macrotask)**：每次循环只取出一个执行。
+   - 整体代码块（主脚本执行）
+   - `setTimeout` / `setInterval`
+   - UI 渲染操作
+   - I/O (网络请求、文件读写)
+2. **微任务 (Microtask)**：拥有极高的优先级，**在每次宏任务执行结束后，必须清空整个微任务队列的所有任务，才能进入下一次循环或 UI 渲染**。
+   - **`Promise.then / catch / finally` 的回调函数** (核心考点！)
+   - `MutationObserver`
+   - Node.js 专属的 `process.nextTick`（优先级甚至高于普通的 Promise 微任务）
+
+### 5.1 终极测验：判断执行顺序
+
+看看这段经典代码，你能在脑海中推演它的执行顺序吗？
+
+```javascript
+console.log('1. Script start'); // 同步，立即执行
+
+setTimeout(() => {
+  console.log('2. setTimeout'); // 放入宏任务队列
+}, 0);
+
+Promise.resolve()
+  .then(() => {
+    console.log('3. Promise 1'); // 放入微任务队列
+  })
+  .then(() => {
+    console.log('4. Promise 2'); // 等 3 执行完，才会放入微任务队列
+  });
+
+console.log('5. Script end'); // 同步，立即执行
+
+/*
+执行推演过程：
+1. 主脚本开始执行（第一个宏任务）。打印 `1. Script start`。
+2. 遇到 setTimeout，将其回调交给浏览器定时器线程。因为是 0ms，回调立刻被推入【宏任务队列】。
+3. 遇到 Promise.resolve().then，将其内部函数推入【微任务队列】。
+4. 打印 `5. Script end`。主脚本代码执行完毕。
+5. 第一个宏任务结束，引擎开始检查【微任务队列】。发现里面有内容，执行它。
+6. 打印 `3. Promise 1`。
+7. 这个 then 执行完后，触发了后面的链式 then，第二个函数又被塞入了【微任务队列】。
+8. 引擎再次检查微任务队列，发现没清空完，继续执行。打印 `4. Promise 2`。
+9. 微任务队列彻底清空。浏览器可能执行一次页面渲染。
+10. 进入下一轮 Event Loop，从【宏任务队列】中取出定时器回调执行。打印 `2. setTimeout`。
+
+最终输出顺序： 1 -> 5 -> 3 -> 4 -> 2
+*/
+```
+
+## 总结
+
+JavaScript 的异步进化史，就是一部前端开发体验的抗争史。从繁琐易错的 Callback，到规范化、可链式组合的 Promise 范式，再到最终化繁为简、回归同步直觉的 `async/await`，语言特性的升级极大释放了生产力。
+
+在现代业务开发中，你的准则是：**全面拥抱 Promise，首选使用 `async/await` 和 `try/catch` 来组织核心逻辑**；在处理复杂状态或批量任务时，熟练运用 Promise 的并发方法。同时，心中常备宏任务与微任务的天平，这才是高级工程师与初学者的分水岭。

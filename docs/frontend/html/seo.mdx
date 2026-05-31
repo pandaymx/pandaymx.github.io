@@ -1,0 +1,204 @@
+---
+title: 前端 SEO 基础
+description: 掌握搜索引擎工作原理，学习通过 Meta 标签、语义化、结构化数据等前端手段提升网站自然搜索排名。
+sidebar_position: 30
+---
+
+# 前端 SEO 基础
+
+引入段落：搜索引擎优化（SEO，Search Engine Optimization）是指通过优化网站的结构、内容和技术细节，提高网站在搜索引擎（如 Google、Bing、Baidu）自然搜索结果页面（SERP）排名的过程。虽然 SEO 听起来像是数字营销或运营团队的工作，但作为前端开发者，确保网站底层的代码架构“对搜索引擎友好”、可被顺畅抓取和理解，是我们不可推卸的技术责任。如果前端底子没打好，再多优质的内容也无法获得好的排名。
+
+## 一、搜索引擎工作原理概述
+
+要做好前端 SEO，首先需要了解搜索引擎是如何发现并评估一个网页的。其基本工作流可以简化为三个核心步骤：
+
+### 1.1 爬虫（Crawler/Spider）抓取流程
+
+搜索引擎会派出被称为“蜘蛛”或“爬虫”（如 Googlebot）的自动化程序访问网页。
+
+- **发现（Discovery）**：爬虫从它已经知道的网页（或通过提交的 Sitemap）出发，沿着页面上的超链接（即 `<a href="...">`）不断发现新的网页，就像在互联网这张巨大的网里爬行。
+- **抓取（Crawl）**：爬虫会下载目标页面的 HTML 内容。
+
+:::warning 客户端渲染 (CSR) 的抓取难题传统的单页应用（SPA，如纯 React/Vue 项目）初始下载的 HTML 里通常只有一个 `<div id="app"></div>`，内容完全靠 JavaScript 在客户端异步渲染。早期的爬虫根本“看”不到这些内容。现在虽然 Googlebot 能执行有限的 JS 并进行渲染，但过程漫长且极耗资源，严重影响抓取效率。因此，对于重 SEO 的项目，**服务端渲染（SSR）或静态站点生成（SSG）**是必不可少的。:::
+
+### 1.2 索引（Index）建立
+
+爬虫抓取回来的内容会被搜索引擎解析系统处理。
+
+- 系统会分析页面的文字内容、标题、Meta 标签、多媒体以及结构化数据，试图“理解”这个页面的核心主题是什么。
+- 提取的关键信息会被存储在极其庞大的数据库中，这个过程叫做“建立索引”。如果页面无法被正确解析，或者被标记为重复内容，它可能永远不会进入索引库。
+
+### 1.3 排名（Ranking）算法简介
+
+当用户在搜索引擎输入关键词并按下回车时，算法会以极快的速度从索引库中寻找最匹配、最高质量的结果。排名算法（如 Google 的核心算法）考量数百个因素，前端能直接影响的包括：
+
+- **相关性**：页面标题、Meta 描述和语义化标签是否匹配关键词。
+- **用户体验 (UX)**：页面加载速度（Core Web Vitals）、是否适配移动端。
+- **技术规范**：HTTPS 安全性、URL 结构、是否存在死链等。
+
+我们可以用 ASCII 图简单表示这个流程：
+
+```text
++----------+      +-----------+      +---------+      +-----------+
+| 互联网网页 | ---> | 爬虫抓取   | ---> | 解析处理 | ---> | 索引数据库 |
++----------+      +-----------+      +---------+      +-----------+
+                                                           |
+                                                           | (用户搜索)
+                                                           v
+                                                     +-----------+
+                                                     | 排名与展示 |
+                                                     +-----------+
+```
+
+## 二、Meta 标签优化
+
+`<head>` 标签中的 Meta 信息虽然大部分不直接显示在页面上，却是搜索引擎理解页面最直接的线索，也是影响用户是否在搜索结果中点击你的第一印象。
+
+### 2.1 `<title>`：页面标题
+
+最重要的前端 SEO 元素，没有之一。它是搜索结果列表中最醒目的蓝色大字。
+
+- **最佳长度**：保持在 50-60 个字符（约 25-30 个中文字符）以内。如果过长，在搜索结果中会被省略号截断（`...`）。
+- **撰写技巧**：将最核心的关键词尽量放在最前面。格式通常推荐采用管道符或连字符：`核心词汇 - 辅助说明 | 品牌名称`。
+
+```html
+<title>前端面试题大全(2024最新版)附详细解析 | 极客前端社区</title>
+```
+
+### 2.2 `<meta name="description">`：页面描述
+
+提供页面的摘要说明，它通常显示在搜索结果列表标题的下方。
+
+- **核心作用**：它目前不直接作为 Google 排名的权重因素，但它极大地影响**点击率（CTR）**。高质量的摘要能吸引用户点击，而点击率提升反过来会促进排名。
+- **长度建议**：控制在 150-160 个字符以内。
+
+```html
+<meta
+  name="description"
+  content="收录了2024年最新最全的前端开发面试题，涵盖HTML、CSS、JavaScript、React、Vue等核心知识点。每道题均附有资深工程师的详细原理解析，助你轻松拿到心仪大厂Offer。"
+/>
+```
+
+### 2.3 已经失效的 Keywords 标签
+
+在 2000 年代，`<meta name="keywords" content="...">` 曾是 SEO 的核心，但因为被严重滥用（堆砌关键词），目前主流搜索引擎（如 Google、Baidu）已经完全忽略该标签，无需再浪费精力填写。
+
+### 2.4 Open Graph (OG) 与 Twitter Cards 标签
+
+为了让你的网页在分享到微信、Twitter、Facebook、Slack 等社交平台时，不只显示一个枯燥的链接，而是展示出包含精美图片、标题和摘要的“富媒体卡片”，你必须配置这些社交图谱标签。
+
+```html
+<!-- Open Graph (被 Facebook, 微信等广泛支持) -->
+<meta property="og:title" content="前端 SEO 基础" />
+<meta property="og:description" content="掌握搜索引擎工作原理，学习前端 SEO 技巧。" />
+<meta property="og:image" content="https://example.com/images/seo-cover.jpg" />
+<meta property="og:url" content="https://example.com/docs/seo" />
+<meta property="og:type" content="article" />
+
+<!-- Twitter Card (专供 X/Twitter 使用) -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="前端 SEO 基础" />
+<meta name="twitter:image" content="https://example.com/images/seo-cover.jpg" />
+```
+
+## 三、结构化数据 (Schema.org)
+
+结构化数据是一种标准化格式（由 Google、Microsoft、Yahoo 等共同制定），用于向搜索引擎“喂食”明确、结构化的实体信息。如果你的页面配置了结构化数据，搜索引擎就能生成极其吸引眼球的**富媒体搜索结果（Rich Results）**。
+
+例如，搜索菜谱时直接在结果页显示评分星星、烹饪时间；搜索商品时显示价格和库存状态；搜索企业时显示客服电话。
+
+### 3.1 JSON-LD 格式简介
+
+有多种方式添加结构化数据（如 Microdata），但 Google 官方强烈推荐使用 **JSON-LD**。它是一段包含在 `<head>` 或 `<body>` 中的 `<script>` 标签内的纯 JSON 数据，完全不影响 DOM 结构。
+
+```html
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "深入理解前端 SEO",
+    "image": [
+      "https://example.com/photos/1x1/photo.jpg",
+      "https://example.com/photos/4x3/photo.jpg"
+    ],
+    "datePublished": "2023-10-01T08:00:00+08:00",
+    "dateModified": "2023-10-05T09:20:00+08:00",
+    "author": [
+      {
+        "@type": "Person",
+        "name": "张三工程师",
+        "url": "https://example.com/profile/zhangsan"
+      }
+    ]
+  }
+</script>
+```
+
+### 3.2 常见类型与测试工具
+
+- **常见类型 (Types)**：`Article` (文章/新闻)、`Product` (商品与评价)、`Event` (活动/演出)、`LocalBusiness` (本地商户)、`FAQPage` (常见问题解答)、`BreadcrumbList` (面包屑导航)。
+- **测试工具验证**：在上线前，务必将你的 URL 或代码片段丢进 Google 的 [Rich Results Test](https://search.google.com/test/rich-results) 工具中，检查 JSON-LD 语法是否合法，以及能生成哪些富媒体效果。
+
+## 四、URL 与链接优化
+
+### 4.1 语义化 URL 结构
+
+URL 应该简短、有意义且包含目标关键词。
+
+- **分隔符**：强烈推荐使用连字符 `-`（Kebab-case）来分隔单词，而不是下划线 `_`。搜索引擎会将 `-` 视为空格，而将带 `_` 的视为一整个生僻单词。
+- ❌ 糟糕的 URL：`https://example.com/post?id=123&sort=asc&lang=zh`
+- ✅ 优秀的 URL：`https://example.com/blog/frontend-seo-best-practices`
+
+### 4.2 Canonical 标签处理重复内容
+
+有时，由于业务需求（如多分类映射、跟踪参数），同一篇内容可以通过多个完全不同的 URL 访问：
+
+- `https://example.com/products/shoes`
+- `https://example.com/products?category=shoes&utm_source=twitter`
+
+如果放任不管，搜索引擎可能会认为你在恶意制造重复内容（Duplicate Content）来刷排名，从而对网站进行降权惩罚。解决办法是在所有这些页面的 `<head>` 中，指定一个唯一的“规范链接”（Canonical URL）。
+
+```html
+<link rel="canonical" href="https://example.com/products/shoes" />
+```
+
+这告诉爬虫：“不管你是通过什么带参数的链接进来的，请把所有的权重都算在这个标准 URL 头上。”
+
+### 4.3 内部链接策略
+
+良好的内部链接（网站页面之间的互相超链接，使用 `<a href="...">`）能帮助爬虫像蜘蛛网一样顺畅地发现网站上的所有页面，并传递页面权重。
+
+- 确保重要的页面不仅在顶部导航栏中可达，在正文区域也要有相关的上下文链接指向它们。
+- 永远不要使用 `<span onclick="goToPage()">` 来代替 `<a>`，爬虫不会执行点击事件！
+
+## 五、性能与 SEO 的深度绑定
+
+页面性能早就不再仅仅是用户体验（UX）问题，它已经被 Google 明确列为排名算法的核心因子。
+
+### 5.1 Core Web Vitals (核心网页指标)
+
+这是 Google 推出的三个极其关键的用户体验评估指标，你可以在 Chrome 的 Lighthouse 工具中直接测量它们：
+
+- **LCP (Largest Contentful Paint) - 加载性能**：视口内最大的可见内容（如首屏大图、大段文字）渲染完成的时间。建议 `< 2.5s`。
+  - _优化手段_：预加载（Preload）关键资源、优化图片体积、服务器端渲染（SSR）。
+- **FID (First Input Delay) / INP (Interaction to Next Paint) - 交互响应**：页面对用户首次交互（如点击按钮）的响应速度。
+  - _优化手段_：减少主线程阻塞，拆分长任务（Code Splitting），推迟非关键 JS（如埋点、广告）的执行。
+- **CLS (Cumulative Layout Shift) - 视觉稳定性**：测量页面内容在加载过程中的意外偏移。如果用户正要点击按钮，上面突然加载出一张图片把按钮挤下去，就会产生严重的 CLS。建议 `< 0.1`。
+  - _优化手段_：永远为 `<img>` 和 `<video>` 标签指定精确的 `width` 和 `height`，预留出占位空间。
+
+### 5.2 移动优先索引 (Mobile-First Indexing)
+
+目前 Google 已经全面切换到“移动优先索引”策略。这意味着**爬虫在评估你的页面时，完全模拟的是一部移动手机（Smartphone）的视角**。如果你的网站只有桌面端版本，或者在手机端展现极差（文字需要缩放才能看清、横向滚动条、按钮太小点不到），无论你的内容多好，排名都会受到严重打击。响应式设计（Responsive Web Design）是必选项。
+
+### 5.3 HTTPS 与安全性
+
+强制使用 HTTPS 加密传输是基础门槛。不仅浏览器会将 HTTP 网站显眼地标记为“不安全”，搜索引擎也会系统性地降低其权重。
+
+## 总结
+
+做好前端 SEO，并不是要用什么黑客手段欺骗搜索引擎，而是要在技术层面上做到“清晰、快速、标准”。通过运用前一章学习的语义化 HTML 搭建骨架，精准配置 Meta 标签和 JSON-LD 作为名片，并死磕 Web 性能指标（Core Web Vitals），前端工程师能够显著提升网站的自然流量，为业务创造不可估量的长期价值。
+
+延伸阅读：
+
+- [Google Search Central: SEO 入门指南](https://developers.google.com/search/docs/fundamentals/seo-starter-guide?hl=zh-cn)
+- [Web.dev: 了解 Core Web Vitals](https://web.dev/articles/vitals?hl=zh-cn)

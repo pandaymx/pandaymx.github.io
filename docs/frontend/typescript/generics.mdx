@@ -1,0 +1,231 @@
+---
+title: 泛型编程
+description: 深度解析 TypeScript 泛型的核心概念、泛型约束及高级的条件映射类型，带你从入门走向类型体操大师之路。
+sidebar_position: 10
+---
+
+# 泛型编程
+
+引入段落：如果你只是把 TypeScript 当作“给变量加个 `: string` 或 `: number`”的工具，那你可能仅仅触及了它的皮毛。在构建企业级应用或开源组件库时，我们经常需要编写一种能够处理**多种不同类型数据**，同时还要保持严格**类型安全**的通用代码（比如一个网络请求封装库、一个可复用的弹窗组件或者一个分页表格组件）。如果不使用泛型，我们要么不得不写死无数种类型组合，要么只能悲惨地退化去使用万恶的 `any`。**泛型（Generics）**，是 TypeScript 的灵魂，也是迈向高级前端工程师的绝对分水岭。
+
+## 一、初识泛型：将“类型”作为参数传递
+
+假设我们要写一个极度简单的函数：它接收什么参数，就原封不动地返回什么。
+
+### 1.1 `any` 的痛点
+
+如果不使用泛型，你可能会这样写：
+
+```typescript
+function identity(arg: any): any {
+  return arg;
+}
+
+const result = identity('Hello');
+// 悲剧发生：虽然我们传入的是字符串，但 TypeScript 认为 result 是 any。
+// 此时你调用 result.toFixed()（数字专有方法），编辑器不会报错，直到代码在浏览器里跑起来才崩溃。
+```
+
+使用 `any` 意味着我们完全放弃了 TypeScript 编译器的保护。这就好比你在一个黑盒子上贴了“里面啥都有可能”的标签，拿出来之后你根本不知道是什么。
+
+### 1.2 引入泛型变量 `<T>`
+
+泛型的本质思维转换是：**不要在定义函数的时候写死类型，而是留一个“类型占位符”。等到调用这个函数的时候，再把真正的类型像参数一样传进去。**
+
+在 TypeScript 中，我们习惯用大写字母 `T` (Type 的首字母) 来作为这个占位符。
+
+```typescript
+function identity<T>(arg: T): T {
+  return arg;
+}
+
+// 调用方式 1：显式传递类型参数，告诉 TS "在这个调用中，T 指代 string"
+const result1 = identity<string>('Hello');
+
+// 调用方式 2：利用类型推论 (Type Inference)，强烈推荐！
+// 编译器看到你传入了数字 42，它足够聪明，自动推断出 T = number
+const result2 = identity(42);
+```
+
+一旦加上了泛型，引擎就建立了一个**绑定契约**：输入参数 `arg` 是 `T` 类型，那么返回值也绝对是 `T` 类型。类型安全得到了完美保障。
+
+## 二、泛型的广泛应用场景
+
+泛型不仅能用于独立的函数，它在接口、类以及复杂数据结构的定义中无处不在。
+
+### 2.1 泛型接口 (Generic Interfaces)
+
+在前后端分离的开发中，后端返回的数据通常有一个固定的外层结构（如包含状态码和提示信息），而最核心的业务数据（data 字段）则是千变万化的。泛型接口是描述这种“通用包裹层”的最佳利器。
+
+```typescript
+// 定义一个通用的响应包裹结构，T 用来指代内部 data 的具体类型
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+// 具体的业务数据类型
+interface UserInfo {
+  id: number;
+  username: string;
+}
+
+interface ProductList {
+  items: Array<{ id: string; price: number }>;
+  total: number;
+}
+
+// 组合使用：极其清晰且类型严密！
+const userRes: ApiResponse<UserInfo> = {
+  code: 200,
+  message: 'success',
+  data: { id: 1, username: 'Alice' },
+};
+
+const productRes: ApiResponse<ProductList> = {
+  /* ... */
+};
+```
+
+### 2.2 泛型类 (Generic Classes)
+
+当你实现一些经典的数据结构（如栈、队列、链表）时，你希望这个结构既能装数字，也能装字符串，甚至能装复杂的对象实例。
+
+```typescript
+// 定义一个泛型队列类
+class GenericQueue<T> {
+  private data: T[] = []; // 内部使用泛型数组存储
+
+  push(item: T) {
+    this.data.push(item);
+  }
+
+  pop(): T | undefined {
+    return this.data.shift();
+  }
+}
+
+const numberQueue = new GenericQueue<number>();
+numberQueue.push(10);
+// numberQueue.push("str"); // 立即报错：类型“string”的参数不能赋给类型“number”的参数。完美！
+```
+
+### 2.3 多个泛型参数的协同
+
+泛型变量并不局限于一个。如果函数涉及多种类型的交互，可以定义多个占位符（惯例通常继续使用 `U`, `V`, `K` 等）。
+
+```typescript
+// 一个经典的元组（Tuple）翻转函数
+function swap<T, U>(tuple: [T, U]): [U, T] {
+  return [tuple[1], tuple[0]];
+}
+
+const swapped = swap(['Age', 25]); // 返回值类型自动推导为 [number, string]
+```
+
+## 三、泛型约束 (`extends` 关键字)
+
+在前面的例子中，泛型 `T` 过于自由了，它可以是世界上的任何类型。但有时候，我们的函数内部需要调用该类型的某个特定属性，如果 `T` 太自由，编译器就会阻止我们。
+
+例如，我们想打印参数的长度：
+
+```typescript
+function logLength<T>(arg: T): T {
+  // 报错：类型“T”上不存在属性“length”
+  console.log(arg.length);
+  return arg;
+}
+```
+
+因为 `T` 可能是数字（number 没有 length 属性），编译器认为这不安全。
+
+### 3.1 基础属性约束
+
+我们需要一种方法告诉编译器：“我允许你传任意类型，但**前提是这个类型必须包含一个名为 length 的数值属性**。” 这就是 `extends` 关键字的作用，它在这里的意思不是“继承类”，而是“**满足契约（兼容该形状）**”。
+
+```typescript
+// 定义一个契约接口
+interface HasLength {
+  length: number;
+}
+
+// 使用 extends 将 T 约束在 HasLength 的范围内
+function logLength<T extends HasLength>(arg: T): T {
+  console.log(arg.length); // 此时不再报错，因为 T 保证有 length
+  return arg;
+}
+
+logLength('hello'); // 字符串有 length，合法
+logLength([1, 2, 3]); // 数组有 length，合法
+// logLength(10); // 报错！数字不满足 HasLength 约束
+```
+
+### 3.2 进阶约束：保证键名存在 (`keyof`)
+
+这是高阶封装中最常用的组合技。我们要写一个安全的对象属性读取函数：传入一个对象，再传入一个键名，返回对象中该键对应的值。
+
+```typescript
+// K extends keyof T 的神仙操作：
+// 1. keyof T 会提取出 T 类型中所有键名组成的一个字面量联合类型（如 "name" | "age"）
+// 2. K extends ... 强制要求传入的参数 K，必须是上述联合类型中的一员！
+function getProperty<T, K extends keyof T>(obj: T, key: K) {
+  return obj[key];
+}
+
+const x = { a: 1, b: 2, c: 3 };
+
+getProperty(x, 'a'); // OK，返回值类型自动推断为 number
+// getProperty(x, "m"); // 编译器直接红线报错：类型“"m"”的参数不能赋给类型“"a" | "b" | "c"”的参数
+```
+
+这种强悍的静态检查，直接在编码阶段就杜绝了拼写错误导致的 `undefined` 异常。
+
+## 四、步入深水区：条件类型与映射类型
+
+熟悉了基础的泛型约束后，我们开始接触 TypeScript 类型系统最变态（也是最迷人）的部分——在类型层面进行“编程逻辑运算”。
+
+### 4.1 条件类型 (Conditional Types)
+
+语法借鉴了 JavaScript 的三元表达式：`T extends U ? X : Y`。它的含义是：如果泛型 `T` 能够赋值给类型 `U`（即 T 是 U 的子类型），那么这个表达式最终推导出来的类型就是 `X`，否则就是 `Y`。
+
+```typescript
+// 一个用于判断 T 是否为字符串的工具类型
+type IsString<T> = T extends string ? 'Yes' : 'No';
+
+type Res1 = IsString<string>; // 类型被计算为字面量 "Yes"
+type Res2 = IsString<number>; // 类型被计算为字面量 "No"
+```
+
+这种能力使得我们可以基于传入的类型参数，动态计算出截然不同的返回值类型。
+
+### 4.2 映射类型 (Mapped Types)
+
+有时候我们需要基于一个旧的接口类型，批量生成一个新的接口类型。比如，将旧接口的所有属性都变成只读的。映射类型结合了 `in` 关键字，类似于 `for...in` 循环，去遍历一个联合类型。
+
+```typescript
+interface Person {
+  name: string;
+  age: number;
+}
+
+// 手写实现内置的 Readonly 工具类型：
+// [P in keyof T] 会遍历 T 的所有键名（name 和 age）
+// T[P] 则获取当前键名在原对象中对应的类型
+type MyReadonly<T> = {
+  readonly [P in keyof T]: T[P];
+};
+
+type ReadonlyPerson = MyReadonly<Person>;
+/*
+最终被展开并计算为：
+{
+  readonly name: string;
+  readonly age: number;
+}
+*/
+```
+
+## 总结
+
+泛型，赋予了 TypeScript 超脱于具体数据类型的宏观抽象能力。通过 `<T>` 构建通用逻辑桥梁，通过 `extends` 设立安全哨卡，再配合 `keyof` 以及条件/映射类型进行复杂的类型推导，这就构成了被业界戏称为“类型体操（Type Gymnastics）”的核心体系。虽然日常的业务开发并不总是需要手写极其复杂的泛型逻辑，但掌握它们，是你读懂 React、Vue、Axios 等世界级开源库源码源码的关键钥匙。

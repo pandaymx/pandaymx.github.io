@@ -1,0 +1,242 @@
+---
+title: React Router 路由管理
+description: 全面掌握 React 客户端路由的核心生态工具 React Router v6，剖析嵌套路由架构、动态传参机制及应用级的路由守卫封装实战。
+sidebar_position: 30
+---
+
+# React Router 路由管理
+
+引入段落：现代前端之所以称之为“应用（Application）”而非传统的“网页（Web Pages）”，核心就在于**单页应用（SPA, Single Page Application）**架构的普及。在 SPA 中，无论用户如何点击侧边栏的导航，浏览器都**不会进行整页刷新**。一切所谓的“页面跳转”，本质上只是 JavaScript 监听了浏览器 URL 地址栏的变化，并在瞬间动态卸载旧组件、挂载新组件的过程，从而实现了丝滑无比、媲美原生 App 的切换体验。而在这场华丽魔术的背后，负责统筹调度 URL 与组件映射关系的“大管家”，就是前端最不可或缺的底层基础设施——路由系统。在 React 生态中，**React Router** 毫无争议地占据着垄断性的王座。
+
+_注意：本文的一切代码架构与思想理念，均基于经历了大刀阔斧重构并广受赞誉的最新 **React Router v6** 版本展开。彻底忘掉 v5 中冗长的 `<Switch>` 和混乱的 `withRouter` 吧。_
+
+## 一、客户端路由的底层基石
+
+在深入 API 之前，我们需要弄明白 React Router 提供的两种截然不同的路由物理表现形式。你在项目最顶层做出的选择，将直接影响应用的部署形态。
+
+### 1.1 `BrowserRouter` (现代标配，强烈推荐)
+
+它底层完全依赖于 HTML5 规范中的 History API（具体为 `pushState` 和 `replaceState` 方法）。
+
+- **表现形式**：极其优雅的真实路径。例如 `https://example.com/dashboard/users`。
+- **致命要求**：这对前端体验完美，但**对后端服务器提出了硬性要求**。当用户直接在浏览器地址栏输入上述深层链接并敲击回车时，请求会真正打到服务器（Nginx / Apache）。如果服务器没做配置，会直接返回 404 Not Found！你必须在服务器进行重定向配置（Rewrite），将所有对该域名下未知路径的请求，统统回退（Fallback）并丢给根目录的 `index.html`，让前端接管后续的路由逻辑。
+
+### 1.2 `HashRouter` (纯静态环境的妥协方案)
+
+它底层依赖于监听老旧浏览器也支持的 `window.onhashchange` 事件。
+
+- **表现形式**：利用 URL 中的“井号”进行锚点占位。例如 `https://example.com/#/dashboard/users`。
+- **特性**：在 HTTP 协议中，`#` 后面的任何内容都**绝对不会**被发送到服务器。因此，不论用户怎么刷新，服务器永远只会收到对 `example.com/` 的请求。这意味着它完全不需要服务器做任何额外配置，可以直接扔在 GitHub Pages 这种纯静态托管网站上跑。
+- **缺点**：不美观，且这种假 URL 架构对 SEO（搜索引擎爬虫抓取）极其不友好。
+
+## 二、V6 的全新声明式架构与核心 API
+
+v6 带来了一场清理门户式的架构简化。它的基础使用逻辑变得非常直观：定义一组由特定 URL 触发显示特定组件的映射关系。
+
+```jsx
+// App.jsx 入口文件
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import Home from './pages/Home';
+import About from './pages/About';
+import NotFound from './pages/NotFound';
+
+function App() {
+  return (
+    // 1. 在最外层包裹环境驱动器
+    <BrowserRouter>
+      {/* 2. 在应用的任何地方，使用 Link 替代传统的 <a> 标签来实现无刷新跳转 */}
+      <nav className="top-nav">
+        <Link to="/">首页大厅</Link>
+        <Link to="/about">关于公司</Link>
+      </nav>
+
+      {/* 3. Routes 是 v6 新增的魔法容器，它会智能选择最匹配当前 URL 的唯一的 Route */}
+      <main className="content-area">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+
+          {/* 极其重要的兜底机制：星号通配符。当上方所有精确路由都无法匹配时，展示 404 页面 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
+  );
+}
+```
+
+## 三、嵌套路由 (Nested Routes) 架构的革命
+
+在一个真实的后台管理系统中，你的页面结构往往是层叠的：所有页面都有一个公共的左侧导航栏和顶部菜单，只有右下方的这块长方形“内容画布”需要随着路由的切换而变化内容。
+
+在旧版本中，处理这种逻辑痛苦不堪。v6 为此引入了近乎完美的机制，其灵魂在于一个叫做 `<Outlet>`（插座/出口）的核心组件。
+
+```jsx
+// --- 1. 路由配置文件的架构改造 ---
+<Routes>
+  {/* 父级路由：当路径命中 /dashboard 时，外层框架 DashboardLayout 会被渲染 */}
+  <Route path="/dashboard" element={<DashboardLayout />}>
+    {/* index 路由是当父路径被精准匹配（没有任何子后缀）时的默认展示内容 */}
+    <Route index element={<DashboardHome />} />
+
+    {/* 注意这里的 path 都是相对路径！不需要再写冗长的 /dashboard/users */}
+    <Route path="users" element={<UserList />} />
+    <Route path="settings" element={<SystemSettings />} />
+  </Route>
+</Routes>;
+
+// --- 2. DashboardLayout.jsx 组件的设计 ---
+import { Outlet, Link } from 'react-router-dom';
+
+function DashboardLayout() {
+  return (
+    <div className="admin-layout-container">
+      <aside className="sidebar">
+        <nav>
+          {/* 跳转到对应的嵌套子路由 */}
+          <Link to="/dashboard/users">用户管理</Link>
+          <Link to="/dashboard/settings">系统设置</Link>
+        </nav>
+      </aside>
+
+      <main className="dynamic-content-area">
+        <h1>后台管理系统</h1>
+        {/* 魔法降临：Outlet 就像一个容器插槽，当前匹配到的子路由组件（如 UserList）会被自动“注入”并渲染在这里！ */}
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+这套架构极其强大，你可以进行无限层级的嵌套，彻底解耦了外层 UI 骨架与内层业务组件的强绑定关系。
+
+## 四、数据的流转：动态参数与编程式导航
+
+在不同页面穿梭时，获取路径上的标识符和携带查询参数是核心诉求。v6 提供了一组异常易用的自定义 Hooks 来接管这一切。
+
+### 4.1 动态路径捕获：`useParams`
+
+常用于根据 URL 中的 ID 去服务器获取详细数据，比如电商网站的商品详情页。
+
+```jsx
+// 在 Route 配置中占位：<Route path="/products/:productId" element={<ProductDetail />} />
+
+import { useParams } from 'react-router-dom';
+
+function ProductDetail() {
+  // 从 Hook 返回的对象中解构出 URL 路径上 : 后面对应的动态变量名
+  const { productId } = useParams();
+
+  // 紧接着通常会使用这个 ID 发起网络请求获取数据
+  return <h2>正在深入查看商品，唯一标识码：{productId}</h2>;
+}
+```
+
+### 4.2 查询字符串解析：`useSearchParams`
+
+常用于分页、搜索关键字过滤等场景。注意 URL 中的 `?page=2&q=react` 这部分。这个 Hook 的设计灵感直接来源于 `useState`，使得操作 URL 就像操作本地组件状态一样简单。
+
+```jsx
+import { useSearchParams } from 'react-router-dom';
+
+function ArticleSearch() {
+  // searchParams 是一个 URLSearchParams 实例，包含丰富的读取 API
+  // setSearchParams 是一个用来修改 URL 且不刷新页面的函数
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentKeyword = searchParams.get('q') || '';
+
+  return (
+    <input
+      type="text"
+      value={currentKeyword}
+      onChange={(e) => {
+        // 当用户输入时，页面 URL 会实时同步变化为 ?q=输入内容
+        setSearchParams({ q: e.target.value });
+      }}
+    />
+  );
+}
+```
+
+### 4.3 掌握方向盘：编程式导航 `useNavigate`
+
+并非所有的页面跳转都是由用户点击 `<Link>` 产生的。有些是在代码逻辑的幕后执行的：例如表单提交成功后自动跳转列表页，或者权限校验失败被强制踢回登录页。
+
+v6 废弃了饱受诟病的 `useHistory`，带来了极简的 `useNavigate` 函数。
+
+```jsx
+import { useNavigate } from 'react-router-dom';
+
+function LoginPanel() {
+  const navigate = useNavigate();
+
+  const handleLoginSubmit = async () => {
+    const isSuccess = await authAPI.login();
+    if (isSuccess) {
+      // 1. 常规推入历史栈的跳转
+      navigate('/dashboard');
+
+      // 2. 替换当前历史记录（按浏览器后退键不会回到登录页，防止死循环），这在登录逻辑中非常关键
+      // navigate('/dashboard', { replace: true });
+
+      // 3. 相对位移（例如：返回上一页）
+      // navigate(-1);
+    }
+  };
+
+  return <button onClick={handleLoginSubmit}>验证并登录</button>;
+}
+```
+
+## 五、企业级实战：打造路由权限守卫
+
+不同于 Vue Router 内置了方便的全局 `beforeEach` 钩子函数，React Router 崇尚“一切皆组件”的哲学，它没有提供内置的所谓拦截器。但这并不妨碍我们通过封装一个高阶组件（HOC）或包裹层组件，来实现极其严密的权限控制墙（Auth Guards）。
+
+其核心思想是：写一个拦截器组件包裹在受保护的路由外层。组件渲染时先校验权限，有权则放行（渲染内部的 `children`），无权则无情打回登录页。
+
+```jsx
+import { Navigate, useLocation } from 'react-router-dom';
+
+// 这是一个极其经典的权限守卫组件封装范式
+function RequireAuthGuard({ children }) {
+  // 1. 获取当前用户认证状态（这里假设来源于你封装的自定义 Hook 或 Redux）
+  const { isAuthenticated } = useAuthStore();
+
+  // 2. 获取用户想去、但因为没登录被拦下的那个目标页面路径
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    // 3. 核心拦截逻辑：发现未登录，使用 Navigate 组件强制触发重定向！
+    // 携带一个 state 过去，相当于在兜里揣了个纸条：“我是从 /admin/settings 被踢过来的”
+    // 这样等用户在登录页输入完密码成功后，登录逻辑就能取出这小纸条，自动送他回到想去的页面，体验拉满。
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // 4. 权限通过，正常挂载并渲染受到保护的核心业务组件
+  return children;
+}
+
+// ==========================================
+// 在最外层的路由拓扑图中使用该守卫组件：
+// ==========================================
+<Routes>
+  {/* 公开路由：任何人可进 */}
+  <Route path="/login" element={<LoginPage />} />
+
+  {/* 机密路由：被严密封锁的战区 */}
+  <Route
+    path="/admin"
+    element={
+      <RequireAuthGuard>
+        <AdminDashboard />
+      </RequireAuthGuard>
+    }
+  />
+</Routes>;
+```
+
+## 总结
+
+React Router v6 通过极致简化的 API 表面和深思熟虑的架构重构，将前端路由的复杂性降到了历史最低点。特别是 `<Routes>` 对匹配算法的智能改进，以及基于 `<Outlet>` 插槽模式的嵌套路由体系，让哪怕拥有上百个页面的中大型企业级系统的菜单层级管理也变得如同搭积木般清晰。深入掌握动态传参的获取与路由守卫组件的封装心法，你就能在单页应用的各个场景之间搭建出一条条稳固、安全且极速的高速公路。
