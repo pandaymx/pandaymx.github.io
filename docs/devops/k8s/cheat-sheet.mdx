@@ -1,0 +1,556 @@
+---
+title: 📝 Kubernetes 速查表
+description: Kubernetes 命令快速参考手册，涵盖集群管理、Pod、Deployment、Service、ConfigMap、Secret、Helm 及常用 YAML 模板。
+sidebar_position: 99
+---
+
+# 📝 Kubernetes 速查表
+
+<a id="overview"></a>
+
+## 📋 概览
+
+本速查表汇总了 Kubernetes 日常运维中最常用的 `kubectl` 命令和 YAML 配置模板，按功能分类排列，方便快速查阅。
+
+<a id="cluster"></a>
+
+## 🖥️ 集群管理（Cluster）
+
+| 命令                                              | 说明                                  |
+| ------------------------------------------------- | ------------------------------------- |
+| `kubectl cluster-info`                            | 查看集群基本信息                      |
+| `kubectl cluster-info dump`                       | 导出集群详细诊断信息                  |
+| `kubectl get nodes`                               | 查看集群节点列表                      |
+| `kubectl get nodes -o wide`                       | 查看节点详细信息（含 IP）             |
+| `kubectl describe node <node>`                    | 查看节点详细信息                      |
+| `kubectl cordon <node>`                           | 标记节点为不可调度                    |
+| `kubectl uncordon <node>`                         | 取消节点不可调度标记                  |
+| `kubectl drain <node> --ignore-daemonsets`        | 驱逐节点上的 Pod（安全维护）          |
+| `kubectl taint nodes <node> key=value:NoSchedule` | 给节点添加污点                        |
+| `kubectl taint nodes <node> key:NoSchedule-`      | 移除节点污点                          |
+| `kubectl top nodes`                               | 查看节点资源占用（需 metrics-server） |
+| `kubectl top pods`                                | 查看 Pod 资源占用                     |
+
+```bash title="集群信息查看示例"
+# 查看集群 API Server 地址
+kubectl cluster-info
+
+# 查看节点资源分配情况
+kubectl describe node node-1 | grep -A 5 "Allocated resources"
+
+# 安全驱逐节点（用于节点维护）
+kubectl drain node-1 --ignore-daemonsets --delete-emptydir-data
+```
+
+<a id="namespaces"></a>
+
+## 📁 命名空间（Namespaces）
+
+| 命令                                                    | 说明                         |
+| ------------------------------------------------------- | ---------------------------- |
+| `kubectl create namespace <name>`                       | 创建命名空间                 |
+| `kubectl get namespaces` / `kubectl get ns`             | 查看所有命名空间             |
+| `kubectl describe namespace <name>`                     | 查看命名空间详情             |
+| `kubectl delete namespace <name>`                       | 删除命名空间                 |
+| `kubectl apply -f namespace.yaml`                       | 通过 YAML 创建命名空间       |
+| `kubectl config set-context --current --namespace=<ns>` | 切换当前上下文的默认命名空间 |
+
+```bash title="命名空间操作示例"
+# 创建命名空间
+kubectl create namespace dev
+
+# 在指定命名空间中操作（临时）
+kubectl get pods -n dev
+
+# 设置默认命名空间（持久）
+kubectl config set-context --current --namespace=dev
+
+# 查看所有命名空间中的资源
+kubectl get pods --all-namespaces
+```
+
+<a id="pods"></a>
+
+## 📦 Pod 管理
+
+| 命令 | 说明 |
+| --- | --- |
+| `kubectl run <name> --image=<image>` | 直接运行 Pod |
+| `kubectl run <name> --image=<image> -it --rm --restart=Never -- /bin/bash` | 临时运行 Pod 并进入交互式 shell |
+| `kubectl get pods` / `kubectl get po` | 查看 Pod 列表 |
+| `kubectl get pods -o wide` | 查看 Pod 列表（含 IP 和节点） |
+| `kubectl describe pod <pod>` | 查看 Pod 详细信息和事件 |
+| `kubectl logs <pod>` | 查看 Pod 日志 |
+| `kubectl logs <pod> -c <container>` | 查看多容器 Pod 中指定容器的日志 |
+| `kubectl logs <pod> -f` | 实时跟踪 Pod 日志 |
+| `kubectl logs <pod> --previous` | 查看上一个终止的容器日志 |
+| `kubectl exec -it <pod> -- bash` | 进入 Pod 容器（bash） |
+| `kubectl exec -it <pod> -c <container> -- sh` | 进入指定容器（sh） |
+| `kubectl exec <pod> -- <cmd>` | 在 Pod 中执行命令 |
+| `kubectl port-forward <pod> <local>:<remote>` | 端口转发到本地 |
+| `kubectl port-forward svc/<service> <local>:<remote>` | 端口转发 Service 到本地 |
+| `kubectl delete pod <pod>` | 删除 Pod |
+| `kubectl delete pod <pod> --grace-period=0 --force` | 强制删除 Pod |
+| `kubectl get pod <pod> -o yaml` | 导出 Pod YAML 配置 |
+
+```bash title="Pod 调试常用命令"
+# 运行临时调试 Pod
+kubectl run debug-pod --image=busybox -it --rm --restart=Never -- /bin/sh
+
+# 查看 Pod 日志（多容器）
+kubectl logs my-pod -c app-container -f
+
+# 进入 Pod 调试
+kubectl exec -it my-pod -- sh
+
+# 端口转发访问 Pod 内服务
+kubectl port-forward pod/my-pod 8080:80
+
+# 查看 Pod 事件（排查启动失败）
+kubectl describe pod my-pod
+```
+
+<a id="deployments"></a>
+
+## 🚀 Deployment 管理
+
+| 命令                                                         | 说明                            |
+| ------------------------------------------------------------ | ------------------------------- |
+| `kubectl create deployment <name> --image=<image>`           | 创建 Deployment                 |
+| `kubectl apply -f deployment.yaml`                           | 通过 YAML 创建/更新 Deployment  |
+| `kubectl get deployments` / `kubectl get deploy`             | 查看 Deployment 列表            |
+| `kubectl describe deployment <deploy>`                       | 查看 Deployment 详情            |
+| `kubectl rollout status deployment/<deploy>`                 | 查看滚动更新状态                |
+| `kubectl rollout history deployment/<deploy>`                | 查看滚动更新历史                |
+| `kubectl rollout undo deployment/<deploy>`                   | 回滚到上一个版本                |
+| `kubectl rollout undo deployment/<deploy> --to-revision=<n>` | 回滚到指定版本                  |
+| `kubectl rollout restart deployment/<deploy>`                | 重启 Deployment（触发滚动重启） |
+| `kubectl scale deployment <deploy> --replicas=<n>`           | 扩缩容                          |
+| `kubectl set image deployment/<deploy> <container>=<image>`  | 更新容器镜像                    |
+| `kubectl edit deployment <deploy>`                           | 编辑 Deployment                 |
+| `kubectl delete deployment <deploy>`                         | 删除 Deployment                 |
+| `kubectl get deployment <deploy> -o yaml`                    | 导出 Deployment YAML            |
+
+```bash title="Deployment 滚动更新示例"
+# 更新镜像触发滚动更新
+kubectl set image deployment/my-app app=my-app:v2.0
+
+# 查看滚动更新进度
+kubectl rollout status deployment/my-app
+
+# 查看更新历史
+kubectl rollout history deployment/my-app
+
+# 回滚到上一个版本
+kubectl rollout undo deployment/my-app
+
+# 回滚到指定版本
+kubectl rollout undo deployment/my-app --to-revision=2
+
+# 扩缩容
+kubectl scale deployment my-app --replicas=5
+```
+
+<a id="services"></a>
+
+## 🔗 Service 管理
+
+| 命令 | 说明 |
+| --- | --- |
+| `kubectl expose deployment <deploy> --port=<p> --target-port=<tp>` | 创建 Service 暴露 Deployment |
+| `kubectl expose pod <pod> --port=<p> --target-port=<tp>` | 创建 Service 暴露 Pod |
+| `kubectl get services` / `kubectl get svc` | 查看 Service 列表 |
+| `kubectl describe service <svc>` | 查看 Service 详情 |
+| `kubectl delete service <svc>` | 删除 Service |
+| `kubectl get endpoints <svc>` | 查看 Service 对应的 Endpoints |
+
+```bash title="Service 操作示例"
+# 创建 ClusterIP Service
+kubectl expose deployment my-app --port=80 --target-port=8080
+
+# 创建 NodePort Service
+kubectl expose deployment my-app --port=80 --target-port=8080 --type=NodePort
+
+# 查看 Service 详情（含 Endpoints）
+kubectl describe svc my-app
+
+# 查看 Service 的 Endpoints（Pod IP 列表）
+kubectl get endpoints my-app
+```
+
+<a id="configmaps-secrets"></a>
+
+## ⚙️ ConfigMap & Secret 管理
+
+| 命令 | 说明 |
+| --- | --- |
+| `kubectl create configmap <name> --from-literal=<key>=<value>` | 从字面量创建 ConfigMap |
+| `kubectl create configmap <name> --from-file=<path>` | 从文件创建 ConfigMap |
+| `kubectl create configmap <name> --from-env-file=<file>` | 从环境变量文件创建 ConfigMap |
+| `kubectl get configmaps` / `kubectl get cm` | 查看 ConfigMap 列表 |
+| `kubectl describe configmap <name>` | 查看 ConfigMap 详情 |
+| `kubectl get configmap <name> -o yaml` | 导出 ConfigMap YAML |
+| `kubectl delete configmap <name>` | 删除 ConfigMap |
+| `kubectl create secret generic <name> --from-literal=<key>=<value>` | 创建普通 Secret |
+| `kubectl create secret generic <name> --from-file=<path>` | 从文件创建 Secret |
+| `kubectl create secret docker-registry <name> --docker-server=<server> --docker-username=<user> --docker-password=<pass>` | 创建 Docker Registry Secret |
+| `kubectl create secret tls <name> --cert=<cert-file> --key=<key-file>` | 创建 TLS Secret |
+| `kubectl get secrets` | 查看 Secret 列表 |
+| `kubectl describe secret <name>` | 查看 Secret 详情 |
+| `kubectl get secret <name> -o jsonpath='{.data.<key>}' \| base64 -d` | 解码 Secret 数据 |
+
+```bash title="ConfigMap 和 Secret 操作示例"
+# 从字面量创建 ConfigMap
+kubectl create configmap app-config --from-literal=APP_ENV=production --from-literal=APP_DEBUG=false
+
+# 从文件创建 ConfigMap
+kubectl create configmap app-config --from-file=config.json
+
+# 创建 Docker Registry Secret（用于拉取私有镜像）
+kubectl create secret docker-registry regcred \
+  --docker-server=registry.example.com \
+  --docker-username=admin \
+  --docker-password=secret123
+
+# 查看 Secret 内容（解码）
+kubectl get secret my-secret -o jsonpath='{.data.password}' | base64 -d
+```
+
+<a id="helm"></a>
+
+## 📦 Helm 包管理
+
+| 命令                                             | 说明                         |
+| ------------------------------------------------ | ---------------------------- |
+| `helm repo add <name> <url>`                     | 添加 Helm 仓库               |
+| `helm repo update`                               | 更新 Helm 仓库索引           |
+| `helm repo list`                                 | 查看已添加的仓库             |
+| `helm search repo <keyword>`                     | 搜索仓库中的 Chart           |
+| `helm install <release> <chart>`                 | 安装 Chart                   |
+| `helm install <release> <chart> -n <namespace>`  | 在指定命名空间安装           |
+| `helm install <release> <chart> --set key=value` | 安装时覆盖值                 |
+| `helm install <release> <chart> -f values.yaml`  | 使用自定义 values 文件安装   |
+| `helm upgrade <release> <chart>`                 | 升级 Release                 |
+| `helm upgrade <release> <chart> --install`       | 升级或安装（不存在时）       |
+| `helm rollback <release> [revision]`             | 回滚到指定版本               |
+| `helm uninstall <release>`                       | 卸载 Release                 |
+| `helm list` / `helm ls`                          | 查看已安装的 Release         |
+| `helm list -n <namespace>`                       | 查看指定命名空间中的 Release |
+| `helm status <release>`                          | 查看 Release 状态            |
+| `helm history <release>`                         | 查看 Release 历史版本        |
+| `helm show values <chart>`                       | 查看 Chart 的默认值          |
+| `helm template <release> <chart>`                | 渲染 Chart 模板（不安装）    |
+| `helm package <chart-dir>`                       | 打包 Chart                   |
+| `helm lint <chart-dir>`                          | 检查 Chart 语法              |
+
+```bash title="Helm 常用操作示例"
+# 添加 Bitnami 仓库
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+# 搜索 Chart
+helm search repo nginx
+
+# 安装 Nginx（指定版本和参数）
+helm install my-nginx bitnami/nginx --version 15.0.0 --set service.type=LoadBalancer
+
+# 升级 Release
+helm upgrade my-nginx bitnami/nginx --set replicaCount=3
+
+# 查看 Release 历史
+helm history my-nginx
+
+# 回滚到版本 1
+helm rollback my-nginx 1
+
+# 卸载 Release
+helm uninstall my-nginx
+```
+
+<a id="kubectl-tips"></a>
+
+## 💡 kubectl 使用技巧
+
+### 输出格式（Output Formats）
+
+| 参数 | 说明 | 示例 |
+| --- | --- | --- |
+| `-o wide` | 宽格式输出（含额外列） | `kubectl get pods -o wide` |
+| `-o json` | JSON 格式输出 | `kubectl get pod my-pod -o json` |
+| `-o yaml` | YAML 格式输出 | `kubectl get pod my-pod -o yaml` |
+| `-o jsonpath='{.status.phase}'` | JSONPath 提取字段 | `kubectl get pod my-pod -o jsonpath='{.status.phase}'` |
+| `-o custom-columns=NAME:.metadata.name,STATUS:.status.phase` | 自定义列输出 | `kubectl get pods -o custom-columns=NAME:.metadata.name,STATUS:.status.phase` |
+| `-o name` | 仅输出资源名称 | `kubectl get pods -o name` |
+
+### 标签与注解（Labels & Annotations）
+
+```bash title="标签和注解操作"
+# 给 Pod 添加标签
+kubectl label pods my-pod env=prod
+
+# 修改标签
+kubectl label pods my-pod env=staging --overwrite
+
+# 删除标签
+kubectl label pods my-pod env-
+
+# 给 Pod 添加注解
+kubectl annotate pods my-pod description="production pod"
+
+# 按标签筛选资源
+kubectl get pods -l env=prod
+kubectl get pods -l 'env in (prod,staging)'
+kubectl get pods -l 'env notin (dev)'
+```
+
+### Dry Run（试运行）
+
+```bash title="Dry Run 生成 YAML"
+# 仅打印对象不执行（客户端模拟）
+kubectl run nginx --image=nginx --dry-run=client -o yaml > pod.yaml
+
+# 仅打印对象不执行（服务端模拟）
+kubectl run nginx --image=nginx --dry-run=server -o yaml > pod.yaml
+
+# 创建 Deployment 并导出 YAML
+kubectl create deployment my-app --image=nginx --dry-run=client -o yaml > deployment.yaml
+```
+
+### Watch（实时监控）
+
+```bash title="Watch 监控资源变化"
+# 实时监控 Pod 状态变化
+kubectl get pods -w
+
+# 实时监控带宽格式
+kubectl get pods -w -o wide
+
+# 结合 grep 过滤（Windows 用 findstr）
+kubectl get pods -w | findstr Running
+```
+
+<a id="yaml-templates"></a>
+
+## 📄 常用 YAML 模板
+
+<a id="yaml-deployment"></a>
+
+### Deployment
+
+```yaml title="Deployment 模板"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  namespace: default
+  labels:
+    app: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: my-app
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+    spec:
+      containers:
+        - name: app
+          image: my-app:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: APP_ENV
+              value: 'production'
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: db-password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: app-config
+      imagePullSecrets:
+        - name: regcred
+```
+
+<a id="yaml-service"></a>
+
+### Service
+
+```yaml title="Service 模板（ClusterIP）"
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+```
+
+```yaml title="Service 模板（NodePort）"
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-nodeport
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080
+```
+
+```yaml title="Service 模板（LoadBalancer）"
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-lb
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+
+<a id="yaml-configmap"></a>
+
+### ConfigMap
+
+```yaml title="ConfigMap 模板"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+data:
+  # 字面量键值对
+  APP_ENV: 'production'
+  APP_DEBUG: 'false'
+  # 配置文件内容
+  app.properties: |
+    server.port=8080
+    database.url=jdbc:mysql://db:3306/app
+    database.username=app_user
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+        }
+    }
+```
+
+<a id="yaml-secret"></a>
+
+### Secret
+
+```yaml title="Secret 模板（Opaque）"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: default
+type: Opaque
+data:
+  # 值需 Base64 编码
+  db-password: c2VjcmV0MTIz
+  api-key: YWJjZGVmZ2hpams=
+stringData:
+  # 明文值（自动编码）
+  db-username: 'app_user'
+```
+
+<a id="yaml-ingress"></a>
+
+### Ingress
+
+```yaml title="Ingress 模板（Nginx）"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.example.com
+      secretName: app-tls-secret
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app-service
+                port:
+                  number: 80
+```
+
+## 🔗 相关资源
+
+- [🚀 K8s 基础入门](./intro) — 理解 Kubernetes 核心概念
+- [📦 Pod 与工作负载](./workloads) — 掌握 Pod 和控制器
+- [🔗 服务发现与负载均衡](./services) — Service 和 Ingress 配置
+- [⚙️ 配置与密钥管理](./config-secrets) — ConfigMap 和 Secret 使用
+- [📦 Helm 包管理](./helm) — Helm Chart 管理
+- [🔧 集群运维与排障](./operations) — 集群维护和故障排查

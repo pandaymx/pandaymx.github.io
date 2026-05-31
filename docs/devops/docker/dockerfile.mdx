@@ -1,0 +1,721 @@
+---
+title: 📄 Dockerfile 精通
+description: 掌握 Dockerfile 指令、多阶段构建、层缓存优化与安全最佳实践，编写生产级镜像。
+sidebar_position: 2
+---
+
+# 📄 Dockerfile 精通
+
+<a id="what-is-dockerfile"></a>
+
+## 📋 什么是 Dockerfile
+
+Dockerfile 是一个**文本配置文件**，包含了构建 Docker 镜像所需的所有指令。通过 `docker build` 命令，Docker 会按照 Dockerfile 中的指令一步步构建镜像。
+
+```dockerfile title="最小 Dockerfile 示例"
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+CMD ["node", "server.js"]
+```
+
+<a id="basic-structure"></a>
+
+## 🏗️ Dockerfile 基本结构
+
+一个典型的 Dockerfile 遵循以下结构：
+
+```
+Dockerfile
+├── FROM        # 基础镜像（必须第一条）
+├── ARG         # 构建参数（可选，放在 FROM 前）
+├── WORKDIR     # 工作目录
+├── ENV         # 环境变量
+├── COPY/ADD    # 复制文件
+├── RUN         # 执行命令（构建时）
+├── EXPOSE      # 暴露端口（声明）
+├── USER        # 切换用户
+├── HEALTHCHECK # 健康检查
+└── CMD/ENTRYPOINT # 容器启动命令
+```
+
+<a id="common-instructions"></a>
+
+## 📝 常用指令速查表
+
+| 指令 | 作用 | 格式示例 | 层数 |
+| --- | --- | --- | --- |
+| `FROM` | 指定基础镜像 | `FROM node:20-alpine` | 0（基础） |
+| `WORKDIR` | 设置工作目录 | `WORKDIR /app` | 0 |
+| `ENV` | 设置环境变量 | `ENV NODE_ENV=production` | 0 |
+| `ARG` | 构建时变量 | `ARG VERSION=1.0` | 0 |
+| `COPY` | 复制文件到容器 | `COPY . .` | 1 |
+| `ADD` | 复制文件（支持 URL/自动解压） | `ADD file.tar.gz /app/` | 1 |
+| `RUN` | 执行命令并创建新层 | `RUN npm install` | 1 |
+| `CMD` | 容器启动默认命令 | `CMD ["node","app.js"]` | 0 |
+| `ENTRYPOINT` | 容器启动主命令 | `ENTRYPOINT ["nginx"]` | 0 |
+| `EXPOSE` | 声明监听端口 | `EXPOSE 3000` | 0 |
+| `USER` | 切换运行用户 | `USER node` | 0 |
+| `VOLUME` | 声明挂载点 | `VOLUME ["/data"]` | 0 |
+| `HEALTHCHECK` | 健康检查 | `HEALTHCHECK --interval=30s CMD curl -f localhost` | 0 |
+| `ONBUILD` | 下游镜像触发器 | `ONBUILD COPY . .` | 0 |
+
+:::tip 指令格式：exec vs shell
+
+- **exec 格式**（推荐）：`CMD ["executable","param1"]`，直接执行，信号正确传递
+- **shell 格式**：`CMD command param`，通过 `/bin/sh -c` 执行，会导致 PID 1 问题
+
+```dockerfile title="exec 格式（推荐）"
+CMD ["node", "server.js"]
+```
+
+```dockerfile title="shell 格式（不推荐，会导致 PID 1 问题）"
+CMD node server.js
+```
+
+:::
+
+<a id="from"></a>
+
+## 🏛️ FROM — 选择基础镜像
+
+`FROM` 是 Dockerfile 的第一条指令（除 `ARG` 外），决定了镜像的「基因」。
+
+```dockerfile title="推荐写法：版本标签 + 发行版"
+FROM node:20-alpine
+
+# 最安全：Digest 引用（完全可重现）
+FROM node:20-alpine@sha256:82cfe0f5e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0
+```
+
+| 标签策略 | 示例                        | 可重现性      | 安全性        | 推荐度   |
+| -------- | --------------------------- | ------------- | ------------- | -------- |
+| `latest` | `node:latest`               | ❌ 不可重现   | ❌ 未知版本   | 禁止     |
+| 主版本   | `node:20`                   | ⚠️ 可能变化   | ⚠️ Minor 更新 | 开发环境 |
+| 精确版本 | `node:20.11-alpine`         | ✅ 可重现     | ✅ 固定版本   | 推荐     |
+| Digest   | `node:20-alpine@sha256:...` | ✅ 完全可重现 | ✅ 内容寻址   | 生产推荐 |
+
+:::tip 基础镜像选择原则
+
+1. **Debian vs Alpine**：Alpine 体积更小（~5MB base），但使用 musl libc，某些原生模块可能不兼容
+2. **官方镜像**：优先使用 Docker Official Images（带 `[OK]` 标记的）
+3. **Distroless**：生产环境可考虑 Google Distroless（只包含应用和运行时，无包管理器）
+
+:::
+
+<a id="run"></a>
+
+## ⚙️ RUN — 执行构建命令与层优化
+
+每条 `RUN` 指令都会创建一个新层。不合理的写法会导致镜像体积膨胀。
+
+```dockerfile title="❌ 错误示例：每个 RUN 创建一层"
+RUN npm install
+RUN npm run build
+RUN npm prune --production
+# 产生 3 层，每层都保留历史数据
+```
+
+```dockerfile title="✅ 正确示例：链式命令减少层数"
+RUN npm ci --only=production && \
+    npm run build && \
+    npm prune --production
+# 只产生 1 层
+```
+
+### 层缓存优化策略
+
+Docker 构建使用**层缓存**：当某层输入未变化时，直接使用缓存。
+
+```dockerfile title="✅ 利用缓存：先复制依赖声明文件"
+# 1. 先复制 package.json（变化频率低）
+COPY package*.json ./
+
+# 2. 安装依赖（只要 package.json 不变，这层就命中缓存）
+RUN npm ci
+
+# 3. 最后复制源码（变化频率高）
+COPY . .
+# 上面的 RUN npm ci 层会被缓存，大大加速构建
+```
+
+```dockerfile title="❌ 缓存失效：先复制全部源码"
+COPY . .          # 源码一变，后续所有层缓存失效
+RUN npm ci        # 每次都要重新安装
+RUN npm run build  # 每次都要重新构建
+```
+
+<a id="cmd-vs-entrypoint"></a>
+
+## ⚔️ CMD vs ENTRYPOINT 深度对比
+
+这是 Dockerfile 中最容易混淆的概念。
+
+| 特性 | CMD | ENTRYPOINT |
+| --- | --- | --- |
+| **是否可被 `docker run` 参数覆盖** | ✅ 可被覆盖 | ❌ 不可被覆盖（需用 `--entrypoint`） |
+| **主要用途** | 提供默认参数 | 定义容器主进程 |
+| **exec 格式** | `CMD ["exe","param"]` | `ENTRYPOINT ["exe","param"]` |
+| **shell 格式** | `CMD command param` | `ENTRYPOINT command param` |
+| **无 CMD/ENTRYPOINT** | 容器退出 | 容器退出 |
+| **组合效果** | CMD 作为 ENTRYPOINT 的默认参数 | ENTRYPOINT 接收 CMD 作为参数 |
+
+### 组合使用模式（生产推荐）
+
+```dockerfile title="ENTRYPOINT + CMD 经典组合"
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+运行时行为：
+
+```bash
+# 使用默认参数启动
+docker run my-nginx
+# 实际执行：docker-entrypoint.sh nginx -g "daemon off;"
+
+# 覆盖 CMD 参数（ENTRYPOINT 不变）
+docker run my-nginx nginx -t
+# 实际执行：docker-entrypoint.sh nginx -t
+```
+
+### 实际案例：Nginx 官方镜像的 entrypoint
+
+```dockerfile title="nginx:alpine 的 Dockerfile 片段"
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+```bash title="docker-entrypoint.sh 简化版"
+#!/bin/sh
+# 处理子配置目录链接
+if [ "$1" = "nginx" ]; then
+    # 执行 nginx 主进程
+    exec "$@"
+fi
+
+# 用户覆盖了 CMD，传递执行
+exec "$@"
+```
+
+:::warning shell 格式会导致 PID 1 问题
+
+使用 `CMD command`（shell 格式）时，命令在 `/bin/sh -c` 中执行，shell 进程成为 PID 1，导致：
+
+- `SIGTERM` 信号不会转发给子进程
+- 容器停止时需要等待 10 秒超时
+- 子进程可能变成孤儿进程
+
+**始终使用 exec 格式**（`CMD ["exe","param"]`）。
+
+:::
+
+<a id="copy-vs-add"></a>
+
+## 📂 COPY vs ADD 对比
+
+| 特性                 | COPY               | ADD                              |
+| -------------------- | ------------------ | -------------------------------- |
+| **基本文件复制**     | ✅ 支持            | ✅ 支持                          |
+| **自动解压本地 tar** | ❌ 不支持          | ✅ 支持（仅本地 tar.gz/tar.bz2） |
+| **远程 URL 下载**    | ❌ 不支持          | ✅ 支持（但不推荐）              |
+| **构建缓存**         | ✅ 按文件 checksum | ⚠️ URL 内容变化不触发缓存失效    |
+| **推荐使用场景**     | **日常文件复制**   | 需要自动解压 tar 包时            |
+
+```dockerfile title="✅ 推荐：使用 COPY 复制文件"
+COPY package*.json ./
+COPY src/ ./src/
+COPY public/ ./public/
+```
+
+```dockerfile title="⚠️ 使用 ADD 自动解压 tar"
+# 仅当需要将 tar 包自动解压到容器中时使用
+ADD backend.tar.gz /app/
+```
+
+```dockerfile title="❌ 不推荐：用 ADD 下载远程文件"
+ADD https://example.com/file.tar.gz /tmp/
+# 问题：无法控制版本、无构建缓存、失败时难以调试
+
+# ✅ 推荐替代方案
+RUN curl -fsSL https://example.com/file.tar.gz | tar xz -C /tmp/
+```
+
+:::tip 最佳实践
+
+**99% 的场景下使用 `COPY`**。`ADD` 的自动解压和 URL 下载功能隐蔽且不可预期，应显式使用 `RUN curl || RUN wget` 或 `RUN tar` 来完成相同操作。
+
+:::
+
+<a id="multi-stage-builds"></a>
+
+## 🏗️ 多阶段构建（Multi-stage Builds）
+
+多阶段构建允许你在一个 Dockerfile 中使用多个 `FROM` 指令，每个 `FROM` 可以使用不同的基础镜像，最终只保留最后一个阶段的内容。这是**减小生产镜像体积的关键技术**。
+
+### 核心概念
+
+```
+构建阶段（Builder）     →     生产阶段（Production）
+┌──────────────┐              ┌──────────────┐
+│ 完整 SDK     │   COPY --from│  仅运行时     │
+│ 源码 + 依赖  │ ──────────→  │  应用二进制   │
+│ 构建工具链   │              │  最小化镜像   │
+└──────────────┘              └──────────────┘
+```
+
+### Node.js 多阶段构建实例
+
+```dockerfile title="Node.js 多阶段构建（Production）"
+# ─── 阶段 1：构建 ────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ─── 阶段 2：生产镜像 ────────────────────────
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+# 仅复制生产依赖
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# 从构建阶段复制编译产物
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+
+# 使用非 root 用户运行
+USER node
+
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+```
+
+### Bun 多阶段构建实例
+
+```dockerfile title="Bun 多阶段构建（Production）"
+# ─── 阶段 1：依赖安装 + 构建 ─────────────────
+FROM oven/bun:1 AS builder
+
+WORKDIR /app
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
+COPY . .
+RUN bun run build
+
+# ─── 阶段 2：生产镜像 ────────────────────────
+FROM oven/bun:1 AS runner
+
+WORKDIR /app
+
+# 仅安装生产依赖
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
+
+# 从构建阶段复制产物
+COPY --from=builder /app/dist ./dist
+COPY --from=bunfig.toml ./
+
+# 非 root 用户
+RUN addgroup --system --gid 1001 bunuser && \
+    adduser --system --uid 1001 bunuser
+USER bunuser
+
+EXPOSE 3000
+CMD ["bun", "dist/server.js"]
+```
+
+### 多阶段构建常用模式
+
+```dockerfile title="三阶段构建：test → build → production"
+# ─── 阶段 1：测试 ────────────────────────────
+FROM node:20-alpine AS test
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm test
+
+# ─── 阶段 2：构建 ────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=test /app ./
+RUN npm run build
+
+# ─── 阶段 3：生产 ────────────────────────────
+FROM node:20-alpine AS production
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+RUN npm ci --only=production
+USER node
+CMD ["node", "dist/server.js"]
+```
+
+```bash title="构建时指定目标阶段"
+# 仅构建到 builder 阶段（用于 CI 中的测试）
+docker build --target builder -t myapp:builder .
+
+# 构建完整镜像（默认构建到最后阶段）
+docker build -t myapp:latest .
+```
+
+<a id="layer-caching"></a>
+
+## 🚀 层缓存深度优化
+
+Docker 的层缓存机制是加速构建的关键，但需要遵循正确的指令顺序。
+
+### 缓存失效规则
+
+```
+Dockerfile 指令执行顺序
+Layer 1: FROM node:20-alpine     → 命中缓存（基础镜像未变）
+Layer 2: WORKDIR /app            → 命中缓存
+Layer 3: COPY package.json ./    → ❌ 失效！package.json 变了
+Layer 4: RUN npm install         → ❌ 失效！上层失效，本层也失效
+Layer 5: COPY . .                → ❌ 失效！
+Layer 6: RUN npm run build       → ❌ 失效！
+```
+
+### 优化策略
+
+```dockerfile title="✅ 优化：按变化频率排列指令"
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 1. 变化最少：OS 依赖安装
+RUN apk add --no-cache python3 make g++
+
+# 2. 变化较少：依赖声明文件
+COPY package*.json ./
+RUN npm ci
+
+# 3. 变化中等：配置文件
+COPY tsconfig.json ./
+COPY nest-cli.json ./
+
+# 4. 变化最多：源码
+COPY src/ ./src/
+RUN npm run build
+
+# 5. 启动命令（几乎不变）
+CMD ["node", "dist/main.js"]
+```
+
+### BuildKit 缓存挂载
+
+Docker BuildKit 支持**缓存挂载**，进一步加速构建。
+
+```dockerfile title="使用 BuildKit 缓存挂载加速 npm/yarn"
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+
+# 挂载缓存目录，避免重复下载
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+COPY . .
+RUN npm run build
+```
+
+```dockerfile title="Bun 使用 BuildKit 缓存"
+# syntax=docker/dockerfile:1
+
+FROM oven/bun:1
+
+WORKDIR /app
+COPY package.json bun.lockb ./
+
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+
+COPY . .
+RUN bun run build
+```
+
+<a id="dockerignore"></a>
+
+## 📁 .dockerignore 文件
+
+`.dockerignore` 文件类似于 `.gitignore`，用于排除不需要发送给 Docker daemon 的文件，减少构建上下文体积。
+
+```title=".dockerignore 推荐配置"
+# 版本控制
+.git
+.gitignore
+.gitattributes
+
+# 依赖目录（让 Docker 内部重新安装，确保架构正确）
+node_modules
+bun_modules
+vendor
+
+# 构建产物（让 Docker 内部重新构建）
+dist
+build
+.out
+.next
+.nuxt
+
+# 测试覆盖和报告
+coverage
+.vitest
+.nyc_output
+
+# 本地环境和配置
+.env
+.env.local
+.env.*.local
+*.local.js
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode
+.idea
+*.swp
+*.swo
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# 文档（不纳入镜像）
+docs/
+*.md
+LICENSE
+
+# 测试文件（生产镜像不需要）
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+```
+
+:::tip .dockerignore 的影响
+
+- **构建速度**：上下文越小，上传到 Docker daemon 越快
+- **缓存命中率**：排除频繁变化的文件（如 `*.log`），减少缓存失效
+- **安全性**：防止敏感文件（如 `.env`）意外被 `COPY . .` 包含
+
+:::
+
+<a id="security-best-practices"></a>
+
+## 🔒 安全最佳实践
+
+### 1. 使用非 root 用户运行
+
+```dockerfile title="✅ 创建并切换到非 root 用户"
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 创建非 root 用户（UID 1000 是惯例）
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
+
+# ... 构建步骤 ...
+
+# 切换到非 root 用户
+USER nodejs
+
+CMD ["node", "server.js"]
+```
+
+```bash title="验证：容器进程的用户"
+docker exec my-container id
+# uid=1000(nodejs) gid=1000(nodejs)
+```
+
+### 2. 不在镜像中存储密钥
+
+```dockerfile title="❌ 错误：将密钥 COPY 进镜像"
+COPY aws-credentials.json /root/.aws/
+COPY .env.production ./
+# 任何人都可以 docker run myimage cat /root/.aws/credentials
+```
+
+```dockerfile title="✅ 正确：运行时通过环境变量或挂载传入"
+# 构建时不包含密钥
+# 运行时：docker run -e AWS_ACCESS_KEY_ID=... myimage
+# 或：docker run -v ./secrets:/run/secrets:ro myimage
+```
+
+```dockerfile title="使用 BuildKit 秘密挂载（推荐）"
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine
+
+# 构建时需要密钥（如私有 npm registry token）
+RUN --mount=type=secret,id=npm_token \
+    NPM_TOKEN=$(cat /run/secrets/npm_token) && \
+    npm ci --registry=https://npm.pkg.github.com/
+
+# 构建完成后，密钥不会留在镜像中
+```
+
+### 3. 固定版本标签
+
+```dockerfile title="❌ 错误：使用 latest 或不固定版本"
+FROM node:latest
+FROM node:20
+```
+
+```dockerfile title="✅ 正确：精确到 minor 版本或 Digest"
+FROM node:20.11-alpine
+FROM node:20-alpine@sha256:abc123...
+```
+
+### 4. 最小化基础镜像
+
+| 基础镜像                              | 体积   | 包含内容           | 适用场景           |
+| ------------------------------------- | ------ | ------------------ | ------------------ |
+| `node:20` (Debian)                    | ~1GB   | 完整 OS + 工具链   | 开发调试           |
+| `node:20-alpine`                      | ~40MB  | Alpine + Node      | 生产（推荐）       |
+| `node:20-slim`                        | ~150MB | Debian Slim + Node | 需要 Debian 兼容性 |
+| `gcr.io/distroless/nodejs20-debian12` | ~20MB  | 仅运行时           | 高安全需求         |
+
+### 5. 扫描镜像漏洞
+
+```bash title="使用 Trivy 扫描镜像"
+# 安装 Trivy
+brew install trivy  # macOS
+# 或：curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+
+# 扫描镜像
+trivy image myapp:latest
+
+# 仅显示 HIGH 和 CRITICAL 漏洞
+trivy image --severity HIGH,CRITICAL myapp:latest
+
+# 扫描并输出 JSON 报告
+trivy image -f json -o results.json myapp:latest
+```
+
+### 6. 使用 BuildKit 增强安全性
+
+```dockerfile title="启用 BuildKit 安全特性"
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine
+
+# 验证下载文件的完整性
+RUN curl -fsSL https://example.com/app.tar.gz -o /tmp/app.tar.gz && \
+    echo "expected_sha256_hash  /tmp/app.tar.gz" | sha256sum -c -
+
+# 使用官方密钥验证 GPG 签名
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg
+```
+
+<a id="complete-example"></a>
+
+## 📦 完整生产级 Dockerfile 示例
+
+```dockerfile title="Node.js 生产级 Dockerfile（完整版）"
+# syntax=docker/dockerfile:1
+
+# ─── 依赖安装阶段 ────────────────────────────
+FROM node:20-alpine AS deps
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# ─── 构建阶段 ────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# 构建环境变量
+ENV NEXT_PUBLIC_API_URL=https://api.example.com
+
+RUN npm run build
+
+# ─── 生产阶段 ────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# 安全：不使用 root 用户
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# 仅复制生产所需文件
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# 切换用户
+USER nextjs
+
+EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+# 启动命令
+CMD ["node", "server.js"]
+```
+
+<a id="debugging"></a>
+
+## 🐛 Dockerfile 调试技巧
+
+```bash title="进入中间阶段调试"
+# 在指定阶段停止构建，进入 shell 调试
+docker build --target builder --tag myapp:builder .
+docker run -it --rm myapp:builder /bin/sh
+
+# 查看镜像层历史
+docker history myapp:latest
+
+# 查看镜像详细信息
+docker inspect myapp:latest
+```
+
+<a id="summary"></a>
+
+## 📚 总结速查表
+
+| 最佳实践      | 做法                                          | 效果         |
+| ------------- | --------------------------------------------- | ------------ |
+| 选择基础镜像  | `node:20-alpine` 而非 `node:latest`           | 体积小、安全 |
+| 利用缓存      | 先 `COPY package.json`，再 `RUN npm install`  | 加速构建     |
+| 多阶段构建    | `FROM ... AS builder` + `COPY --from=builder` | 减小镜像体积 |
+| 非 root 用户  | `USER node`                                   | 安全加固     |
+| .dockerignore | 排除 `node_modules`、`.git`                   | 减小上下文   |
+| 固定版本      | `node:20.11-alpine`                           | 可重现构建   |
+| exec 格式     | `CMD ["node","app.js"]`                       | 正确信号传递 |
+
+## 🔗 下一步
+
+- [🎼 Docker Compose 编排](./compose) — 用 YAML 编排多容器应用
+- [🌐 网络与存储](./network-storage) — 理解 Docker 网络与数据持久化

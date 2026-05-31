@@ -1,0 +1,831 @@
+---
+title: 🔧 高级技巧与自定义 Action
+description: Composite actions、JavaScript/Docker 自定义 Action、workflow reuse、OIDC 云认证、GitHub API 等高级特性
+sidebar_position: 3
+---
+
+# 🔧 高级技巧与自定义 Action
+
+本章介绍 GitHub Actions 的高级特性，包括自定义 Action 开发、工作流复用、OIDC 云认证等。
+
+## Composite Actions（组合 Action）{#composite-actions}
+
+Composite Action 允许将多个 step 封装成一个可复用的 action，适合逻辑复用场景。
+
+### 创建 Composite Action {#create-composite-action}
+
+```yaml
+# actions/setup-app/action.yml
+name: 'Setup Application Environment'
+description: 'Setup Node.js, install dependencies, and configure environment'
+inputs:
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '20'
+  cache:
+    description: 'Enable dependency cache'
+    required: false
+    default: 'true'
+  install-command:
+    description: 'Command to install dependencies'
+    required: false
+    default: 'npm ci'
+
+outputs:
+  cache-hit:
+    description: 'Cache hit status'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache == 'true' && 'npm' || '' }}
+
+    - name: Install dependencies
+      shell: bash
+      run: ${{ inputs.install-command }}
+
+    - name: Cache build artifacts
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: node_modules/.cache
+        key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
+```
+
+### 使用 Composite Action {#use-composite-action}
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup app environment
+        uses: ./actions/setup-app
+        with:
+          node-version: '20'
+          cache: 'true'
+
+      - name: Build
+        run: npm run build
+```
+
+:::tip Composite Action 的文件必须放在仓库的 `actions/` 目录下，或者使用独立的 action 仓库。:::
+
+## JavaScript Custom Action {#javascript-action}
+
+JavaScript action 使用 Node.js 运行，适合需要复杂逻辑的场景。
+
+### Action 项目结构 {#js-action-structure}
+
+```
+my-javascript-action/
+├── action.yml          # Action 元数据
+├── package.json
+├── src/
+│   └── index.js       # 入口文件
+└── dist/
+    └── index.js       # 打包后的文件（使用 @vercel/ncc 打包）
+```
+
+### action.yml 元数据 {#action-metadata}
+
+```yaml
+# action.yml
+name: 'My JavaScript Action'
+description: 'A custom JavaScript action'
+author: 'Your Name'
+inputs:
+  token:
+    description: 'GitHub token'
+    required: true
+  message:
+    description: 'Message to display'
+    required: false
+    default: 'Hello from action'
+outputs:
+  result:
+    description: 'Action result'
+    value: ${{ steps.run-action.outputs.result }}
+runs:
+  using: 'node20' # 或 node16
+  main: 'dist/index.js' # 打包后的入口文件
+```
+
+### JavaScript Action 代码 {#js-action-code}
+
+```javascript
+// src/index.js
+const core = require('@actions/core');
+const github = require('@actions/github');
+const exec = require('@actions/exec');
+
+async function run() {
+  try {
+    // 读取输入参数
+    const token = core.getInput('token', { required: true });
+    const message = core.getInput('message');
+
+    // 获取上下文
+    const context = github.context;
+    const owner = context.repo.owner;
+    const repo = context.repo.repo;
+
+    // 设置输出
+    core.setOutput('result', 'success');
+
+    // 设置环境变量
+    core.exportVariable('MY_VAR', 'value');
+
+    // 写入文件到 GITHUB_ENV（供后续 step 使用）
+    const fs = require('fs');
+    fs.appendFileSync(process.env.GITHUB_ENV, 'MY_VAR=value\n');
+
+    // 写入文件到 GITHUB_PATH（将目录添加到 PATH）
+    fs.appendFileSync(process.env.GITHUB_PATH, '/my/path\n');
+
+    // 执行命令
+    await exec.exec('echo', ['Hello from action']);
+
+    // 记录日志
+    core.info(`Message: ${message}`);
+    core.debug('This is a debug message');
+    core.warning('This is a warning');
+    core.error('This is an error');
+
+    // 失败退出
+    // core.setFailed('Action failed');
+  } catch (error) {
+    core.setFailed(error.message);
+  }
+}
+
+run();
+```
+
+### 打包 JavaScript Action {#package-js-action}
+
+使用 `@vercel/ncc` 打包：
+
+```bash
+npm install -g @vercel/ncc
+ncc build src/index.js --license licenses.txt
+```
+
+:::warning JavaScript action 必须打包成单个文件（`dist/index.js`），不能依赖 `node_modules`。使用 `ncc` 或 `esbuild` 打包。:::
+
+## Docker Custom Action {#docker-action}
+
+Docker action 在容器中运行，适合需要特定环境的场景。
+
+### Docker Action 结构 {#docker-action-structure}
+
+```
+my-docker-action/
+├── action.yml
+├── Dockerfile
+└── entrypoint.sh
+```
+
+### action.yml {#docker-action-yml}
+
+```yaml
+# action.yml
+name: 'My Docker Action'
+description: 'A custom Docker action'
+inputs:
+  name:
+    description: 'Name to greet'
+    required: true
+    default: 'World'
+outputs:
+  greeting:
+    description: 'The greeting message'
+    value: ${{ steps.greet.outputs.greeting }}
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  # 或者使用预构建镜像：
+  # image: 'docker://alpine:latest'
+  env:
+    MY_ENV: value
+  entrypoint: '/entrypoint.sh'
+  args:
+    - ${{ inputs.name }}
+```
+
+### Dockerfile {#docker-action-dockerfile}
+
+```dockerfile
+FROM alpine:3.19
+
+RUN apk add --no-cache bash
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+```
+
+### entrypoint.sh {#docker-action-entrypoint}
+
+```bash
+#!/bin/bash
+set -e
+
+echo "Hello, $1!"
+
+# 设置输出
+echo "greeting=Hello, $1!" >> "$GITHUB_OUTPUT"
+
+# 设置环境变量
+echo "MY_VAR=hello" >> "$GITHUB_ENV"
+```
+
+## Action 元数据语法 {#action-metadata-syntax}
+
+`action.yml` 的完整语法参考：
+
+```yaml
+name: 'Action Name'           # 必填：Action 名称
+description: 'Description'    # 必填：描述
+author: 'Author Name'         # 可选：作者
+
+# 输入参数
+inputs:
+  input-id:
+    description: 'Input description'
+    required: true/false
+    default: 'default value'  # 当 required: false 时的默认值
+
+# 输出参数
+outputs:
+  output-id:
+    description: 'Output description'
+    value: ${{ steps.step-id.outputs.output-id }}
+
+# 运行配置
+runs:
+  using: 'node20' | 'node16' | 'docker' | 'composite'
+  main: 'dist/index.js'           # JavaScript action 入口
+  # 或
+  image: 'Dockerfile' | 'docker://image:tag'  # Docker action
+  entrypoint: '/entrypoint.sh'    # Docker action 入口点
+  args: []                       # Docker action 参数
+  # 或（composite）
+  steps: []                      # Composite action 步骤列表
+```
+
+## 复用工作流（Workflow Call）{#workflow-reuse}
+
+通过 `workflow_call` 触发器，可以让一个工作流被另一个工作流调用，实现逻辑复用。
+
+### 定义可复用工作流 {#define-reusable-workflow}
+
+```yaml
+# .github/workflows/reusable-deploy.yml
+name: Reusable Deploy Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      version:
+        required: false
+        type: string
+        default: 'latest'
+    secrets:
+      deploy-token:
+        required: true
+    outputs:
+      deploy-url:
+        description: 'Deployment URL'
+        value: ${{ jobs.deploy.outputs.url }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Deploy
+        id: deploy
+        run: |
+          echo "Deploying version ${{ inputs.version }} to ${{ inputs.environment }}"
+          echo "url=https://${{ inputs.environment }}.example.com" >> $GITHUB_OUTPUT
+```
+
+### 调用可复用工作流 {#call-reusable-workflow}
+
+```yaml
+# .github/workflows/main.yml
+name: Main Workflow
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: staging
+      version: ${{ github.sha }}
+    secrets:
+      deploy-token: ${{ secrets.DEPLOY_TOKEN }}
+
+  deploy-production:
+    needs: deploy-staging
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: production
+      version: ${{ github.sha }}
+    secrets:
+      deploy-token: ${{ secrets.DEPLOY_TOKEN }}
+
+  notify:
+    needs: [deploy-staging, deploy-production]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify
+        run: echo "Staging URL: ${{ needs.deploy-staging.outputs.deploy-url }}"
+```
+
+:::tip可复用工作流文件必须放在 `.github/workflows/` 目录下，且触发器中必须包含 `workflow_call`。:::
+
+## Environment Files（环境文件）{#environment-files}
+
+GitHub Actions 提供多个环境文件，用于在不同 step 之间传递数据。
+
+| 文件 | 用途 | 写入方式 |
+| --- | --- | --- |
+| `$GITHUB_ENV` | 设置环境变量（后续 step 可用） | `echo "VAR=value" >> $GITHUB_ENV` |
+| `$GITHUB_PATH` | 添加目录到 PATH | `echo "/path/to/dir" >> $GITHUB_PATH` |
+| `$GITHUB_OUTPUT` | 设置 step 输出 | `echo "output=value" >> $GITHUB_OUTPUT` |
+| `$GITHUB_STATE` | 设置 job 状态（跨 step 共享） | `echo "state=value" >> $GITHUB_STATE` |
+| `$GITHUB_STEP_SUMMARY` | 添加 step 摘要（显示在 PR 页面） | `echo "## Test Results" >> $GITHUB_STEP_SUMMARY` |
+
+### 使用示例 {#environment-files-example}
+
+```yaml
+steps:
+  - name: Generate version
+    id: version
+    run: |
+      VERSION="v1.2.3-$(git rev-parse --short HEAD)"
+      echo "VERSION=$VERSION" >> $GITHUB_ENV
+      echo "version=$VERSION" >> $GITHUB_OUTPUT
+      echo "build-time=$(date)" >> $GITHUB_STATE
+
+  - name: Use version
+    run: |
+      echo "Version: $VERSION"
+      echo "Build time: ${{ env.VERSION }}"
+
+  - name: Add to summary
+    run: |
+      echo "## Build Info" >> $GITHUB_STEP_SUMMARY
+      echo "- Version: $VERSION" >> $GITHUB_STEP_SUMMARY
+      echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+```
+
+## Concurrency Groups（并发控制）{#concurrency-groups}
+
+控制同一时刻只允许一个工作流运行，避免资源冲突。
+
+### 基础并发控制 {#basic-concurrency}
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+### 分支级别的并发 {#branch-concurrency}
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+```
+
+- `github.head_ref`：PR 的源分支名
+- `github.run_id`：唯一的运行 ID（非 PR 事件时使用）
+
+### Job 级别并发 {#job-concurrency}
+
+```yaml
+jobs:
+  deploy:
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps: [...]
+```
+
+:::warning 并发控制是按 group 名称匹配的。如果使用 `github.ref` 作为 group 的一部分，同一分支的多次推送会取消之前的运行。:::
+
+## Conditional Execution（条件执行）{#conditional-execution}
+
+### if 条件 {#if-condition}
+
+```yaml
+steps:
+  - name: Run on main branch only
+    if: github.ref == 'refs/heads/main'
+    run: echo "On main branch"
+
+  - name: Run on PR
+    if: github.event_name == 'pull_request'
+    run: echo "This is a PR"
+
+  - name: Run on tag
+    if: startsWith(github.ref, 'refs/tags/v')
+    run: echo "This is a tag release"
+
+  - name: Run on schedule
+    if: github.event_name == 'schedule'
+    run: echo "Scheduled run"
+
+  - name: Always run (even on failure)
+    if: always()
+    run: echo "This always runs"
+
+  - name: Run on failure
+    if: failure()
+    run: echo "Previous step failed"
+
+  - name: Run on cancellation
+    if: cancelled()
+    run: echo "Workflow was cancelled"
+
+  - name: Run on success
+    if: success()
+    run: echo "All previous steps succeeded"
+```
+
+### 常用条件函数 {#condition-functions}
+
+| 函数           | 说明         | 示例                                                          |
+| -------------- | ------------ | ------------------------------------------------------------- |
+| `always()`     | 总是执行     | `if: always()`                                                |
+| `cancelled()`  | 被取消时执行 | `if: cancelled()`                                             |
+| `failure()`    | 失败时执行   | `if: failure()`                                               |
+| `success()`    | 成功时执行   | `if: success()`                                               |
+| `contains()`   | 包含判断     | `if: contains(github.event.head_commit.message, '[skip ci]')` |
+| `startsWith()` | 前缀判断     | `if: startsWith(github.ref, 'refs/tags/')`                    |
+| `endsWith()`   | 后缀判断     | `if: endsWith(github.event.head_commit.message, '[skip ci]')` |
+| `hashFiles()`  | 文件哈希     | `if: hashFiles('package-lock.json') != ''`                    |
+
+## Custom Outputs（自定义输出）{#custom-outputs}
+
+Job 之间可以通过 outputs 传递数据。
+
+### Step 输出 {#step-output}
+
+```yaml
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - id: version
+        run: |
+          echo "version=v1.2.3" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+  consume:
+    needs: generate
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Version: ${{ needs.generate.outputs.version }}"
+          echo "SHA: ${{ needs.generate.outputs.sha }}"
+```
+
+### Job 输出到 Workflow {#job-output}
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - id: meta
+        run: echo "tags=myapp:latest" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying ${{ needs.build.outputs.image-tag }}"
+```
+
+## OIDC for Cloud Authentication（OIDC 云认证）{#oidc-authentication}
+
+OIDC（OpenID Connect）允许 GitHub Actions 直接认证到云服务商，无需存储长期密钥。
+
+### AWS OIDC {#aws-oidc}
+
+```yaml
+# .github/workflows/deploy-aws.yml
+name: Deploy to AWS with OIDC
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write # 必须：用于 OIDC 令牌
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          aws-region: us-east-1
+          # 可选：设置 session 名称
+          role-session-name: GitHubActionsSession
+
+      - name: Deploy to AWS
+        run: |
+          aws s3 sync ./dist s3://my-bucket/
+          aws lambda update-function-code --function-name my-function --s3-bucket my-bucket --s3-key dist.zip
+```
+
+### AWS IAM Role 配置 {#aws-iam-role}
+
+在 AWS IAM 中创建 Role，Trust Policy 如下：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:owner/repo:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
+```
+
+### GCP OIDC {#gcp-oidc}
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider
+          service_account: deploy-bot@my-project.iam.gserviceaccount.com
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to GCP
+        run: gcloud run deploy my-service --image gcr.io/my-project/my-image
+```
+
+### Azure OIDC {#azure-oidc}
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure
+        run: az webapp deploy --resource-group my-rg --name my-app --src-path ./dist
+```
+
+:::tip 使用 OIDC 认证相比存储 AK/SK 密钥更安全，因为：
+
+1. 无需在 GitHub Secrets 中存储长期密钥
+2. 令牌有效期短（通常 1 小时）
+3. 可以精确控制可访问的仓库和分支 :::
+
+## GitHub API in Workflows（工作流中使用 GitHub API）{#github-api}
+
+### 使用 gh CLI {#gh-cli}
+
+```yaml
+steps:
+  - name: Create issue via gh CLI
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+      gh issue create \
+        --title "Bug: Something went wrong" \
+        --body "Details here" \
+        --label "bug"
+
+  - name: Comment on PR
+    if: github.event_name == 'pull_request'
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+      gh pr comment ${{ github.event.number }} \
+        --body "✅ Build passed! See results: https://example.com"
+
+  - name: Get PR diff
+    if: github.event_name == 'pull_request'
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+      DIFF=$(gh pr diff ${{ github.event.number }})
+      echo "$DIFF" > pr.diff
+```
+
+### 使用 octokit（JavaScript）{#octokit}
+
+```javascript
+// 在 JavaScript action 中使用 octokit
+const { Octokit } = require('@octokit/rest');
+
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+});
+
+async function run() {
+  // 获取 PR 列表
+  const { data: pulls } = await octokit.pulls.list({
+    owner: 'owner',
+    repo: 'repo',
+    state: 'open',
+  });
+
+  // 创建 Issue 评论
+  await octokit.issues.createComment({
+    owner: 'owner',
+    repo: 'repo',
+    issue_number: 123,
+    body: 'Hello from Octokit!',
+  });
+}
+```
+
+### 直接调用 GitHub API {#direct-api-call}
+
+```yaml
+steps:
+  - name: Call GitHub API directly
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+      curl -X POST \
+        -H "Authorization: token $GH_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        https://api.github.com/repos/${{ github.repository }}/issues \
+        -d '{"title":"New Issue","body":"Created via API"}'
+```
+
+## 完整高级示例 {#complete-advanced-example}
+
+下面是一个综合使用多种高级特性的工作流：
+
+```yaml
+# .github/workflows/advanced-example.yml
+name: Advanced Example
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # Job 1: 使用 composite action 设置环境
+  setup:
+    name: 🔧 Setup
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION="v1.0.0-$(git rev-parse --short HEAD)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Add summary
+        run: |
+          echo "## Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  # Job 2: 使用矩阵构建测试
+  test:
+    name: 🧪 Test (Node ${{ matrix.node }})
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  # Job 3: 使用 OIDC 认证部署到 AWS
+  deploy:
+    name: 🚀 Deploy to AWS
+    needs: [setup, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy
+        run: |
+          echo "Deploying version ${{ needs.setup.outputs.version }} to AWS"
+          aws s3 sync ./dist s3://my-bucket/
+
+      - name: Comment on commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
+            --method POST \
+            -f body="✅ Deployment completed: ${{ needs.setup.outputs.version }}"
+```
+
+## 下一步 {#next-steps}
+
+- 了解 [自托管 Runner](./self-hosted.mdx) 掌握自托管运行器的部署和管理
+- 查看 [速查表](./cheat-sheet.mdx) 快速参考常用语法和模式

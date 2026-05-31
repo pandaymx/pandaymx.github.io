@@ -1,0 +1,342 @@
+---
+title: 📝 Docker 速查表
+description: Docker 命令快速参考手册，涵盖镜像、容器、数据卷、网络、系统、Compose 及 Dockerfile 常用指令。
+sidebar_position: 99
+---
+
+# 📝 Docker 速查表
+
+<a id="overview"></a>
+
+## 📋 概览
+
+本速查表汇总了 Docker 日常使用中最常用的命令，按功能分类排列，方便快速查阅。
+
+<a id="image"></a>
+
+## 🖼️ 镜像（Image）
+
+| 命令                                 | 说明                             |
+| ------------------------------------ | -------------------------------- |
+| `docker pull <image>[:tag]`          | 拉取镜像                         |
+| `docker push <image>[:tag]`          | 推送镜像到仓库                   |
+| `docker build -t <name> .`           | 根据当前目录 Dockerfile 构建镜像 |
+| `docker build -f <file> -t <name> .` | 指定 Dockerfile 构建             |
+| `docker images` / `docker image ls`  | 列出本地镜像                     |
+| `docker rmi <image>`                 | 删除镜像                         |
+| `docker rmi $(docker images -q)`     | 删除所有镜像（危险！）           |
+| `docker tag <src> <dst>`             | 为镜像打标签                     |
+| `docker save -o <file>.tar <image>`  | 将镜像保存为 tar 文件            |
+| `docker load -i <file>.tar`          | 从 tar 文件加载镜像              |
+| `docker history <image>`             | 查看镜像构建历史                 |
+| `docker inspect <image>`             | 查看镜像详细信息（JSON）         |
+
+```bash title="常用镜像操作示例"
+# 拉取指定版本镜像
+docker pull nginx:1.25-alpine
+
+# 构建并打标签
+docker build -t myapp: v1.0 -t myapp:latest .
+
+# 推送多标签镜像
+docker push myregistry/myapp:v1.0
+docker push myregistry/myapp:latest
+
+# 清理未使用的镜像
+docker image prune -a
+```
+
+<a id="container"></a>
+
+## 📦 容器（Container）
+
+| 命令                                       | 说明                     |
+| ------------------------------------------ | ------------------------ |
+| `docker run <image>`                       | 运行容器（前台）         |
+| `docker run -d --name <name> <image>`      | 后台运行并命名容器       |
+| `docker run -it <image> bash`              | 交互式运行并进入 bash    |
+| `docker run -p <host>:<container> <image>` | 端口映射运行             |
+| `docker run -v <host>:<container> <image>` | 挂载数据卷运行           |
+| `docker ps`                                | 查看运行中的容器         |
+| `docker ps -a`                             | 查看所有容器（含已停止） |
+| `docker stop <container>`                  | 停止容器                 |
+| `docker start <container>`                 | 启动已停止的容器         |
+| `docker restart <container>`               | 重启容器                 |
+| `docker rm <container>`                    | 删除容器                 |
+| `docker rm -f <container>`                 | 强制删除（运行中也可）   |
+| `docker exec -it <container> bash`         | 进入运行中的容器         |
+| `docker exec <container> <cmd>`            | 在容器中执行命令         |
+| `docker logs <container>`                  | 查看容器日志             |
+| `docker logs -f <container>`               | 实时跟踪日志             |
+| `docker logs --tail 100 <container>`       | 查看最后 100 行日志      |
+| `docker diff <container>`                  | 查看容器文件系统变更     |
+| `docker top <container>`                   | 查看容器运行进程         |
+| `docker stats <container>`                 | 查看容器资源占用         |
+| `docker inspect <container>`               | 查看容器详细信息（JSON） |
+| `docker port <container>`                  | 查看容器端口映射         |
+| `docker commit <container> <image>`        | 将容器保存为镜像         |
+| `docker export -o <file>.tar <container>`  | 导出容器为 tar 文件      |
+| `docker import <file>.tar <image>`         | 从 tar 文件导入为镜像    |
+| `docker cp <container>:<path> <host>`      | 从容器复制文件到主机     |
+| `docker cp <host> <container>:<path>`      | 从主机复制文件到容器     |
+| `docker wait <container>`                  | 阻塞等待容器停止         |
+| `docker kill <container>`                  | 强制杀死容器             |
+
+```bash title="容器运行常用参数"
+# 后台运行 + 命名 + 端口映射 + 数据卷 + 环境变量
+docker run -d \
+  --name my-app \
+  -p 8080:80 \
+  -v /host/data:/app/data \
+  -e NODE_ENV=production \
+  --restart unless-stopped \
+  my-image:latest
+
+# 资源限制
+docker run -d \
+  --memory=512m \
+  --cpus=1.5 \
+  --name limited-app \
+  my-image:latest
+```
+
+<a id="volume"></a>
+
+## 💾 数据卷（Volume）
+
+| 命令                                                        | 说明               |
+| ----------------------------------------------------------- | ------------------ |
+| `docker volume create <name>`                               | 创建数据卷         |
+| `docker volume ls`                                          | 列出所有数据卷     |
+| `docker volume inspect <volume>`                            | 查看数据卷详情     |
+| `docker volume rm <volume>`                                 | 删除数据卷         |
+| `docker volume prune`                                       | 删除未使用的数据卷 |
+| `docker volume inspect <volume> --format '{{.Mountpoint}}'` | 查看数据卷挂载点   |
+
+```bash title="数据卷操作示例"
+# 创建并挂载数据卷
+docker volume create my-data
+docker run -d -v my-data:/data --name app my-image
+
+# 查看数据卷在宿主机的实际路径
+docker volume inspect my-data --format '{{.Mountpoint}}'
+
+# 清理无用数据卷
+docker volume prune
+```
+
+<a id="network"></a>
+
+## 🌐 网络（Network）
+
+| 命令                                              | 说明             |
+| ------------------------------------------------- | ---------------- |
+| `docker network create <name>`                    | 创建网络         |
+| `docker network ls`                               | 列出所有网络     |
+| `docker network inspect <network>`                | 查看网络详情     |
+| `docker network rm <network>`                     | 删除网络         |
+| `docker network connect <network> <container>`    | 将容器连接到网络 |
+| `docker network disconnect <network> <container>` | 将容器从网络断开 |
+| `docker network prune`                            | 删除未使用的网络 |
+
+```bash title="自定义网络示例"
+# 创建自定义桥接网络
+docker network create my-network
+
+# 容器使用自定义网络
+docker run -d --network my-network --name web nginx
+docker run -d --network my-network --name app my-app
+
+# 容器间可通过容器名互相访问
+docker exec app ping web
+```
+
+<a id="system"></a>
+
+## ⚙️ 系统（System）
+
+| 命令                     | 说明                                   |
+| ------------------------ | -------------------------------------- |
+| `docker system df`       | 查看 Docker 磁盘使用情况               |
+| `docker system prune`    | 删除所有未使用资源（镜像、容器、网络） |
+| `docker system prune -a` | 删除所有未使用资源（含未被引用的镜像） |
+| `docker system info`     | 查看 Docker 系统信息                   |
+| `docker system events`   | 实时查看 Docker 事件                   |
+| `docker version`         | 查看 Docker 版本                       |
+| `docker info`            | 查看 Docker 详细信息                   |
+
+```bash title="磁盘清理示例"
+# 查看磁盘占用
+docker system df
+
+# 清理所有未使用资源（需确认）
+docker system prune
+
+# 强制清理所有未使用资源（无需确认）
+docker system prune -af
+
+# 清理所有未使用资源 + 构建缓存
+docker system prune -af --volumes
+```
+
+<a id="compose"></a>
+
+## 🎼 Docker Compose
+
+| 命令                                 | 说明                         |
+| ------------------------------------ | ---------------------------- |
+| `docker compose up`                  | 启动所有服务（前台）         |
+| `docker compose up -d`               | 后台启动所有服务             |
+| `docker compose down`                | 停止并删除容器、网络         |
+| `docker compose down -v`             | 停止并删除容器、网络、数据卷 |
+| `docker compose build`               | 构建服务镜像                 |
+| `docker compose build --no-cache`    | 无缓存构建                   |
+| `docker compose logs`                | 查看服务日志                 |
+| `docker compose logs -f`             | 实时跟踪服务日志             |
+| `docker compose ps`                  | 查看服务状态                 |
+| `docker compose exec <service> bash` | 进入服务容器                 |
+| `docker compose pull`                | 拉取服务镜像                 |
+| `docker compose config`              | 验证并查看 Compose 配置      |
+
+```bash title="Compose 常用操作"
+# 后台启动所有服务
+docker compose up -d
+
+# 查看服务日志（指定服务）
+docker compose logs -f web
+
+# 停止并清理
+docker compose down
+
+# 重新构建并启动
+docker compose up -d --build
+
+# 扩缩容（需配置 deploy 或 scale）
+docker compose up -d --scale web=3
+```
+
+<a id="dockerfile"></a>
+
+## 📄 Dockerfile 常用指令
+
+| 指令 | 说明 | 示例 |
+| --- | --- | --- |
+| `FROM <image>[:tag]` | 指定基础镜像 | `FROM node:20-alpine` |
+| `WORKDIR <path>` | 设置工作目录 | `WORKDIR /app` |
+| `COPY <src> <dest>` | 复制文件到容器 | `COPY . .` |
+| `ADD <src> <dest>` | 复制文件（支持 URL 和解压） | `ADD https://... /tmp/` |
+| `RUN <cmd>` | 执行命令（构建时） | `RUN npm install` |
+| `CMD <cmd>` | 容器启动默认命令 | `CMD ["node", "server.js"]` |
+| `ENTRYPOINT <cmd>` | 容器入口点 | `ENTRYPOINT ["docker-entrypoint.sh"]` |
+| `ENV <key>=<value>` | 设置环境变量 | `ENV NODE_ENV=production` |
+| `ARG <key>[=<default>]` | 构建时变量 | `ARG VERSION=1.0` |
+| `EXPOSE <port>` | 声明端口 | `EXPOSE 3000` |
+| `VOLUME <path>` | 声明数据卷挂载点 | `VOLUME ["/data"]` |
+| `USER <user>` | 切换用户 | `USER node` |
+| `HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD curl -f http://localhost:8080/health \|\| exit 1` | 健康检查 |  |
+| `LABEL <key>=<value>` | 添加元数据 | `LABEL maintainer="dev@example.com"` |
+| `ONBUILD <instruction>` | 下游构建触发指令 | `ONBUILD COPY . /app` |
+| `STOPSIGNAL <signal>` | 容器停止信号 | `STOPSIGNAL SIGTERM` |
+| `SHELL ["executable", "parameters"]` | 覆盖默认 shell | `SHELL ["/bin/bash", "-c"]` |
+
+```dockerfile title="多阶段构建模板（前端）"
+# ---- 构建阶段 ----
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+
+# ---- 生产阶段 ----
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+```dockerfile title="多阶段构建模板（后端 Node.js）"
+# ---- 构建阶段 ----
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+
+# ---- 生产阶段 ----
+FROM node:20-alpine
+RUN addgroup -S app && adduser -S app -G app
+WORKDIR /app
+COPY --from=builder --chown=app:app /app/dist ./dist
+COPY --from=builder --chown=app:app /app/node_modules ./node_modules
+COPY --from=builder --chown=app:app /app/package*.json ./
+USER app
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s CMD node healthcheck.js
+CMD ["node", "dist/server.js"]
+```
+
+<a id="dockerignore"></a>
+
+## 📋 .dockerignore 模板
+
+```
+# 版本控制
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+
+# 依赖（构建时重新安装）
+node_modules
+vendor
+venv
+__pycache__
+
+# 构建产物
+dist
+build
+out
+*.log
+*.tar
+*.gz
+
+# 测试与覆盖率
+coverage
+.nyc_output
+test
+tests
+*.test.js
+*.spec.js
+
+# 编辑器配置
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# CI/CD 配置
+Jenkinsfile
+Dockerfile
+docker-compose*.yml
+
+# 文档
+*.md
+docs/
+LICENSE
+```
+
+## 🔗 相关资源
+
+- [🚀 Docker 基础入门](./intro) — 理解容器化思维
+- [📄 Dockerfile 精通](./dockerfile) — 编写高效、安全的 Dockerfile
+- [🎼 Docker Compose 编排](./compose) — 多容器应用编排
+- [🏗️ 生产级最佳实践](./production) — 生产环境部署优化
