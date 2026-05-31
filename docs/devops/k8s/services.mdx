@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # 🔗 服务发现与负载均衡
 
-## 🌐 Service 概述 {#service-overview}
+## 🌐 Service 概述
 
 **Service** 是 Kubernetes 中用于暴露应用服务的抽象层，它为一组功能相同的 Pod 提供稳定的网络访问入口。
 
@@ -24,7 +24,7 @@ graph LR
     Service --> Pod3[Pod 3: 8080]
 ```
 
-## 📡 Service 类型 {#service-types}
+## 📡 Service 类型
 
 Kubernetes 支持四种 Service 类型：
 
@@ -35,7 +35,7 @@ Kubernetes 支持四种 Service 类型：
 | **LoadBalancer** | 云厂商负载均衡器      | 生产环境外部访问         |
 | **ExternalName** | CNAME 记录            | 访问集群外部服务         |
 
-### ClusterIP Service {#clusterip}
+### ClusterIP Service
 
 ```yaml
 apiVersion: v1
@@ -62,7 +62,7 @@ curl http://backend-service:80
 kubectl port-forward svc/backend-service 8080:80
 ```
 
-### NodePort Service {#nodeport}
+### NodePort Service
 
 ```yaml
 apiVersion: v1
@@ -93,7 +93,7 @@ curl http://<node-ip>:30007
 - 需要开放节点防火墙端口
 - 不适合生产环境直接使用 :::
 
-### LoadBalancer Service {#loadbalancer}
+### LoadBalancer Service
 
 ```yaml
 apiVersion: v1
@@ -117,7 +117,7 @@ spec:
 - 分配外部 IP 地址
 - 成本高，适合生产环境
 
-### ExternalName Service {#externalname}
+### ExternalName Service
 
 ```yaml
 apiVersion: v1
@@ -131,7 +131,7 @@ spec:
 
 **用途**：将集群外部服务映射为集群内部服务，方便应用访问。
 
-## 🎯 Headless Service {#headless-service}
+## 🎯 Headless Service
 
 **Headless Service** 是不分配 ClusterIP 的 Service，直接返回 Pod IP 列表，用于：
 
@@ -170,7 +170,7 @@ mysql-1.mysql-headless.default.svc.cluster.local
 - **Peer-to-Peer**：如 Cassandra、Etcd 集群成员发现
 - **gRPC/HTTP/2**：需要客户端负载均衡 :::
 
-## 🚥 Ingress 详解 {#ingress}
+## 🚥 Ingress 详解
 
 **Ingress** 是 Kubernetes 的七层负载均衡（HTTP/HTTPS），提供：
 
@@ -178,7 +178,7 @@ mysql-1.mysql-headless.default.svc.cluster.local
 - SSL/TLS 终止
 - 名称虚拟主机
 
-### Ingress 架构 {#ingress-architecture}
+### Ingress 架构
 
 ```mermaid
 graph TB
@@ -192,7 +192,7 @@ graph TB
     Service3 --> Pod3A[Pod C1]
 ```
 
-### 安装 Nginx Ingress Controller {#install-nginx-ingress}
+### 安装 Nginx Ingress Controller
 
 ```bash
 # 使用 Helm 安装（推荐）
@@ -204,7 +204,7 @@ helm install ingress-nginx ingress-nginx/ingress-nginx
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
 ```
 
-### Ingress 基础配置 {#ingress-basic}
+### Ingress 基础配置
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -235,7 +235,7 @@ spec:
                   number: 80
 ```
 
-### 基于域名的路由 {#ingress-host-routing}
+### 基于域名的路由
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -267,7 +267,7 @@ spec:
                   number: 80
 ```
 
-### Ingress TLS/SSL 配置 {#ingress-tls}
+### Ingress TLS/SSL 配置
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -323,7 +323,7 @@ spec:
 
 :::
 
-## 🕸️ Service Mesh 入门 {#service-mesh}
+## 🕸️ Service Mesh 入门
 
 **Service Mesh** 是专用的基础设施层，用于处理服务间通信，提供：
 
@@ -331,7 +331,7 @@ spec:
 - 安全（mTLS、认证、授权）
 - 可观测性（指标、日志、追踪）
 
-### Istio vs Linkerd 对比 {#istio-vs-linkerd}
+### Istio vs Linkerd 对比
 
 | 特性         | Istio                                            | Linkerd          |
 | ------------ | ------------------------------------------------ | ---------------- |
@@ -341,7 +341,7 @@ spec:
 | **学习曲线** | 陡峭                                             | 平缓             |
 | **适用场景** | 企业级复杂场景                                   | 中小型集群       |
 
-### Istio 核心架构 {#istio-architecture}
+### Istio 核心架构
 
 ```mermaid
 graph TB
@@ -358,7 +358,7 @@ graph TB
 - **Istiod**：控制平面，负责服务发现、配置分发
 - **Envoy Proxy**：数据平面，Sidecar 代理处理所有流量
 
-### Istio 安装 {#istio-install}
+### Istio 安装
 
 ```bash
 # 下载 Istio
@@ -373,7 +373,7 @@ istioctl install --set profile=demo -y
 kubectl label namespace default istio-injection=enabled
 ```
 
-### Linkerd 安装 {#linkerd-install}
+### Linkerd 安装
 
 ```bash
 # 安装 Linkerd CLI
@@ -396,16 +396,16 @@ kubectl annotate namespace default linkerd.io/inject=enabled
 - **企业级/复杂需求**：使用 Istio
 - **只需要基础负载均衡**：不需要 Service Mesh，用 Ingress 即可 :::
 
-## 🔒 网络策略 {#network-policies}
+## 🔒 网络策略
 
 **NetworkPolicy** 用于控制 Pod 间的网络流量，实现微分段（Micro-segmentation）。
 
-### 默认行为 {#default-behavior}
+### 默认行为
 
 - **没有 NetworkPolicy**：所有流量允许（默认）
 - **有 NetworkPolicy**：只允许策略中明确允许的流量
 
-### 拒绝所有入站流量 {#deny-all-ingress}
+### 拒绝所有入站流量
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -419,7 +419,7 @@ spec:
   # 不指定 ingress 规则 = 拒绝所有入站
 ```
 
-### 允许特定命名空间访问 {#allow-namespace}
+### 允许特定命名空间访问
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -442,7 +442,7 @@ spec:
           port: 8080
 ```
 
-### 允许特定 Pod 访问 {#allow-pod}
+### 允许特定 Pod 访问
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -465,7 +465,7 @@ spec:
           port: 3306
 ```
 
-### 出口流量控制 {#egress-control}
+### 出口流量控制
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -492,9 +492,9 @@ spec:
 
 :::warning NetworkPolicy 依赖 NetworkPolicy 需要 CNI 插件支持（如 Calico、Cilium、Flannel+Calico）。纯 Flannel 不支持 NetworkPolicy。:::
 
-## 🛠️ 实用工具与命令 {#tools-commands}
+## 🛠️ 实用工具与命令
 
-### 调试 Service {#debug-service}
+### 调试 Service
 
 ```bash
 # 查看 Service 详情
@@ -510,7 +510,7 @@ kubectl exec -it <pod-name> -- curl http://<service-name>:<port>
 kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- curl http://<service-name>
 ```
 
-### DNS 解析测试 {#dns-test}
+### DNS 解析测试
 
 ```bash
 # 运行 DNS 测试 Pod
@@ -520,7 +520,7 @@ kubectl run dns-test --image=busybox --rm -it --restart=Never -- nslookup <servi
 kubectl run dns-test --image=busybox --rm -it --restart=Never -- nslookup <service-name>.<namespace>.svc.cluster.local
 ```
 
-## 📚 最佳实践 {#best-practices}
+## 📚 最佳实践
 
 1. **优先使用 ClusterIP**，避免直接暴露 NodePort
 2. **生产环境使用 LoadBalancer 或 Ingress**，配合云厂商 LB
@@ -548,7 +548,7 @@ spec:
       timeoutSeconds: 10800
 ```
 
-## 📚 参考资源 {#references}
+## 📚 参考资源
 
 - [Kubernetes Services](https://kubernetes.io/docs/concepts/services-networking/service/)
 - [Ingress 官方文档](https://kubernetes.io/docs/concepts/services-networking/ingress/)
