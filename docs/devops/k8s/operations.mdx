@@ -6,9 +6,9 @@ sidebar_position: 6
 
 # 🔧 集群运维与排障
 
-## 🖥️ 节点维护 {#node-maintenance}
+## 🖥️ 节点维护
 
-### Cordon：标记节点不可调度 {#cordon}
+### Cordon：标记节点不可调度
 
 **Cordon** 标记节点为 `SchedulingDisabled`，新的 Pod 不会被调度到该节点，但现有 Pod 继续运行。
 
@@ -26,7 +26,7 @@ kubectl get nodes
 # node-1  Ready,SchedulingDisabled  <none>   10d   v1.28.0
 ```
 
-### Drain：驱逐节点上的 Pod {#drain}
+### Drain：驱逐节点上的 Pod
 
 **Drain** 安全地驱逐节点上的所有 Pod，常用于节点维护前。
 
@@ -50,7 +50,7 @@ kubectl get pods --all-namespaces -o wide | grep node-1
 - 对于 StatefulSet，Pod 会在其他节点以相同名称重建（需要持久化存储）
 - 对于 DaemonSet，Pod 会在其他节点自动创建 :::
 
-### Taint：污点驱逐 {#taint}
+### Taint：污点驱逐
 
 **Taint** 用于标记节点，只有容忍（Toleration）该污点的 Pod 才能调度到该节点。
 
@@ -92,9 +92,9 @@ spec:
       image: nginx:1.25
 ```
 
-## 📊 资源配额与限制 {#resource-quotas}
+## 📊 资源配额与限制
 
-### ResourceQuota：命名空间资源配额 {#resourcequota}
+### ResourceQuota：命名空间资源配额
 
 **ResourceQuota** 限制命名空间内的资源使用总量。
 
@@ -131,7 +131,7 @@ spec:
 kubectl describe resourcequota compute-quota -n production
 ```
 
-### LimitRange：默认资源限制 {#limitrange}
+### LimitRange：默认资源限制
 
 **LimitRange** 为命名空间内的 Pod 设置默认资源请求和限制。
 
@@ -167,13 +167,13 @@ spec:
 - 使用 ResourceQuota 防止资源耗尽
 - 使用 LimitRange 设置默认值 :::
 
-## 📈 自动扩缩容 {#autoscaling}
+## 📈 自动扩缩容
 
-### HPA：水平 Pod 自动扩缩容 {#hpa}
+### HPA：水平 Pod 自动扩缩容
 
 **HPA**（Horizontal Pod Autoscaler）根据 CPU/内存使用率自动调整 Pod 副本数。
 
-#### HPA v2 示例 {#hpa-v2-example}
+#### HPA v2 示例
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -234,11 +234,11 @@ kubectl describe hpa webapp-hpa
 - Pod 必须设置 `resources.requests`（否则无法计算使用率）
 - HPA 默认每 15 秒检查一次（可配置）:::
 
-### VPA：垂直 Pod 自动扩缩容 {#vpa}
+### VPA：垂直 Pod 自动扩缩容
 
 **VPA**（Vertical Pod Autoscaler）自动调整 Pod 的 CPU/内存请求。
 
-#### 安装 VPA {#install-vpa}
+#### 安装 VPA
 
 ```bash
 # 下载 VPA
@@ -252,7 +252,7 @@ cd autoscaler/vertical-pod-autoscaler/
 kubectl get pods -n kube-system | grep vpa
 ```
 
-#### VPA 示例 {#vpa-example}
+#### VPA 示例
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1
@@ -284,7 +284,7 @@ spec:
 - `Initial`：仅在创建 Pod 时设置资源
 - `Off`：仅推荐，不执行
 
-### PDB：Pod 中断预算 {#pdb}
+### PDB：Pod 中断预算
 
 **PDB**（PodDisruptionBudget）确保在自愿中断（如节点维护）期间，至少有指定数量的 Pod 保持运行。
 
@@ -312,9 +312,9 @@ spec:
 - 多副本应用必须配置 PDB
 - StatefulSet 也需要 PDB（保护有状态服务）:::
 
-## 🔍 调试 Pod {#debugging-pods}
+## 🔍 调试 Pod
 
-### kubectl describe：查看 Pod 详情 {#kubectl-describe}
+### kubectl describe：查看 Pod 详情
 
 ```bash
 # 查看 Pod 详情
@@ -333,7 +333,7 @@ kubectl describe pod <pod-name> -n <namespace>
 - `FailedPullImage`：拉取镜像失败（镜像不存在、认证失败）
 - `BackOff`：容器启动失败，正在退避重启
 
-### kubectl logs：查看容器日志 {#kubectl-logs}
+### kubectl logs：查看容器日志
 
 ```bash
 # 查看当前日志
@@ -355,7 +355,7 @@ kubectl logs <pod-name> --tail=100
 kubectl logs <pod-name> --since=1h
 ```
 
-### kubectl exec：进入容器 {#kubectl-exec}
+### kubectl exec：进入容器
 
 ```bash
 # 进入容器 Shell
@@ -374,7 +374,7 @@ kubectl cp /local/file.txt <pod-name>:/app/file.txt
 kubectl cp <pod-name>:/app/file.txt /local/file.txt
 ```
 
-### kubectl attach：附加到容器 {#kubectl-attach}
+### kubectl attach：附加到容器
 
 ```bash
 # 附加到正在运行的容器（查看输出）
@@ -384,9 +384,9 @@ kubectl attach <pod-name> -c <container-name>
 kubectl attach <pod-name> -c <container-name> --sig=SIGTERM
 ```
 
-## 🚨 常见故障场景与修复 {#common-failures}
+## 🚨 常见故障场景与修复
 
-### 场景 1：Pod 一直处于 Pending 状态 {#pod-pending}
+### 场景 1：Pod 一直处于 Pending 状态
 
 **症状**：`kubectl get pods` 显示 `Pending`
 
@@ -411,7 +411,7 @@ kubectl edit deployment <deployment-name>
 kubectl taint nodes <node-name> key:NoSchedule-
 ```
 
-### 场景 2：Pod 不断 CrashLoopBackOff {#crashloopbackoff}
+### 场景 2：Pod 不断 CrashLoopBackOff
 
 **症状**：Pod 反复崩溃重启
 
@@ -445,7 +445,7 @@ kubectl edit deployment <deployment-name>
 # 修改 resources.limits.memory
 ```
 
-### 场景 3：Service 无法访问 {#service-unreachable}
+### 场景 3：Service 无法访问
 
 **症状**：Service Endpoints 为空或连接超时
 
@@ -478,7 +478,7 @@ kubectl get pods
 kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- curl http://<service-name>
 ```
 
-### 场景 4：PVC 无法绑定 {#pvc-pending}
+### 场景 4：PVC 无法绑定
 
 **症状**：PVC 状态为 `Pending`
 
@@ -521,7 +521,7 @@ spec:
 EOF
 ```
 
-### 场景 5：节点 NotReady {#node-notready}
+### 场景 5：节点 NotReady
 
 **症状**：节点状态为 `NotReady`
 
@@ -557,9 +557,9 @@ kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
 kubectl delete node <node-name>
 ```
 
-## 📊 监控：Prometheus + Grafana {#monitoring}
+## 📊 监控：Prometheus + Grafana
 
-### 安装 kube-prometheus-stack {#install-prometheus}
+### 安装 kube-prometheus-stack
 
 ```bash
 # 添加仓库
@@ -574,7 +574,7 @@ helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --set prometheus.prometheusSpec.retention=30d
 ```
 
-### 访问 Grafana 仪表盘 {#access-grafana}
+### 访问 Grafana 仪表盘
 
 ```bash
 # 端口转发
@@ -590,7 +590,7 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 # - Node Exporter Full (ID: 1860)
 ```
 
-### 关键监控指标 {#key-metrics}
+### 关键监控指标
 
 | 类别           | 指标                                          | 告警阈值      |
 | -------------- | --------------------------------------------- | ------------- |
@@ -602,7 +602,7 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 | **Pod**        | `kube_pod_status_ready`                       | Ready != 1    |
 | **Deployment** | `kube_deployment_status_replicas_unavailable` | > 0           |
 
-### Prometheus 告警规则示例 {#alert-rules}
+### Prometheus 告警规则示例
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -641,11 +641,11 @@ spec:
             summary: '节点 {{ $labels.node }} 不可用'
 ```
 
-## 💾 备份 etcd {#backup-etcd}
+## 💾 备份 etcd
 
 **etcd** 是 Kubernetes 集群的状态存储，备份 etcd 是灾难恢复的关键。
 
-### 使用 etcdctl 备份 {#etcd-backup}
+### 使用 etcdctl 备份
 
 ```bash
 # 安装 etcdctl（如果尚未安装）
@@ -663,7 +663,7 @@ ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot.db \
 ETCDCTL_API=3 etcdctl --write-out=table snapshot status /backup/etcd-snapshot.db
 ```
 
-### 自动化备份脚本 {#backup-script}
+### 自动化备份脚本
 
 ```bash
 #!/bin/bash
@@ -710,7 +710,7 @@ crontab -e
 0 2 * * * /path/to/etcd-backup.sh >> /var/log/etcd-backup.log 2>&1
 ```
 
-### 恢复 etcd 备份 {#etcd-restore}
+### 恢复 etcd 备份
 
 ```bash
 # 停止 kube-apiserver（防止写入）
@@ -738,9 +738,9 @@ kubectl get nodes
 - 多 etcd 节点环境需要逐个恢复并重新组建集群
 - 测试恢复流程，确保备份可用 :::
 
-## 🛠️ 集群运维工具 {#operations-tools}
+## 🛠️ 集群运维工具
 
-### kubectl 调试技巧 {#kubectl-debug-tips}
+### kubectl 调试技巧
 
 ```bash
 # 1. 使用 --field-selector 过滤资源
@@ -768,7 +768,7 @@ kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- bash
 kubectl get events --sort-by='.lastTimestamp' -n kube-system
 ```
 
-### 集群健康检查脚本 {#health-check-script}
+### 集群健康检查脚本
 
 ```bash
 #!/bin/bash
@@ -813,7 +813,7 @@ echo ""
 echo "=== 检查完成 ==="
 ```
 
-## 📚 最佳实践 {#best-practices}
+## 📚 最佳实践
 
 1. **定期备份 etcd**：至少每天备份一次，测试恢复流程
 2. **使用 PDB 保护应用**：确保滚动更新和节点维护时不中断服务
@@ -824,7 +824,7 @@ echo "=== 检查完成 ==="
 7. **启用审计日志**：记录所有 API 访问
 8. **测试灾难恢复**：定期演练 etcd 恢复、节点故障恢复
 
-## 📚 参考资源 {#references}
+## 📚 参考资源
 
 - [Kubernetes 官方文档 - 管理集群](https://kubernetes.io/docs/tasks/administer-cluster/)
 - [Kubernetes 故障排查](https://kubernetes.io/docs/tasks/debug/debug-cluster/)

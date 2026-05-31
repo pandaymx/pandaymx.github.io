@@ -6,11 +6,11 @@ sidebar_position: 5
 
 # 📦 Helm 包管理
 
-## 🎯 什么是 Helm？ {#what-is-helm}
+## 🎯 什么是 Helm？
 
 **Helm** 是 Kubernetes 的包管理器（类似 yum、apt），用于简化 Kubernetes 应用的部署和管理。
 
-### 核心概念 {#core-concepts}
+### 核心概念
 
 | 概念           | 说明                                        |
 | -------------- | ------------------------------------------- |
@@ -28,9 +28,9 @@ graph LR
     Helm --> Release[Release Instance]
 ```
 
-## 📁 Chart 结构 {#chart-structure}
+## 📁 Chart 结构
 
-### 标准 Chart 目录结构 {#chart-directory-structure}
+### 标准 Chart 目录结构
 
 ```
 mychart/
@@ -52,7 +52,7 @@ mychart/
 └── LICENSE           # 许可证
 ```
 
-### Chart.yaml 详解 {#chart-yaml}
+### Chart.yaml 详解
 
 ```yaml
 apiVersion: v2
@@ -87,9 +87,9 @@ dependencies:
 - `appVersion`：应用版本（可以是任意字符串）
 - `dependencies`：依赖的 Chart
 
-## 📝 values.yaml 配置 {#values-yaml}
+## 📝 values.yaml 配置
 
-### 默认 values.yaml 示例 {#default-values}
+### 默认 values.yaml 示例
 
 ```yaml
 # 默认值配置
@@ -146,7 +146,7 @@ tolerations: []
 affinity: {}
 ```
 
-### 覆盖 values 的方式 {#override-values}
+### 覆盖 values 的方式
 
 ```bash
 # 方式 1：使用 --set 参数
@@ -162,11 +162,11 @@ helm install myapp ./mychart --values values-prod.yaml
 helm install myapp ./mychart -f values.yaml -f values-prod.yaml
 ```
 
-## 🔧 模板语法 {#template-syntax}
+## 🔧 模板语法
 
 Helm 使用 **Go 模板** 语言，结合 **Sprig** 函数库。
 
-### 基础模板示例 {#basic-template}
+### 基础模板示例
 
 ```yaml
 # templates/deployment.yaml
@@ -206,7 +206,7 @@ spec:
         {{- end }}
 ```
 
-### 辅助函数（\_helpers.tpl）{#helpers-tpl}
+### 辅助函数（\_helpers.tpl）
 
 ```yaml
 {{/*
@@ -256,7 +256,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 ```
 
-### 常用模板函数 {#common-functions}
+### 常用模板函数
 
 ```yaml
 # 字符串函数
@@ -297,11 +297,11 @@ enabled: false
 checksum/config: {{ include "mychart.configmap" . | sha256sum }}
 ```
 
-## 🎣 Chart Hooks {#chart-hooks}
+## 🎣 Chart Hooks
 
 **Hooks** 允许在 Release 生命周期的特定时刻执行操作。
 
-### Hook 类型 {#hook-types}
+### Hook 类型
 
 | Hook            | 触发时机 |
 | --------------- | -------- |
@@ -315,7 +315,7 @@ checksum/config: {{ include "mychart.configmap" . | sha256sum }}
 | `post-rollback` | 回滚后   |
 | `test`          | 测试时   |
 
-### Hook 示例：数据库迁移 {#hook-example}
+### Hook 示例：数据库迁移
 
 ```yaml
 # templates/migration-job.yaml
@@ -343,9 +343,9 @@ spec:
 - `hook-failed`：Hook 失败后删除
 - `before-hook-creation`：创建新 Hook 前删除旧 Hook
 
-## 🚀 创建 Chart {#create-chart}
+## 🚀 创建 Chart
 
-### 快速创建 Chart {#quick-create}
+### 快速创建 Chart
 
 ```bash
 # 创建新 Chart
@@ -355,7 +355,7 @@ helm create myapp
 tree myapp/
 ```
 
-### 自定义 Chart 示例 {#custom-chart-example}
+### 自定义 Chart 示例
 
 让我们创建一个完整的 Web 应用 Chart：
 
@@ -445,9 +445,9 @@ helm package myapp/
 # 输出：myapp-0.1.0.tgz
 ```
 
-## 📦 部署常用 Chart {#deploy-popular-charts}
+## 📦 部署常用 Chart
 
-### Nginx Ingress Controller {#nginx-ingress}
+### Nginx Ingress Controller
 
 ```bash
 # 添加仓库
@@ -461,7 +461,7 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --set controller.service.type=LoadBalancer
 ```
 
-### Cert-Manager（SSL 证书管理）{#cert-manager}
+### Cert-Manager（SSL 证书管理）
 
 ```bash
 # 添加仓库
@@ -478,7 +478,7 @@ helm install cert-manager jetstack/cert-manager \
 kubectl get pods -n cert-manager
 ```
 
-### Prometheus + Grafana（监控）{#prometheus-grafana}
+### Prometheus + Grafana（监控）
 
 ```bash
 # 添加仓库
@@ -497,7 +497,7 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 # 用户名：admin，密码：admin123
 ```
 
-### Redis {#redis}
+### Redis
 
 ```bash
 # 添加 Bitnami 仓库
@@ -515,9 +515,9 @@ helm install redis-ha bitnami/redis \
   --set auth.password=redis123
 ```
 
-## 🗂️ Chart 仓库管理 {#chart-repository}
+## 🗂️ Chart 仓库管理
 
-### 常用 Chart 仓库 {#popular-repos}
+### 常用 Chart 仓库
 
 ```bash
 # 添加常用仓库
@@ -543,7 +543,7 @@ helm search hub nginx  # 搜索 Artifact Hub
 helm repo remove bitnami
 ```
 
-### 创建私有 Chart 仓库 {#private-chart-repo}
+### 创建私有 Chart 仓库
 
 **方式 1：使用 ChartMuseum**
 
@@ -577,7 +577,7 @@ charts/
 helm repo add myorg https://myorg.github.io/charts
 ```
 
-## 🛠️ Helm 常用命令 {#helm-commands}
+## 🛠️ Helm 常用命令
 
 ```bash
 # === 安装和管理 ===
@@ -639,7 +639,7 @@ helm show chart bitnami/nginx
 helm show values bitnami/nginx  # 查看默认值
 ```
 
-## 📚 最佳实践 {#best-practices}
+## 📚 最佳实践
 
 1. **使用 Helm 3**：Helm 2 已废弃，存在安全风险（Tiller）
 2. **版本控制 Chart**：将 Chart 存储在 Git 仓库
@@ -650,7 +650,7 @@ helm show values bitnami/nginx  # 查看默认值
 7. **使用 OCI 仓库**：Helm 3.8+ 支持 OCI 注册表（类似 Docker）
 8. **测试 Chart**：使用 `helm test` 验证部署
 
-### OCI 仓库示例 {#oci-example}
+### OCI 仓库示例
 
 ```bash
 # 启用 OCI 支持
@@ -666,7 +666,7 @@ helm push myapp-0.1.0.tgz oci://registry.example.com/charts
 helm install myapp oci://registry.example.com/charts/myapp --version 0.1.0
 ```
 
-## 📚 参考资源 {#references}
+## 📚 参考资源
 
 - [Helm 官方文档](https://helm.sh/docs/)
 - [Helm Chart 最佳实践](https://helm.sh/docs/chart_best_practices/)

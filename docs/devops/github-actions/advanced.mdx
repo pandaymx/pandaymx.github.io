@@ -8,11 +8,11 @@ sidebar_position: 3
 
 本章介绍 GitHub Actions 的高级特性，包括自定义 Action 开发、工作流复用、OIDC 云认证等。
 
-## Composite Actions（组合 Action）{#composite-actions}
+## Composite Actions（组合 Action）
 
 Composite Action 允许将多个 step 封装成一个可复用的 action，适合逻辑复用场景。
 
-### 创建 Composite Action {#create-composite-action}
+### 创建 Composite Action
 
 ```yaml
 # actions/setup-app/action.yml
@@ -59,7 +59,7 @@ runs:
         key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
 ```
 
-### 使用 Composite Action {#use-composite-action}
+### 使用 Composite Action
 
 ```yaml
 jobs:
@@ -80,11 +80,11 @@ jobs:
 
 :::tip Composite Action 的文件必须放在仓库的 `actions/` 目录下，或者使用独立的 action 仓库。:::
 
-## JavaScript Custom Action {#javascript-action}
+## JavaScript Custom Action
 
 JavaScript action 使用 Node.js 运行，适合需要复杂逻辑的场景。
 
-### Action 项目结构 {#js-action-structure}
+### Action 项目结构
 
 ```
 my-javascript-action/
@@ -96,7 +96,7 @@ my-javascript-action/
     └── index.js       # 打包后的文件（使用 @vercel/ncc 打包）
 ```
 
-### action.yml 元数据 {#action-metadata}
+### action.yml 元数据
 
 ```yaml
 # action.yml
@@ -120,7 +120,7 @@ runs:
   main: 'dist/index.js' # 打包后的入口文件
 ```
 
-### JavaScript Action 代码 {#js-action-code}
+### JavaScript Action 代码
 
 ```javascript
 // src/index.js
@@ -171,7 +171,7 @@ async function run() {
 run();
 ```
 
-### 打包 JavaScript Action {#package-js-action}
+### 打包 JavaScript Action
 
 使用 `@vercel/ncc` 打包：
 
@@ -182,11 +182,11 @@ ncc build src/index.js --license licenses.txt
 
 :::warning JavaScript action 必须打包成单个文件（`dist/index.js`），不能依赖 `node_modules`。使用 `ncc` 或 `esbuild` 打包。:::
 
-## Docker Custom Action {#docker-action}
+## Docker Custom Action
 
 Docker action 在容器中运行，适合需要特定环境的场景。
 
-### Docker Action 结构 {#docker-action-structure}
+### Docker Action 结构
 
 ```
 my-docker-action/
@@ -195,7 +195,7 @@ my-docker-action/
 └── entrypoint.sh
 ```
 
-### action.yml {#docker-action-yml}
+### action.yml
 
 ```yaml
 # action.yml
@@ -222,7 +222,7 @@ runs:
     - ${{ inputs.name }}
 ```
 
-### Dockerfile {#docker-action-dockerfile}
+### Dockerfile
 
 ```dockerfile
 FROM alpine:3.19
@@ -235,7 +235,7 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 ```
 
-### entrypoint.sh {#docker-action-entrypoint}
+### entrypoint.sh
 
 ```bash
 #!/bin/bash
@@ -250,7 +250,7 @@ echo "greeting=Hello, $1!" >> "$GITHUB_OUTPUT"
 echo "MY_VAR=hello" >> "$GITHUB_ENV"
 ```
 
-## Action 元数据语法 {#action-metadata-syntax}
+## Action 元数据语法
 
 `action.yml` 的完整语法参考：
 
@@ -284,11 +284,11 @@ runs:
   steps: []                      # Composite action 步骤列表
 ```
 
-## 复用工作流（Workflow Call）{#workflow-reuse}
+## 复用工作流（Workflow Call）
 
 通过 `workflow_call` 触发器，可以让一个工作流被另一个工作流调用，实现逻辑复用。
 
-### 定义可复用工作流 {#define-reusable-workflow}
+### 定义可复用工作流
 
 ```yaml
 # .github/workflows/reusable-deploy.yml
@@ -326,7 +326,7 @@ jobs:
           echo "url=https://${{ inputs.environment }}.example.com" >> $GITHUB_OUTPUT
 ```
 
-### 调用可复用工作流 {#call-reusable-workflow}
+### 调用可复用工作流
 
 ```yaml
 # .github/workflows/main.yml
@@ -364,7 +364,7 @@ jobs:
 
 :::tip可复用工作流文件必须放在 `.github/workflows/` 目录下，且触发器中必须包含 `workflow_call`。:::
 
-## Environment Files（环境文件）{#environment-files}
+## Environment Files（环境文件）
 
 GitHub Actions 提供多个环境文件，用于在不同 step 之间传递数据。
 
@@ -376,7 +376,7 @@ GitHub Actions 提供多个环境文件，用于在不同 step 之间传递数�
 | `$GITHUB_STATE` | 设置 job 状态（跨 step 共享） | `echo "state=value" >> $GITHUB_STATE` |
 | `$GITHUB_STEP_SUMMARY` | 添加 step 摘要（显示在 PR 页面） | `echo "## Test Results" >> $GITHUB_STEP_SUMMARY` |
 
-### 使用示例 {#environment-files-example}
+### 使用示例
 
 ```yaml
 steps:
@@ -400,11 +400,11 @@ steps:
       echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 ```
 
-## Concurrency Groups（并发控制）{#concurrency-groups}
+## Concurrency Groups（并发控制）
 
 控制同一时刻只允许一个工作流运行，避免资源冲突。
 
-### 基础并发控制 {#basic-concurrency}
+### 基础并发控制
 
 ```yaml
 concurrency:
@@ -412,7 +412,7 @@ concurrency:
   cancel-in-progress: true
 ```
 
-### 分支级别的并发 {#branch-concurrency}
+### 分支级别的并发
 
 ```yaml
 concurrency:
@@ -423,7 +423,7 @@ concurrency:
 - `github.head_ref`：PR 的源分支名
 - `github.run_id`：唯一的运行 ID（非 PR 事件时使用）
 
-### Job 级别并发 {#job-concurrency}
+### Job 级别并发
 
 ```yaml
 jobs:
@@ -437,9 +437,9 @@ jobs:
 
 :::warning 并发控制是按 group 名称匹配的。如果使用 `github.ref` 作为 group 的一部分，同一分支的多次推送会取消之前的运行。:::
 
-## Conditional Execution（条件执行）{#conditional-execution}
+## Conditional Execution（条件执行）
 
-### if 条件 {#if-condition}
+### if 条件
 
 ```yaml
 steps:
@@ -476,7 +476,7 @@ steps:
     run: echo "All previous steps succeeded"
 ```
 
-### 常用条件函数 {#condition-functions}
+### 常用条件函数
 
 | 函数           | 说明         | 示例                                                          |
 | -------------- | ------------ | ------------------------------------------------------------- |
@@ -489,11 +489,11 @@ steps:
 | `endsWith()`   | 后缀判断     | `if: endsWith(github.event.head_commit.message, '[skip ci]')` |
 | `hashFiles()`  | 文件哈希     | `if: hashFiles('package-lock.json') != ''`                    |
 
-## Custom Outputs（自定义输出）{#custom-outputs}
+## Custom Outputs（自定义输出）
 
 Job 之间可以通过 outputs 传递数据。
 
-### Step 输出 {#step-output}
+### Step 输出
 
 ```yaml
 jobs:
@@ -517,7 +517,7 @@ jobs:
           echo "SHA: ${{ needs.generate.outputs.sha }}"
 ```
 
-### Job 输出到 Workflow {#job-output}
+### Job 输出到 Workflow
 
 ```yaml
 jobs:
@@ -536,11 +536,11 @@ jobs:
       - run: echo "Deploying ${{ needs.build.outputs.image-tag }}"
 ```
 
-## OIDC for Cloud Authentication（OIDC 云认证）{#oidc-authentication}
+## OIDC for Cloud Authentication（OIDC 云认证）
 
 OIDC（OpenID Connect）允许 GitHub Actions 直接认证到云服务商，无需存储长期密钥。
 
-### AWS OIDC {#aws-oidc}
+### AWS OIDC
 
 ```yaml
 # .github/workflows/deploy-aws.yml
@@ -574,7 +574,7 @@ jobs:
           aws lambda update-function-code --function-name my-function --s3-bucket my-bucket --s3-key dist.zip
 ```
 
-### AWS IAM Role 配置 {#aws-iam-role}
+### AWS IAM Role 配置
 
 在 AWS IAM 中创建 Role，Trust Policy 如下：
 
@@ -599,7 +599,7 @@ jobs:
 }
 ```
 
-### GCP OIDC {#gcp-oidc}
+### GCP OIDC
 
 ```yaml
 jobs:
@@ -624,7 +624,7 @@ jobs:
         run: gcloud run deploy my-service --image gcr.io/my-project/my-image
 ```
 
-### Azure OIDC {#azure-oidc}
+### Azure OIDC
 
 ```yaml
 jobs:
@@ -653,9 +653,9 @@ jobs:
 2. 令牌有效期短（通常 1 小时）
 3. 可以精确控制可访问的仓库和分支 :::
 
-## GitHub API in Workflows（工作流中使用 GitHub API）{#github-api}
+## GitHub API in Workflows（工作流中使用 GitHub API）
 
-### 使用 gh CLI {#gh-cli}
+### 使用 gh CLI
 
 ```yaml
 steps:
@@ -685,7 +685,7 @@ steps:
       echo "$DIFF" > pr.diff
 ```
 
-### 使用 octokit（JavaScript）{#octokit}
+### 使用 octokit（JavaScript）
 
 ```javascript
 // 在 JavaScript action 中使用 octokit
@@ -713,7 +713,7 @@ async function run() {
 }
 ```
 
-### 直接调用 GitHub API {#direct-api-call}
+### 直接调用 GitHub API
 
 ```yaml
 steps:
@@ -728,7 +728,7 @@ steps:
         -d '{"title":"New Issue","body":"Created via API"}'
 ```
 
-## 完整高级示例 {#complete-advanced-example}
+## 完整高级示例
 
 下面是一个综合使用多种高级特性的工作流：
 
@@ -825,7 +825,7 @@ jobs:
             -f body="✅ Deployment completed: ${{ needs.setup.outputs.version }}"
 ```
 
-## 下一步 {#next-steps}
+## 下一步
 
 - 了解 [自托管 Runner](./self-hosted.mdx) 掌握自托管运行器的部署和管理
 - 查看 [速查表](./cheat-sheet.mdx) 快速参考常用语法和模式
