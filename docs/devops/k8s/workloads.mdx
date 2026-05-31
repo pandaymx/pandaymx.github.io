@@ -6,11 +6,11 @@ sidebar_position: 2
 
 # 📦 Pod 与工作负载
 
-## 📖 Pod 基础 {#pod-basics}
+## 📖 Pod 基础
 
 **Pod** 是 Kubernetes 中最小的可部署计算单元。一个 Pod 包含一个或多个容器，这些容器共享网络和存储。
 
-### Pod 生命周期 {#pod-lifecycle}
+### Pod 生命周期
 
 Pod 的生命周期包括以下几个阶段：
 
@@ -34,7 +34,7 @@ stateDiagram-v2
 | **Failed**    | 所有容器终止，至少一个容器失败                     |
 | **Unknown**   | 无法获取 Pod 状态（通常和网络问题有关）            |
 
-### Pod Spec 基本结构 {#pod-spec}
+### Pod Spec 基本结构
 
 ```yaml
 apiVersion: v1
@@ -66,7 +66,7 @@ spec:
 - **limits**：容器能使用的最大资源
 - **restartPolicy**：Always（默认）、OnFailure、Never :::
 
-## 🔄 Init Containers {#init-containers}
+## 🔄 Init Containers
 
 **Init Container** 是在应用容器启动之前运行的专用容器，用于执行初始化任务。
 
@@ -100,7 +100,7 @@ spec:
 
 :::warning 注意事项 Init Container 的名称必须唯一，不能与应用容器同名。Init Container 的端口不能与应用容器冲突。:::
 
-## 🩺 健康检查：Probes {#probes}
+## 🩺 健康检查：Probes
 
 Kubernetes 提供三种探针来监控容器健康状态：
 
@@ -110,7 +110,7 @@ Kubernetes 提供三种探针来监控容器健康状态：
 | **readinessProbe** | 检测容器是否准备好接收流量 | 从 Service 端点移除 |
 | **startupProbe**   | 检测应用是否已启动         | 杀死容器并重启      |
 
-### Liveness Probe 示例 {#liveness-probe}
+### Liveness Probe 示例
 
 ```yaml
 apiVersion: v1
@@ -131,7 +131,7 @@ spec:
         failureThreshold: 3
 ```
 
-### Readiness Probe 示例 {#readiness-probe}
+### Readiness Probe 示例
 
 ```yaml
 apiVersion: v1
@@ -153,7 +153,7 @@ spec:
         failureThreshold: 3
 ```
 
-### Startup Probe 示例 {#startup-probe}
+### Startup Probe 示例
 
 ```yaml
 apiVersion: v1
@@ -184,7 +184,7 @@ spec:
 - **TCP 探针**：适用于无法提供 HTTP 端点的应用
 - **Exec 探针**：执行命令检查，灵活但开销较大 :::
 
-## 📊 工作负载类型对比 {#workload-comparison}
+## 📊 工作负载类型对比
 
 Kubernetes 提供多种工作负载类型，选择适合的控制器非常重要：
 
@@ -197,11 +197,11 @@ Kubernetes 提供多种工作负载类型，选择适合的控制器非常重要
 | **Job**         | 一次性任务     | 任务完成后 Pod 终止     | 可选             |
 | **CronJob**     | 定时任务       | 按 Cron 表达式调度      | 可选             |
 
-## 🚀 Deployment {#deployment}
+## 🚀 Deployment
 
 **Deployment** 是最常用的工作负载，用于管理无状态应用的部署和更新。
 
-### Deployment YAML 示例 {#deployment-yaml}
+### Deployment YAML 示例
 
 ```yaml
 apiVersion: apps/v1
@@ -251,7 +251,7 @@ spec:
             periodSeconds: 5
 ```
 
-### Deployment 常用操作 {#deployment-operations}
+### Deployment 常用操作
 
 ```bash
 # 创建 Deployment
@@ -285,11 +285,11 @@ kubectl rollout pause deployment/nginx
 kubectl rollout resume deployment/nginx
 ```
 
-## 🏛️ StatefulSet {#statefulset}
+## 🏛️ StatefulSet
 
 **StatefulSet** 用于管理有状态应用，提供固定的 Pod 名称和持久化存储。
 
-### StatefulSet YAML 示例 {#statefulset-yaml}
+### StatefulSet YAML 示例
 
 ```yaml
 apiVersion: apps/v1
@@ -340,11 +340,11 @@ spec:
 - 稳定的网络标识：Pod 可以通过 `<pod-name>.<service-name>` 访问
 - 持久化存储：每个 Pod 有独立的 PVC
 
-## 🛡️ DaemonSet {#daemonset}
+## 🛡️ DaemonSet
 
 **DaemonSet** 确保所有（或某些）节点上运行一个 Pod 副本，常用于日志收集、监控等守护进程。
 
-### DaemonSet YAML 示例 {#daemonset-yaml}
+### DaemonSet YAML 示例
 
 ```yaml
 apiVersion: apps/v1
@@ -394,11 +394,11 @@ spec:
 - 节点删除时自动清理 Pod
 - 可以通过 `nodeSelector` 或 `affinity` 指定运行节点
 
-## ⚡ Job {#job}
+## ⚡ Job
 
 **Job** 用于运行一次性任务，确保任务成功完成。
 
-### Job YAML 示例 {#job-yaml}
+### Job YAML 示例
 
 ```yaml
 apiVersion: batch/v1
@@ -427,11 +427,11 @@ spec:
 - `parallelism`：并行运行的 Pod 数量
 - `backoffLimit`：失败重试次数
 
-## ⏰ CronJob {#cronjob}
+## ⏰ CronJob
 
 **CronJob** 用于定时执行任务，基于 Cron 表达式调度。
 
-### CronJob YAML 示例 {#cronjob-yaml}
+### CronJob YAML 示例
 
 ```yaml
 apiVersion: batch/v1
@@ -476,9 +476,9 @@ spec:
 - `Forbid`：禁止并发，跳过本次执行
 - `Replace`：取消正在运行的 Job，用新的替换 :::
 
-## 🔄 滚动更新策略 {#rollout-strategies}
+## 🔄 滚动更新策略
 
-### Recreate 策略 {#recreate-strategy}
+### Recreate 策略
 
 ```yaml
 spec:
@@ -488,7 +488,7 @@ spec:
 
 **特点**：先删除所有旧 Pod，再创建新 Pod。会导致服务短暂不可用。
 
-### RollingUpdate 策略 {#rollingupdate-strategy}
+### RollingUpdate 策略
 
 ```yaml
 spec:
@@ -504,7 +504,7 @@ spec:
 - `maxSurge`：更新期间可以额外创建的 Pod 数量
 - `maxUnavailable`：更新期间可以不可用的 Pod 数量
 
-### Canary 发布 {#canary-deployment}
+### Canary 发布
 
 Canary 发布通过 Ingress 或 Service Mesh 实现流量分割。
 
@@ -531,7 +531,7 @@ spec:
           image: myapp:2.0-canary
 ```
 
-### Blue-Green 部署 {#blue-green-deployment}
+### Blue-Green 部署
 
 Blue-Green 部署通过切换 Service 选择器实现零停机发布。
 
@@ -600,7 +600,7 @@ spec:
 - 数据库迁移需要向后兼容（支持两个版本同时访问）
 - 切换后观察 Green 版本运行状态，异常可快速回切 :::
 
-## 📚 最佳实践 {#best-practices}
+## 📚 最佳实践
 
 1. **使用 Deployment 管理无状态应用**，避免使用裸 Pod
 2. **设置合理的资源请求和限制**，防止资源争抢
@@ -610,7 +610,7 @@ spec:
 6. **守护进程使用 DaemonSet**，如日志收集、监控代理
 7. **定时任务使用 CronJob**，注意并发策略配置
 
-## 📚 参考资源 {#references}
+## 📚 参考资源
 
 - [Kubernetes Workloads](https://kubernetes.io/docs/concepts/workloads/)
 - [Deployment 官方文档](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)

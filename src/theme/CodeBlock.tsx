@@ -21,7 +21,7 @@ export default function CodeBlockWrapper(
   // 提取语言名称 (例如 from "language-ts" to "ts")
   const language = className
     ?.split(' ')
-    .find((cls) => cls.startsWith('language-'));
+    .find((cls: string) => cls.startsWith('language-'));
 
   return (
     <div className={clsx('custom-code-block', language)}>

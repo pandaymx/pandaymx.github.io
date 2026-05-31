@@ -8,7 +8,7 @@ sidebar_position: 2
 
 本章介绍如何使用 GitHub Actions 构建生产级的 CI/CD 流水线，涵盖从代码提交到生产部署的完整流程。
 
-## CI Pipeline 示例 {#ci-pipeline}
+## CI Pipeline 示例
 
 一个典型的 CI 流水线包含：代码检出 → Lint → 测试 → 构建 → 产物上传。
 
@@ -100,7 +100,7 @@ jobs:
           retention-days: 30
 ```
 
-## CD Pipeline 示例 {#cd-pipeline}
+## CD Pipeline 示例
 
 CD 流水线负责将构建产物部署到目标环境。典型流程：构建 → 推送 Docker 镜像 → 部署。
 
@@ -210,7 +210,7 @@ jobs:
             docker compose ps
 ```
 
-## 分支策略部署 {#branch-deployment}
+## 分支策略部署
 
 根据分支类型自动部署到不同环境：
 
@@ -255,7 +255,7 @@ jobs:
           # 部署脚本
 ```
 
-## Environment Protection Rules {#environment-protection}
+## Environment Protection Rules
 
 在 GitHub Settings → Environments 中配置环境保护规则：
 
@@ -282,11 +282,11 @@ Protection rules 可配置：
 
 :::tip 生产环境建议配置 Required reviewers + Wait timer，防止误操作。:::
 
-## Matrix Builds（矩阵构建）{#matrix-builds}
+## Matrix Builds（矩阵构建）
 
 矩阵构建允许在多个环境下并行测试，大幅缩短总构建时间。
 
-### 基础矩阵 {#basic-matrix}
+### 基础矩阵
 
 ```yaml
 jobs:
@@ -315,7 +315,7 @@ jobs:
       - run: python manage.py test
 ```
 
-### 矩阵最大并行数 {#matrix-max-parallel}
+### 矩阵最大并行数
 
 ```yaml
 jobs:
@@ -344,11 +344,11 @@ jobs:
       - run: node --version
 ```
 
-## 缓存策略 {#caching}
+## 缓存策略
 
 合理使用缓存可以大幅加速构建速度。
 
-### npm/yarn/pnpm 缓存 {#npm-cache}
+### npm/yarn/pnpm 缓存
 
 ```yaml
 steps:
@@ -367,7 +367,7 @@ steps:
         ${{ runner.os }}-npm-
 ```
 
-### Python pip 缓存 {#pip-cache}
+### Python pip 缓存
 
 ```yaml
 steps:
@@ -386,7 +386,7 @@ steps:
         ${{ runner.os }}-pip-
 ```
 
-### Docker 层缓存 {#docker-cache}
+### Docker 层缓存
 
 ```yaml
 steps:
@@ -418,11 +418,11 @@ steps:
 
 :::tip GitHub Actions Cache 有大小限制（免费版 10GB，企业版更大），定期清理旧缓存避免超限。:::
 
-## Artifact 共享 {#artifact-sharing}
+## Artifact 共享
 
 Artifact 用于在不同 job 之间传递数据。
 
-### 上传 Artifact {#upload-artifact}
+### 上传 Artifact
 
 ```yaml
 jobs:
@@ -445,7 +445,7 @@ jobs:
           compression-level: 9 # 0-9，9 最高压缩
 ```
 
-### 下载 Artifact {#download-artifact}
+### 下载 Artifact
 
 ```yaml
 jobs:
@@ -465,7 +465,7 @@ jobs:
           # 使用下载的构建产物进行部署
 ```
 
-### 多 Artifact 模式 {#multiple-artifacts}
+### 多 Artifact 模式
 
 ```yaml
 jobs:
@@ -504,9 +504,9 @@ jobs:
           # 生成汇总报告
 ```
 
-## 并行 vs 串行 Jobs {#parallel-vs-sequential}
+## 并行 vs 串行 Jobs
 
-### 并行 Jobs {#parallel-jobs}
+### 并行 Jobs
 
 默认情况下，同一 workflow 中的不同 job 并行执行：
 
@@ -525,7 +525,7 @@ jobs:
     steps: [...] # 与 lint、test 并行
 ```
 
-### 串行 Jobs（使用 needs）{#sequential-jobs}
+### 串行 Jobs（使用 needs）
 
 使用 `needs` 关键字定义依赖关系：
 
@@ -559,7 +559,7 @@ graph TD
     C --> D
 ```
 
-## Monorepo CI 示例 {#monorepo-ci}
+## Monorepo CI 示例
 
 Monorepo 中需要智能地只构建变更的包。
 
@@ -642,7 +642,7 @@ jobs:
 
 :::tip使用 `dorny/paths-filter` action 可以智能检测哪些目录有变更，避免不必要的构建。:::
 
-## 完整 CI/CD 示例 {#complete-example}
+## 完整 CI/CD 示例
 
 下面是一个完整的生产级 CI/CD 流水线：
 
@@ -760,7 +760,7 @@ jobs:
         run: echo "Deploying ${{ needs.build-and-push.outputs.image-tag }} to production"
 ```
 
-## 下一步 {#next-steps}
+## 下一步
 
 - 学习 [高级技巧与自定义 Action](./advanced.mdx) 了解 composite actions、workflow reuse、OIDC 等高级特性
 - 了解 [自托管 Runner](./self-hosted.mdx) 掌握自托管运行器的部署和管理

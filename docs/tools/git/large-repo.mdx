@@ -91,7 +91,7 @@ git push --force-with-lease origin main
 ### 方案对比
 
 | 方案 | 适用场景 | 工具链 | 优点 | 缺点 |
-| :--- | :--- | :--- | :--- | :--- |
+| :-- | :-- | :-- | :-- | :-- |
 | **Nx** | 前端 Monorepo（React/Angular） | Nx + Turborepo | 任务缓存、依赖图分析 | 学习曲线较陡 |
 | **Turborepo** | 前端 Monorepo（通用） | Turborepo | 远程缓存、零配置 | 仅限 JS/TS 生态 |
 | **Bazel** | 大型多语言 Monorepo | Bazel | Google 级性能 | 配置复杂 |
@@ -161,11 +161,11 @@ git clone --depth=1 --branch=main https://github.com/user/repo.git
 git fetch --unshallow  # 拉取完整历史
 ```
 
-| 场景 | 推荐 depth | 说明 |
-| :--- | :--- | :--- |
-| **CI 只跑测试** | `depth=1` | 最快，不需要历史 |
-| **CI 需要 sematic-release** | `depth=0`（全量） | 需要完整历史计算版本号 |
-| **本地开发** | 不浅克隆 | 需要完整历史做 `git log`、`git blame` |
+| 场景                        | 推荐 depth        | 说明                                  |
+| :-------------------------- | :---------------- | :------------------------------------ |
+| **CI 只跑测试**             | `depth=1`         | 最快，不需要历史                      |
+| **CI 需要 sematic-release** | `depth=0`（全量） | 需要完整历史计算版本号                |
+| **本地开发**                | 不浅克隆          | 需要完整历史做 `git log`、`git blame` |
 
 ### 部分克隆（Partial Clone）——Git 2.19+
 
@@ -197,10 +197,10 @@ git sparse-checkout disable
 
 :::tip[💡 三大优化手段对比]
 
-| 手段 | 减少什么 | 适合场景 |
-| :--- | :--- | :--- |
-| **浅克隆** | 历史提交数量 | CI 快速构建 |
-| **部分克隆** | Blob/Tree 对象 | 大仓库日常开发 |
+| 手段         | 减少什么       | 适合场景                |
+| :----------- | :------------- | :---------------------- |
+| **浅克隆**   | 历史提交数量   | CI 快速构建             |
+| **部分克隆** | Blob/Tree 对象 | 大仓库日常开发          |
 | **稀疏检出** | 工作区文件数量 | Monorepo 只开发部分应用 |
 
 :::
