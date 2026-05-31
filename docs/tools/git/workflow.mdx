@@ -31,11 +31,11 @@ Git 的本地工作区分为三个逻辑区域，理解它们的关系是掌握 
 └─────────────────┘
 ```
 
-| 区域                  | 命令（进入） | 命令（退出/查看）          | 文件状态              |
-| :-------------------- | :----------- | :------------------------- | :-------------------- |
-| **Working Directory** | 编辑文件     | `git add`                  | `modified`（已修改）  |
-| **Staging Area**      | `git add`    | `git commit` / `git reset` | `staged`（已暂存）    |
-| **Repository**        | `git commit` | `git push`                 | `committed`（已提交） |
+| 区域 | 命令（进入） | 命令（退出/查看） | 文件状态 |
+| :--- | :--- | :--- | :--- |
+| **Working Directory** | 编辑文件 | `git add` | `modified`（已修改）|
+| **Staging Area** | `git add` | `git commit` / `git reset` | `staged`（已暂存）|
+| **Repository** | `git commit` | `git push` | `committed`（已提交）|
 
 :::tip[💡 核心心法]
 
@@ -139,7 +139,6 @@ git push --force-with-lease   # 比 --force 安全一点，会检查是否有他
 :::danger[🚨 强制推送警告]
 
 `git push --force` **会覆盖远程仓库的历史**，可能导致他人的提交丢失。仅在以下情况使用：
-
 - 你确定只有你在这个分支工作
 - 你正在修复自己刚推送的提交（`--force-with-lease` 更安全）
 
@@ -163,10 +162,10 @@ git config --global pull.rebase true
 
 :::tip[💡 Merge vs. Rebase]
 
-| 方式                | 优点         | 缺点                              | 适用场景           |
-| :------------------ | :----------- | :-------------------------------- | :----------------- |
-| `git pull`（merge） | 保留完整历史 | 产生大量 merge commit，历史非线性 | 新手、团队强制要求 |
-| `git pull --rebase` | 历史线性清晰 | 会改写本地提交时间线              | **推荐日常使用**   |
+| 方式 | 优点 | 缺点 | 适用场景 |
+| :--- | :--- | :--- | :--- |
+| `git pull`（merge）| 保留完整历史 | 产生大量 merge commit，历史非线性 | 新手、团队强制要求 |
+| `git pull --rebase` | 历史线性清晰 | 会改写本地提交时间线 | **推荐日常使用** |
 
 :::
 
@@ -283,14 +282,14 @@ git push origin --delete feature/old-feature
 
 推荐使用以下前缀规范：
 
-| 前缀        | 用途                   | 示例                   |
-| :---------- | :--------------------- | :--------------------- |
-| `feature/`  | 新功能开发             | `feature/user-login`   |
-| `fix/`      | Bug 修复               | `fix/api-timeout`      |
-| `hotfix/`   | 生产环境紧急修复       | `hotfix/auth-crash`    |
-| `chore/`    | 杂项（依赖更新、配置） | `chore/deps-update`    |
-| `docs/`     | 文档变更               | `docs/api-guide`       |
-| `refactor/` | 重构                   | `refactor/auth-module` |
+| 前缀 | 用途 | 示例 |
+| :--- | :--- | :--- |
+| `feature/` | 新功能开发 | `feature/user-login` |
+| `fix/` | Bug 修复 | `fix/api-timeout` |
+| `hotfix/` | 生产环境紧急修复 | `hotfix/auth-crash` |
+| `chore/` | 杂项（依赖更新、配置） | `chore/deps-update` |
+| `docs/` | 文档变更 | `docs/api-guide` |
+| `refactor/` | 重构 | `refactor/auth-module` |
 
 ---
 

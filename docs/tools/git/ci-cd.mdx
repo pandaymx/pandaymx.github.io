@@ -23,7 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 全量克隆，保留完整历史（默认值 1 会导致 merge-base 计算错误）
+          fetch-depth: 0  # 全量克隆，保留完整历史（默认值 1 会导致 merge-base 计算错误）
 
       - name: Run tests
         run: npm test
@@ -34,11 +34,11 @@ jobs:
 
 ### 关键配置：`actions/checkout` 参数
 
-| 参数          | 默认值         | 说明                                      |
-| :------------ | :------------- | :---------------------------------------- |
-| `fetch-depth` | `1`            | 克隆深度，`0` = 全量（需要完整历史时用）  |
-| `ref`         | 触发事件的 ref | 指定检出的分支/tag/commit                 |
-| `token`       | `GITHUB_TOKEN` | 认证 token，推送时需要 `permissions` 配置 |
+| 参数 | 默认值 | 说明 |
+| :--- | :--- | :--- |
+| `fetch-depth` | `1` | 克隆深度，`0` = 全量（需要完整历史时用） |
+| `ref` | 触发事件的 ref | 指定检出的分支/tag/commit |
+| `token` | `GITHUB_TOKEN` | 认证 token，推送时需要 `permissions` 配置 |
 
 ### 场景 1：自动发布版本（Semantic Release）
 
@@ -52,7 +52,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 需要写权限来创建 tag 和 release
+      contents: write  # 需要写权限来创建 tag 和 release
       issues: write
       pull-requests: write
     steps:
@@ -80,7 +80,7 @@ on:
 
 jobs:
   auto-merge:
-    if: github.actor == 'dependabot[bot]' # 仅对 Dependabot PR 自动合并
+    if: github.actor == 'dependabot[bot]'  # 仅对 Dependabot PR 自动合并
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge
@@ -103,8 +103,8 @@ jobs:
 
 ```yaml
 variables:
-  GIT_STRATEGY: clone # 默认：每个 job 都 clone 代码
-  GIT_DEPTH: 0 # 0 = 全量克隆（类似 GitHub 的 fetch-depth: 0）
+  GIT_STRATEGY: clone   # 默认：每个 job 都 clone 代码
+  GIT_DEPTH: 0          # 0 = 全量克隆（类似 GitHub 的 fetch-depth: 0）
 
 stages:
   - test
@@ -127,13 +127,13 @@ build:
 
 ### GitLab 特有：`CI_COMMIT_*` 环境变量
 
-| 变量                  | 含义                         | 示例值                                    |
-| :-------------------- | :--------------------------- | :---------------------------------------- |
-| `CI_COMMIT_SHA`       | 当前提交的完整 hash          | `a1b2c3d4...`                             |
-| `CI_COMMIT_SHORT_SHA` | 短 hash                      | `a1b2c3d`                                 |
-| `CI_COMMIT_REF_NAME`  | 分支名或 tag 名              | `main`、`v1.2.0`                          |
-| `CI_COMMIT_TAG`       | 如果是 tag 触发，则是 tag 名 | `v1.2.0`                                  |
-| `CI_PIPELINE_SOURCE`  | 触发来源                     | `push`、`merge_request_event`、`schedule` |
+| 变量 | 含义 | 示例值 |
+| :--- | :--- | :--- |
+| `CI_COMMIT_SHA` | 当前提交的完整 hash | `a1b2c3d4...` |
+| `CI_COMMIT_SHORT_SHA` | 短 hash | `a1b2c3d` |
+| `CI_COMMIT_REF_NAME` | 分支名或 tag 名 | `main`、`v1.2.0` |
+| `CI_COMMIT_TAG` | 如果是 tag 触发，则是 tag 名 | `v1.2.0` |
+| `CI_PIPELINE_SOURCE` | 触发来源 | `push`、`merge_request_event`、`schedule` |
 
 ### 场景：自动创建 Release Tag
 
@@ -145,8 +145,8 @@ create-release:
   script:
     - git config user.email "ci@gitlab.com"
     - git config user.name "CI Bot"
-    - npm run release:version # 用 changesets 或 sematic-release 计算版本号
-    - git push --follow-tags origin main # 推送新 tag
+    - npm run release:version  # 用 changesets 或 sematic-release 计算版本号
+    - git push --follow-tags origin main  # 推送新 tag
 ```
 
 :::warning[⚠️ GitLab CI 中的 `GIT_STRATEGY: fetch`]
@@ -171,7 +171,7 @@ vMAJOR.MINOR.PATCH
 ### 工具链选型的考量
 
 | 工具 | 用途 | 推荐场景 |
-| :-- | :-- | :-- |
+| :--- | :--- | :--- |
 | **semantic-release** | 全自动版本号 + Changelog + GitHub Release | CI 自动化程度高的团队 |
 | **Changesets** | 手动标记变更集，PR 合并时自动发版 | Monorepo、需要人工审核发版节奏 |
 | **release-please** | Google 出品，基于 Conventional Commits 自动发版 | 大型项目、多语言 Monorepo |
@@ -221,16 +221,13 @@ jobs:
 ## 1.3.0 (2024-03-15)
 
 ### 🚀 New Features
-
 - feat(auth): add OAuth2 login support (#1234) @alice
 - feat(dashboard): add usage metrics chart (#1240) @bob
 
 ### 🐛 Bug Fixes
-
 - fix(api): handle null pointer in user service (#1220) @charlie
 
 ### 📝 Documentation
-
 - docs(README): update installation guide (#1215) @diana
 ```
 

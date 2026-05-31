@@ -61,11 +61,11 @@ git cat-file -p a1b2c3d4
 # Hello, Git
 ```
 
-| 特性          | 说明                            |
-| :------------ | :------------------------------ |
-| **存储内容**  | 文件数据（不含文件名）          |
-| **Hash 计算** | `blob <size>\0<content>`        |
-| **去重**      | 相同内容 → 相同 hash → 只存一份 |
+| 特性 | 说明 |
+| :--- | :--- |
+| **存储内容** | 文件数据（不含文件名） |
+| **Hash 计算** | `blob <size>\0<content>` |
+| **去重** | 相同内容 → 相同 hash → 只存一份 |
 
 ### Tree 对象——目录结构
 
@@ -106,13 +106,13 @@ git cat-file -p HEAD
 # fix: handle token expiration  ← 提交 message
 ```
 
-| 字段        | 含义                                          |
-| :---------- | :-------------------------------------------- |
-| `tree`      | 本次提交对应的根目录 Tree hash                |
-| `parent`    | 父提交 hash（合并提交有多个 parent）          |
-| `author`    | 原作者（姓名、邮箱、时间戳）                  |
+| 字段 | 含义 |
+| :--- | :--- |
+| `tree` | 本次提交对应的根目录 Tree hash |
+| `parent` | 父提交 hash（合并提交有多个 parent） |
+| `author` | 原作者（姓名、邮箱、时间戳） |
 | `committer` | 提交者（rebase 后 author 不变，committer 变） |
-| 消息体      | Commit message                                |
+| 消息体 | Commit message |
 
 :::tip[💡 author vs. committer 的区别]
 
@@ -144,7 +144,6 @@ Tree (根目录快照)
 ### 为什么需要 Packfile？
 
 随着提交增多，`.git/objects/` 里会有成千上万个独立文件（每个 blob 一个文件），导致：
-
 1. **磁盘占用大**——同一个文件修改 100 次，存 100 份完整内容
 2. **访问慢**——随机 I/O 多，克隆时间长
 
@@ -158,10 +157,10 @@ ls .git/objects/pack/
 # pack-abc1234.idx    ← 索引文件（快速查找）
 ```
 
-| 文件    | 作用                                           |
-| :------ | :--------------------------------------------- |
-| `.pack` | 压缩后的 objects 数据（增量存储）              |
-| `.idx`  | 索引，支持 O(1) 查找某个 hash 在 pack 中的位置 |
+| 文件 | 作用 |
+| :--- | :--- |
+| `.pack` | 压缩后的 objects 数据（增量存储） |
+| `.idx` | 索引，支持 O(1) 查找某个 hash 在 pack 中的位置 |
 
 ### 垃圾回收（GC）
 
@@ -201,11 +200,11 @@ cat .git/refs/remotes/origin/main
 # def4567890abcdef1234567890abcdef12345678  ← 远程跟踪分支
 ```
 
-| 引用类型         | 路径                         | 含义                                        |
-| :--------------- | :--------------------------- | :------------------------------------------ |
-| **分支**         | `refs/heads/<name>`          | 本地分支，可移动（`git commit` 会自动更新） |
-| **远程跟踪分支** | `refs/remotes/origin/<name>` | 远程分支的本地缓存（`git fetch` 更新）      |
-| **Tag**          | `refs/tags/<name>`           | 标签，通常不可移动                          |
+| 引用类型 | 路径 | 含义 |
+| :--- | :--- | :--- |
+| **分支** | `refs/heads/<name>` | 本地分支，可移动（`git commit` 会自动更新） |
+| **远程跟踪分支** | `refs/remotes/origin/<name>` | 远程分支的本地缓存（`git fetch` 更新） |
+| **Tag** | `refs/tags/<name>` | 标签，通常不可移动 |
 
 ### 符号引用（Symbolic Ref）——指向另一个引用
 
@@ -222,7 +221,7 @@ cat .git/HEAD
 ### `HEAD` 的三种状态
 
 | 状态 | `HEAD` 内容 | 说明 |
-| :-- | :-- | :-- |
+| :--- | :--- | :--- |
 | **正常（在分支上）** | `ref: refs/heads/main` | `git commit` 会移动 main |
 | **Detached HEAD** | `abc1234...` (直接 hash） | `git commit` 会创建"无分支的提交"（可用 reflog 找回） |
 | **未 born（新仓库）** | `ref: refs/heads/main` 但 main 不存在 | 第一次 `git commit` 后自动创建 |
@@ -230,7 +229,6 @@ cat .git/HEAD
 :::tip[💡 理解 `HEAD^`、`HEAD~2` 等语法的本质]
 
 这些语法操作的是 **DAG（有向无环图）中的 commit 节点**：
-
 - `HEAD^` = 第一个 parent
 - `HEAD^2` = 第二个 parent（仅合并提交有）
 - `HEAD~2` = 向前 2 代（沿着第一个 parent 链）

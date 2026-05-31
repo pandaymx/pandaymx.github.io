@@ -67,7 +67,6 @@ git worktree remove --force ../my-project-feature-a
 :::tip[💡 Worktree 的魔法：共享 `.git` 目录]
 
 所有 worktree 共享同一个 `.git` 目录。这意味着：
-
 - 在一个 worktree 里 `git commit`，其他 worktree 的 `git log` 立即可见
 - 不需要每个 worktree 都 `npm install`（共享 node_modules，前提是不在 `.gitignore` 里）
 - 磁盘占用极省（只有工作文件，没有多份 `.git` 对象）
@@ -202,12 +201,12 @@ echo "   分支: $BRANCH_NAME (基于 $BASE_BRANCH)"
 
 :::tip[💡 用 `git worktree` 替代 `git stash` 的场景]
 
-| 场景                               | 用 stash      | 用 worktree  |
-| :--------------------------------- | :------------ | :----------- |
-| 临时切换分支修 hotfix（< 30 分钟） | ✅ 合适       | 可以，但略重 |
-| 需要同时运行两个分支对比           | ❌ 做不到     | ✅ 完美      |
-| AI 助手需要独立工作区              | ❌ 做不到     | ✅ 完美      |
-| 长时间（> 1 天）并行开发           | ❌ stash 会忘 | ✅ 完美      |
+| 场景 | 用 stash | 用 worktree |
+| :--- | :--- | :--- |
+| 临时切换分支修 hotfix（< 30 分钟） | ✅ 合适 | 可以，但略重 |
+| 需要同时运行两个分支对比 | ❌ 做不到 | ✅ 完美 |
+| AI 助手需要独立工作区 | ❌ 做不到 | ✅ 完美 |
+| 长时间（> 1 天）并行开发 | ❌ stash 会忘 | ✅ 完美 |
 
 :::
 
