@@ -1,0 +1,74 @@
+---
+title: ⚡ JavaScript 核心原理
+description: 深入剖析 JS 原型链、闭包、异步编程及 ES6+ 现代语法。
+position: 3
+---
+
+# ⚡ JavaScript (ECMAScript)
+
+为网页赋予生命与灵魂，现代前端开发的绝对核心。
+
+## 🎯 语言核心特性
+
+### 1. 数据类型与内存分配
+
+JavaScript 有 8 种数据类型（包括 7 种原始类型和 1 种引用类型）：
+
+- **原始类型** (存储在栈内存中)：`Undefined`, `Null`, `Boolean`, `Number`, `String`, `Symbol`, `BigInt`。
+- **引用类型** (存储在堆内存中)：`Object`（包含 Array, Function, Date 等）。
+
+### 2. 作用域与闭包 (Closures)
+
+- **作用域**: 决定了变量生命周期及其可见性（全局作用域、函数作用域、ES6 引入的块级作用域 `let/const`）。
+- **闭包**: 函数以及其捆绑的周边环境状态（词法环境）的引用的组合。闭包让开发者可以从内部函数访问外部函数的作用域。
+  ```javascript
+  function makeCounter() {
+    let count = 0;
+    return function () {
+      return count++; // 闭包访问了外部函数的局部变量
+    };
+  }
+  ```
+
+### 3. 原型与原型链 (Prototype Chain)
+
+JavaScript 是一种基于原型的语言。当试图访问一个对象的属性时，不仅在该对象上搜寻，还会搜寻该对象的原型，以及该对象的原型的原型，依次层层向上搜索，直到找到一个名字匹配的属性或到达原型链的末尾 (`null`)。
+
+### 4. `this` 关键字
+
+`this` 的值在执行时才绑定，取决于函数的调用方式：
+
+- 默认绑定（严格模式下为 `undefined`，非严格模式下为全局对象）。
+- 隐式绑定（由对象调用时，指向该对象）。
+- 显式绑定（`call`, `apply`, `bind`）。
+- `new` 绑定（指向新实例化的对象）。
+- **箭头函数**: 不绑定自己的 `this`，它会捕获其所在上下文的 `this` 值。
+
+## ⏳ 异步编程与事件循环 (Event Loop)
+
+因为 JavaScript 在浏览器中是单线程运行的，处理耗时操作（网络请求、定时器）需要依靠异步机制。
+
+- **回调函数 (Callbacks)**: 早期的异步方案，容易导致"回调地狱"。
+- **Promise**: ES6 引入，表示一个异步操作的最终完成或失败及其结果值。
+- **async/await**: ES8 引入，基于 Promise 的语法糖，使异步代码看起来像同步代码，极大地提升了可读性。
+
+**Event Loop 机制**:
+
+1. 执行同步代码（宏任务）。
+2. 执行所有的微任务（如 `Promise.then`, `MutationObserver`）。
+3. 渲染页面（如果需要）。
+4. 执行下一个宏任务（如 `setTimeout`, `setInterval`）。
+
+## ✨ ES6+ 现代语法
+
+- **解构赋值 (Destructuring)**
+- **扩展/剩余运算符 (Spread/Rest Operator `...`)**
+- **模板字符串 (Template Literals)**
+- **模块化 (ES Modules: `import` / `export`)**
+- **可选链 (`?.`) 与 双空合并运算符 (`??`)**
+
+## 📖 最佳实践
+
+- 优先使用 `const` 声明变量，只在需要重新赋值时使用 `let`，完全弃用 `var`。
+- 使用强等号 `===` 和 `!==` 进行比较，避免类型隐式转换带来的问题。
+- 善用高阶数组方法（`map`, `filter`, `reduce`）替代传统的 `for` 循环操作数据。
