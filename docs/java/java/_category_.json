@@ -1,0 +1,8 @@
+{
+  "label": "Java 基础",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "Java 基础语法、集合、并发等核心知识"
+  }
+}

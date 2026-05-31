@@ -1,0 +1,59 @@
+---
+title: ⚛️ React 体系与生态
+description: 探索 React 核心原理、Hooks、状态管理及 Next.js 框架。
+position: 5
+---
+
+# ⚛️ React 体系
+
+由 Facebook 开源的用于构建用户界面的 JavaScript 库，目前最受全球开发者欢迎的前端框架之一。
+
+## 🎯 核心设计理念
+
+### 1. 声明式 UI (Declarative UI)
+
+React 采用声明式范式，你只需要描述在任何给定的状态下你的 UI 应该是什么样子，React 会自动在状态改变时高效地更新和渲染相关组件。这比传统的命令式操作 DOM（如 jQuery）更加直观且易于调试。
+
+### 2. 组件化 (Component-Based)
+
+将复杂的 UI 拆分为独立、可复用的微小组件。组件自身管理自己的状态 (`state`)，并接受外部传入的数据 (`props`)。组件化极大地提升了代码的复用性和可维护性。
+
+### 3. 虚拟 DOM (Virtual DOM)
+
+React 在内存中维护了一棵轻量级的虚拟 DOM 树。当数据发生变化时，React 会先计算出新的虚拟 DOM 树，然后通过高效的 Diff 算法对比新旧树的差异，最后只将必要的更新批量应用到真实的浏览器 DOM 上，从而优化了性能。
+
+## 🎣 React Hooks
+
+在 React 16.8 引入的 Hooks 彻底改变了 React 的开发模式，使得函数组件拥有了状态和生命周期的能力。
+
+- **`useState`**: 在函数组件中声明并更新状态。
+- **`useEffect`**: 处理副作用（如数据获取、订阅、手动修改 DOM），类似于类组件中的 `componentDidMount`, `componentDidUpdate`, `componentWillUnmount` 的组合。
+- **`useContext`**: 跨层级组件传递数据，避免 Prop Drilling。
+- **`useRef`**: 获取 DOM 节点引用或保存跨渲染周期的可变值。
+- **`useMemo` & `useCallback`**: 性能优化手段，用于缓存计算结果和函数实例。
+
+## 📦 状态管理与路由生态
+
+- **全局状态管理**: 虽然 `Context API` 可以应对简单的全局状态，但复杂应用通常依赖专门的库：
+  - **Redux Toolkit (RTK)**: Redux 的官方现代推荐写法，基于不可变数据和集中式 Store。
+  - **Zustand**: 轻量、简洁、无样板代码的现代状态管理库。
+  - **Jotai**: 原子化状态管理方案。
+- **路由 (React Router)**: 用于构建单页面应用 (SPA) 的标准路由库，通过 URL 控制组件渲染。
+
+## 🚀 全栈框架体系 (Next.js)
+
+现代 React 开发已经从单纯的 SPA 转向全栈框架。**Next.js** 是目前最成熟的 React 框架。
+
+- **渲染策略**: 支持多种渲染方式：
+  - CSR (Client-Side Rendering)
+  - SSR (Server-Side Rendering)
+  - SSG (Static Site Generation)
+  - ISR (Incremental Static Regeneration)
+- **App Router**: 基于 React Server Components (RSC) 的现代路由架构。
+- **内置优化**: 提供图像、字体、脚本的自动性能优化。
+
+## 📖 最佳实践
+
+- 组件拆分应遵循单一职责原则。
+- 尽量使用函数组件和 Hooks，减少类组件的使用。
+- 不要滥用 `useEffect`，许多需要 `useEffect` 处理的场景实际上可以通过在事件处理函数中直接完成或提取为派生状态。

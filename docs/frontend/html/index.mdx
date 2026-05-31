@@ -1,0 +1,53 @@
+---
+title: 📝 HTML 基础与进阶
+description: 掌握 HTML 语义化、HTML5 新特性及无障碍开发。
+position: 1
+---
+
+# 📝 HTML (HyperText Markup Language)
+
+构建 Web 的基石，定义了网页的结构与内容。
+
+## 🎯 核心概念
+
+HTML（超文本标记语言）用于描述网页文档的结构。随着 Web 标准的演进，HTML 经历了多个版本的迭代，目前主流标准为 **HTML5**。
+
+### 1. 语义化标签
+
+语义化不仅有助于搜索引擎优化 (SEO)，也对屏幕阅读器等辅助技术至关重要。
+
+- `<header>`: 页眉
+- `<nav>`: 导航链接
+- `<main>`: 页面主体内容
+- `<article>`: 独立完整的文章结构
+- `<section>`: 内容章节
+- `<footer>`: 页脚
+- `<aside>`: 侧边栏
+
+### 2. HTML5 新特性
+
+HTML5 引入了许多原生支持的多媒体和交互特性，极大地丰富了 Web 应用的能力：
+
+- **多媒体标签**: `<audio>` 和 `<video>` 原生支持音视频播放。
+- **图形绘制**: `<canvas>` 和 `<svg>` 提供了强大的图形绘制与渲染能力。
+- **Web Storage**: `localStorage` 和 `sessionStorage` 提供了比 Cookie 更大容量、更方便的本地存储方案。
+- **增强型表单**: 新增了 `date`、`email`、`url` 等输入类型及内置的数据验证属性（如 `required`, `pattern`）。
+- **Geolocation API**: 允许网页获取用户的地理位置信息。
+
+### 3. DOM (Document Object Model)
+
+DOM 是 HTML 和 XML 文档的编程接口，它将文档解析为一个由节点和对象（包含属性和方法）组成的结构集合，使得编程语言（如 JavaScript）可以与页面内容进行交互。
+
+### 4. 无障碍访问 (Accessibility, a11y)
+
+确保所有人（包括残疾人）都能访问和使用网页。
+
+- **ARIA (Accessible Rich Internet Applications)**: 用于补充 HTML 语义的属性集合。
+- 确保图片有合适的 `alt` 替代文本。
+- 保证页面具有清晰的键盘导航焦点顺序 (`tabindex`)。
+
+## 📖 最佳实践
+
+- 始终声明正确的 `<!DOCTYPE html>` 以触发标准模式。
+- 合理使用语义化标签，而非全篇使用 `<div>` 和 `<span>`。
+- 保持文档结构的正确嵌套。
