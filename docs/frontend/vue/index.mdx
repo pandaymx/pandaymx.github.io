@@ -1,0 +1,65 @@
+---
+title: 💚 Vue 体系与全家桶
+description: 深入 Vue 3 的 Composition API、响应式原理及其全家桶生态。
+position: 6
+---
+
+# 💚 Vue 体系
+
+一款渐进式 JavaScript 框架，以其易学易用、性能出色、文档友好而在前端开发者中广受欢迎。
+
+## 🎯 Vue 3 核心变革
+
+相较于 Vue 2 (Options API)，Vue 3 带来了巨大的架构升级，重点在于性能优化与更好的 TypeScript 支持。
+
+### 1. Composition API (组合式 API)
+
+Composition API 是 Vue 3 的核心特性，它提供了一种全新的组件逻辑复用和代码组织方式。
+
+- **`setup`**: 组件的核心入口，现在通常使用 `<script setup>` 语法糖，极大地简化了代码量。
+- 逻辑复用：通过自定义 Hooks (Composable 函数) 替代了原有的 Mixins，解决了命名冲突和数据来源不清晰的问题。
+
+### 2. 响应式系统原理升级
+
+Vue 3 放弃了使用 `Object.defineProperty`，转而使用 ES6 的 **Proxy** 来实现响应式系统。
+
+- **优势**: 支持监听数组变化、对象属性的添加/删除、Map/Set 等数据结构，并且初始化性能更好，不需要深度递归劫持。
+- **API**:
+  - `ref()`: 用于定义基本数据类型及重新赋值对象的响应式引用。
+  - `reactive()`: 用于定义深层响应式对象。
+
+### 3. 其他重要特性
+
+- **Teleport (传送门)**: 允许将组件的 DOM 渲染到 DOM 树的其他位置（如挂载 Dialog 到 `body`），而保持组件逻辑关系不变。
+- **Fragments**: Vue 3 允许多个根节点组件，不再强制要求最外层包裹一个单独的 `div`。
+- **Suspense**: 用于协调异步组件的渲染加载状态。
+
+## 📦 Vue 全家桶生态
+
+### 路由：Vue Router
+
+官方推荐的路由管理器，深度集成了 Vue 核心，支持嵌套路由、路由守卫、动态路由匹配等高级功能。
+
+### 状态管理：Pinia
+
+Pinia 是 Vue 的专属状态管理库，作为 Vuex 的继任者，它具有以下特点：
+
+- 极其轻量。
+- 原生支持 TypeScript，提供完美的类型推断。
+- 移除了冗长的 `mutations`，直接使用 `actions` 修改状态。
+- 扁平化架构，没有嵌套的模块化概念。
+
+### 视图组件库与构建工具
+
+- **Vite**: 由 Vue 作者尤雨溪开发的现代前端构建工具，极速的冷启动与热更新 (HMR) 体验。
+- **组件库**: Element Plus, Ant Design Vue, Vant (移动端) 等成熟的 UI 库。
+
+## 🚀 全栈 SSR 框架：Nuxt.js
+
+基于 Vue 的混合渲染框架，提供开箱即用的 SSR (服务端渲染)、SSG (静态生成)、文件系统路由、SEO 优化等企业级特性。
+
+## 📖 最佳实践
+
+- 拥抱 `<script setup>` 和 Composition API。
+- 优先使用 `ref` 来定义各种类型的响应式数据，保持心智模型的统一。
+- 在大型项目中强制使用 TypeScript，利用 Pinia 管理复杂的跨组件状态。

@@ -1,0 +1,76 @@
+---
+title: 🛡️ TypeScript 进阶指南
+description: 掌握 TypeScript 的类型系统、泛型编程与工程化配置。
+position: 4
+---
+
+# 🛡️ TypeScript
+
+JavaScript 的超集，为大型前端项目赋予类型安全与更好的开发体验 (DX)。
+
+## 🎯 核心概念
+
+### 1. 基础类型与类型推断
+
+TypeScript 扩展了 JS 的基础类型，引入了 `tuple`, `enum`, `any`, `unknown`, `never`, `void` 等。通过强大的类型推断机制，在很多情况下无需显式声明类型：
+
+```typescript
+let isDone = false; // 自动推断为 boolean
+let strArr = ['a', 'b']; // 自动推断为 string[]
+```
+
+### 2. 接口 (Interfaces) 与类型别名 (Type Aliases)
+
+用于定义对象的形状。
+
+- **Interface**: 适合定义对象结构，支持继承 (extends) 和声明合并。
+- **Type Alias**: 适合定义联合类型、交叉类型、基础类型的别名等。
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+  age?: number; // 可选属性
+}
+
+type ID = string | number; // 联合类型
+```
+
+### 3. 泛型 (Generics)
+
+允许在定义函数、接口或类的时候，不预先指定具体的类型，而在使用的时候再指定类型的一种特性，极大地提升了代码的复用性。
+
+```typescript
+function identity<T>(arg: T): T {
+  return arg;
+}
+let output = identity<string>('myString');
+```
+
+### 4. 高级类型与工具类型 (Utility Types)
+
+TypeScript 内置了许多有用的工具类型来操作类型：
+
+- `Partial<T>`: 将 T 中的所有属性变为可选。
+- `Required<T>`: 将 T 中的所有属性变为必选。
+- `Readonly<T>`: 将 T 中的所有属性变为只读。
+- `Record<K, T>`: 构造一个对象类型，属性键为 K，属性值为 T。
+- `Pick<T, K>` / `Omit<T, K>`: 从 T 中挑选/剔除一组属性 K。
+
+## 🛠️ 工程化与配置
+
+### `tsconfig.json`
+
+TypeScript 项目的核心配置文件，控制编译器的行为。关键配置项包括：
+
+- `target`: 编译产物的 ECMAScript 目标版本（如 ES5, ES2015）。
+- `module`: 生成代码的模块系统（如 CommonJS, ESNext）。
+- `strict`: 启用所有严格的类型检查选项（强烈建议开启）。
+- `paths`: 路径映射，解决相对路径引用过深的问题。
+- `include` / `exclude`: 指定需要编译/不需要编译的文件或文件夹。
+
+## 📖 最佳实践
+
+- 尽量避免使用 `any`（它会让 TS 退化为 JS），在不知道类型时优先使用 `unknown` 并配合类型守卫 (Type Guards) 使用。
+- 开启 `strict` 模式，养成在编写逻辑前先设计数据结构（类型）的好习惯（Type-Driven Development）。
+- 结合现代编辑器（如 VS Code）的智能提示，利用 JSDoc 配合 TS 为代码提供更丰富的文档注释。
