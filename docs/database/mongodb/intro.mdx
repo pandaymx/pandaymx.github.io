@@ -1,54 +1,207 @@
 ---
-title: MongoDB 基础与操作
+title: MongoDB 基础教程
+description: 面向文档数据库初学者的 MongoDB 核心概念与 CRUD 操作指南。
 sidebar_position: 1
 ---
 
-# 🍃 MongoDB 基础与操作
+# MongoDB 基础教程
 
-MongoDB 是一个基于分布式文件存储的数据库，是当前最流行的 NoSQL 文档型数据库。
+MongoDB 是目前最流行的 NoSQL 文档型数据库，以其灵活的 Schema、高可扩展性和开发友好性而闻名。本文档面向初学者，介绍 MongoDB 的基本概念、安装方法和常用的文档操作。
 
-## 简介
+## 1. MongoDB 简介
 
-MongoDB 将数据存储为一个文档，数据结构由键值 (key=>value) 对组成。MongoDB 的文档类似于 JSON 对象（实际上是 BSON），字段值可以包含其他文档，数组及文档数组。这种灵活的 Schema 非常适合敏捷开发。
+### 什么是文档数据库
 
-## 安装
+在关系型数据库（如 MySQL）中，数据以严格的表格形式存储；而在 MongoDB 中，数据存储为灵活的 **BSON（二进制 JSON）文档**。这意味着同一个集合（类似于表）中的不同文档可以拥有完全不同的结构。
 
-### 使用 Docker 快速启动
+### 核心概念对照
+
+如果你熟悉关系型数据库，可以通过下表快速理解 MongoDB 的概念：
+
+| MySQL / RDBMS     | MongoDB               | 说明                                       |
+| ----------------- | --------------------- | ------------------------------------------ |
+| Database (数据库) | **Database**          | 数据库容器。                               |
+| Table (表)        | **Collection (集合)** | 文档的集合，没有固定的模式结构。           |
+| Row (行)          | **Document (文档)**   | 类似 JSON 格式的数据记录，由键值对组成。   |
+| Column (列)       | **Field (字段)**      | 文档中的一个键。                           |
+| JOIN (表连接)     | **$lookup**           | MongoDB 在聚合管道中支持类似 JOIN 的操作。 |
+
+### 适用场景
+
+MongoDB 非常适合处理以下场景：
+
+- **Schema 不固定的数据**：例如内容管理系统 (CMS)、用户动态属性、产品目录。
+- **快速迭代的敏捷开发**：开发初期无需频繁执行 DDL（修改表结构）语句。
+- **海量且半结构化的数据**：如各类日志、物联网 (IoT) 传感器数据。
+- **基于位置的服务**：原生强大的地理空间索引。
+
+## 2. 安装与连接
+
+### Docker 快速启动
+
+建议在本地使用 Docker 运行 MongoDB：
 
 ```bash
+# 启动最新版 MongoDB 容器并映射默认端口 27017
+docker run -d --name my-mongo -p 27017:27017 mongo:latest
+
+# 启动并设置初始的 root 用户及密码
 docker run -d \
-  --name mongo-dev \
+  --name my-mongo-auth \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=secret \
   -p 27017:27017 \
   mongo:latest
 ```
 
-## 基础操作
+### 连接与工具
 
-进入 Mongo Shell (mongosh)：
+- **mongosh**：MongoDB 官方推荐的现代化交互式 Shell。
+  ```bash
+  # 进入容器并使用 mongosh 连接
+  docker exec -it my-mongo mongosh
+  ```
+- **MongoDB Compass**：官方提供的跨平台图形化管理工具，非常适合可视化查询和分析执行计划。
 
-```bash
-docker exec -it mongo-dev mongosh
-```
+## 3. 数据库与集合管理
 
-### 基础命令示例
+在 `mongosh` 中执行以下命令：
+
+### 创建/切换数据库
+
+MongoDB 采用“延迟创建”策略，切换到一个不存在的数据库并不会立刻创建它，只有当你插入第一条数据时，数据库才会真正生成。
 
 ```javascript
-// 切换数据库（如果不存在则隐式创建）
-use mydatabase;
+// 切换到 mydb（如果不存在则在内存中准备）
+use mydb
 
-// 插入文档
+// 显示所有拥有数据的数据库
+show dbs
+```
+
+### 创建集合
+
+通常集合也会随着插入数据自动创建，但如果你需要配置特殊属性（如固定集合、验证规则），可以显式创建：
+
+```javascript
+// 显式创建名为 users 的集合
+db.createCollection("users")
+
+// 查看当前数据库下的所有集合
+show collections
+```
+
+## 4. 文档操作 (CRUD)
+
+### INSERT (插入)
+
+MongoDB 默认会为每个没有 `_id` 字段的文档自动生成一个全局唯一的 `ObjectId`。
+
+```javascript
+// 插入单条文档
 db.users.insertOne({
-  name: "Charlie",
-  age: 30,
-  skills: ["Node.js", "MongoDB"]
+  name: 'Alice',
+  age: 25,
+  skills: ['Java', 'MongoDB'], // 数组类型
+  address: { city: 'Beijing', zip: '100000' }, // 嵌套子文档
 });
 
-// 查询文档
-db.users.find({ age: { $gte: 25 } });
-
-// 更新文档
-db.users.updateOne(
-  { name: "Charlie" },
-  { $push: { skills: "React" } }
-);
+// 批量插入多条文档
+db.users.insertMany([
+  { name: 'Bob', age: 30, status: 'A' },
+  { name: 'Charlie', age: 35, status: 'B' },
+]);
 ```
+
+### SELECT (查询)
+
+查询操作使用 `find` 或 `findOne`。
+
+```javascript
+// 查询所有数据 (格式化输出)
+db.users.find().pretty();
+
+// 等值查询
+db.users.find({ name: 'Alice' });
+
+// 使用比较运算符：$gt(>), $gte(>=), $lt(<), $lte(<=), $ne(!=)
+db.users.find({ age: { $gte: 30 } });
+
+// 多条件查询 (隐式 AND)
+db.users.find({ age: { $gt: 20 }, status: 'A' });
+
+// 嵌套字段查询 (使用点标记法，键必须加引号)
+db.users.find({ 'address.city': 'Beijing' });
+
+// 数组查询：包含 "MongoDB" 技能的用户
+db.users.find({ skills: 'MongoDB' });
+```
+
+#### 投影、排序与分页
+
+```javascript
+// 投影 (Projection)：只返回需要的字段。1 表示返回，0 表示排除
+// 下例返回 name 和 age，排除默认带出的 _id
+db.users.find({}, { name: 1, age: 1, _id: 0 });
+
+// 分页与排序：先排序(1 升序，-1 降序)，跳过前 10 条，限制返回 5 条
+db.users.find().sort({ age: -1 }).skip(10).limit(5);
+```
+
+### UPDATE (更新)
+
+切记：如果不使用更新操作符（如 `$set`），更新操作会**完全覆盖**原有文档。
+
+```javascript
+// updateOne：更新匹配到的第一条数据
+// 使用 $set 仅修改指定字段或添加新字段
+db.users.updateOne({ name: 'Alice' }, { $set: { age: 26, 'address.zip': '100001' } });
+
+// updateMany：更新所有匹配的数据
+// 使用 $inc 让所有 age 大于 30 的用户年龄加 1
+db.users.updateMany({ age: { $gte: 30 } }, { $inc: { age: 1 } });
+
+// $push：向数组字段末尾追加元素
+db.users.updateOne({ name: 'Alice' }, { $push: { skills: 'Redis' } });
+```
+
+### DELETE (删除)
+
+```javascript
+// 删除匹配到的第一条记录
+db.users.deleteOne({ name: 'Alice' });
+
+// 批量删除所有 status 为 B 的记录
+db.users.deleteMany({ status: 'B' });
+
+// 清空整个集合的数据（但保留集合和索引本身）
+db.users.deleteMany({});
+```
+
+## 5. 聚合管道基础 (Aggregation)
+
+如果说 `find` 只是用来筛选和检出数据，那么聚合管道 (`aggregate`) 则是 MongoDB 处理复杂数据分析、分组、汇总的超级武器。管道通过将文档传递经过一系列“阶段”（Stage），每个阶段处理完毕后传给下一个阶段。
+
+```javascript
+// 统计各状态的用户数量，且只统计年龄大于 20 的用户
+db.users.aggregate([
+  // 第一阶段：$match，过滤数据（类似 WHERE）
+  { $match: { age: { $gt: 20 } } },
+
+  // 第二阶段：$group，按 status 分组，并计算数量和平均年龄（类似 GROUP BY）
+  {
+    $group: {
+      _id: '$status',
+      totalCount: { $sum: 1 },
+      avgAge: { $avg: '$age' },
+    },
+  },
+
+  // 第三阶段：$sort，按统计数量倒序
+  { $sort: { totalCount: -1 } },
+]);
+```
+
+---
+
+:::tip 总结 MongoDB 的学习重点在于思维转换：摒弃严格建表的束缚，拥抱灵活嵌套的数据结构，熟练掌握 JSON 风格的查询语法。:::

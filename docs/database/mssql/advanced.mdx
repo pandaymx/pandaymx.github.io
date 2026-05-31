@@ -1,26 +1,145 @@
 ---
-title: SQL Server 进阶与调优
+title: SQL Server 进阶指南
+description: 面向企业级应用开发者的 SQL Server 查询优化、高可用架构与高级 T-SQL 特性。
 sidebar_position: 2
 ---
 
-# 🪟 SQL Server 进阶与调优
+# SQL Server 进阶指南
 
-掌握 SQL Server 的高级特性和调优技术，可以显著提升系统的稳定性和响应速度。
+本文档探讨 SQL Server 在企业级应用中的进阶使用，重点在于性能调优（特别是死锁和阻塞问题）、高可用与灾难恢复架构，以及 T-SQL 的高级编程特性。
 
-## T-SQL 高级特性
+## 1. 查询优化与执行计划
 
-T-SQL (Transact-SQL) 是 SQL Server 使用的 SQL 方言。
+### 锁与阻塞排查
 
-- 掌握 CTE (Common Table Expressions) 和窗口函数。
-- 熟练编写存储过程和触发器。
+由于 SQL Server 默认的读机制（在未开启读提交快照时），写操作（UPDATE/DELETE）会阻塞相关的读操作，这在并发系统中经常引发性能问题。
 
-## 高可用性与灾备
+- **`sp_who2`**：系统存储过程，用于查看当前活动进程及哪个 SPID 正在阻塞其他进程 (`BlkBy` 列)。
+- **`sys.dm_exec_requests`**：动态管理视图 (DMV)，可以获取正在执行的请求、其等待类型 (Wait Type) 以及具体的 SQL 文本。
 
-- **Always On 可用性组 (Availability Groups)**：提供企业级的高可用性和灾难恢复解决方案，支持多节点的故障转移。
-- 备份与还原策略 (完整、差异、事务日志备份)。
+### NOLOCK 提示与参数嗅探
 
-## 性能调优
+- **`WITH (NOLOCK)`**：在查询表时使用（如 `SELECT * FROM Orders WITH (NOLOCK)`），允许脏读，不会被写操作阻塞。适用于统计查询，但严禁用于需要财务级数据一致性的场景。
+- **参数嗅探 (Parameter Sniffing)**：当存储过程首次执行时，SQL Server 会根据传入的参数生成执行计划并缓存。如果后续传入的参数导致最佳执行计划大相径庭，重用的旧计划可能导致严重性能下降。
+  - **解决手段**：在存储过程内使用局部变量接收参数，或在查询后追加 `OPTION (RECOMPILE)` 强制每次重新编译执行计划。
 
-1. **执行计划 (Execution Plans)**：在 SSMS 中分析图形化执行计划，识别缺失的索引或低效的运算符。
-2. **SQL Server Profiler / 扩展事件 (Extended Events)**：追踪和监控数据库活动，捕获慢查询。
-3. **索引碎片整理**：定期维护索引，处理内部和外部碎片 (`ALTER INDEX REBUILD/REORGANIZE`)。
+### 索引统计信息
+
+优化器依靠统计信息来评估执行计划成本。如果表数据发生巨变，统计信息过时会导致选错索引。
+
+```sql
+-- 手动更新指定表的统计信息
+UPDATE STATISTICS Employees;
+```
+
+## 2. 事务与并发模型
+
+### 事务隔离级别
+
+- **READ COMMITTED (默认)**：读已提交。在默认行为下，读操作需要获取共享锁。
+- **READ COMMITTED SNAPSHOT ISOLATION (RCSI)**：开启此数据库级选项后，SQL Server 会利用 `tempdb` 存放行版本（类似 MVCC）。**强烈推荐现代高并发系统开启**，它能让读写不再互相阻塞，且无需修改应用层代码。
+  ```sql
+  ALTER DATABASE CompanyDB SET READ_COMMITTED_SNAPSHOT ON;
+  ```
+
+### 分布式事务
+
+当业务需要跨越多个 SQL Server 实例或其他支持 XA 协议的资源管理器时，可以通过 MSDTC（Microsoft Distributed Transaction Coordinator）实现分布式事务（利用 `BEGIN DISTRIBUTED TRANSACTION`）。
+
+## 3. 高可用架构 (Always On)
+
+SQL Server 提供了极其强大的企业级高可用和灾备方案。
+
+### Always On 可用性组 (Availability Groups, AG)
+
+这是目前 SQL Server 的首选高可用方案（取代了旧的数据库镜像）。
+
+- **工作原理**：类似于高级的主从复制。主副本上的事务日志被发送到一或多个辅助副本并应用。
+- **特点**：
+  - 支持数据库级别的故障转移。
+  - 辅助副本可以配置为**只读路由**，用于分担主库的报表查询压力，还能用于执行备份，减轻主库负担。
+  - 结合 Windows Server 故障转移集群 (WSFC) 提供仲裁和自动故障转移。
+
+### 传统高可用技术
+
+- **故障转移集群实例 (FCI)**：实例级别的冗余方案，基于共享存储（SAN）。如果主服务器宕机，备用服务器接管存储并拉起实例。不提供数据冗余。
+- **复制 (Replication)**：用于将数据分发到多个位置。包括快照复制、事务复制和合并复制，常用于跨地域的数据同步汇总。
+
+## 4. 备份与灾难恢复
+
+### 恢复模式 (Recovery Models)
+
+决定了事务日志（`.ldf`）的管理方式。
+
+- **FULL (完整)**：生产环境默认。记录所有事务细节。日志文件会持续增长，**必须定期执行日志备份 (LOG BACKUP)**，日志备份后空间才会被截断并循环使用。支持点时间恢复。
+- **SIMPLE (简单)**：事务提交后日志空间自动回收。无需日志备份，但也无法恢复到故障点，只能恢复到上一次完整备份。适合开发环境或数据仓库。
+
+### 备份策略示例
+
+```sql
+-- 1. 每周日执行完整备份
+BACKUP DATABASE CompanyDB TO DISK = 'C:\Backup\CompanyDB_Full.bak';
+
+-- 2. 每天夜间执行差异备份（备份自上次完整备份以来更改的数据）
+BACKUP DATABASE CompanyDB TO DISK = 'C:\Backup\CompanyDB_Diff.bak' WITH DIFFERENTIAL;
+
+-- 3. 每小时执行一次事务日志备份（至关重要，防止 LDF 爆满，并提供点时间恢复能力）
+BACKUP LOG CompanyDB TO DISK = 'C:\Backup\CompanyDB_Log.trn';
+```
+
+## 5. T-SQL 高级特性
+
+### 窗口函数 (Window Functions)
+
+窗口函数可以在不改变查询返回行数的情况下，对数据集的特定“窗口”进行聚合或排名操作。
+
+```sql
+SELECT
+    EmployeeID,
+    DepartmentID,
+    Salary,
+    -- 按部门分组排名，薪水最高的为第 1 名
+    RANK() OVER (PARTITION BY DepartmentID ORDER BY Salary DESC) as DeptRank,
+    -- 获取按入职时间排序的上一名员工的薪水
+    LAG(Salary, 1, 0) OVER (ORDER BY HireDate) as PrevEmployeeSalary
+FROM Employees;
+```
+
+### PIVOT 与 UNPIVOT
+
+用于实现行列转换的强大语法。常用于生成交叉报表。
+
+```sql
+-- 假设存在销售表，将不同月份的行数据转换为列名
+SELECT *
+FROM (
+    SELECT Employee, Month, SalesAmount FROM Sales
+) AS SourceTable
+PIVOT (
+    SUM(SalesAmount)
+    FOR Month IN ([Jan], [Feb], [Mar])
+) AS PivotTable;
+```
+
+### JSON 支持
+
+从 SQL Server 2016 开始，原生支持解析和生成 JSON 文本。
+
+```sql
+-- 将查询结果直接输出为 JSON 数组格式
+SELECT EmployeeID, FirstName, LastName
+FROM Employees
+FOR JSON AUTO;
+
+-- 解析传入的 JSON 字符串
+DECLARE @json NVARCHAR(MAX) = N'[{"id": 1, "name": "John"}]';
+SELECT * FROM OPENJSON(@json) WITH (id INT, name NVARCHAR(50));
+```
+
+### 内存优化表 (In-Memory OLTP)
+
+专为极致高并发（如高频交易系统）设计的引擎。表数据完全驻留在内存中（后台异步刷盘），采用无锁算法，彻底消除了闩锁争用（Latch Contention）。通过将存储过程编译为本机代码 (Natively Compiled Stored Procedures)，性能可达到普通表的数十倍。
+
+---
+
+:::tip 进阶总结掌握 SQL Server 进阶的关键在于理解其锁机制并解决阻塞问题，实施基于 AG 的高可用架构，并熟练运用窗口函数等现代 T-SQL 语法来简化复杂的数据分析需求。:::
