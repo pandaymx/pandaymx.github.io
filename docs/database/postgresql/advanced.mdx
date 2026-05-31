@@ -1,0 +1,28 @@
+---
+title: PostgreSQL 进阶与调优
+sidebar_position: 2
+---
+
+# 🐘 PostgreSQL 进阶与调优
+
+深入理解 PostgreSQL 的内部机制，能够帮助我们更好地进行架构设计和性能调优。
+
+## JSON 与复杂数据类型
+
+PostgreSQL 原生支持 JSON 和 JSONB 类型，允许在关系型数据库中执行类似于 NoSQL 的文档存储和查询操作。
+
+```sql
+-- JSONB 上的 GIN 索引示例
+CREATE INDEX idx_users_metadata ON users USING GIN (metadata);
+```
+
+## 并发控制 (MVCC)
+
+多版本并发控制（MVCC）允许数据库在无需锁定表的情况下提供高并发访问。了解事务隔离级别（Read Committed, Repeatable Read, Serializable）对于保证数据一致性非常重要。
+
+## 性能调优
+
+1. **`EXPLAIN ANALYZE`**：分析查询执行计划的核心工具。
+2. **连接池 (Connection Pooling)**：使用 PgBouncer 或类似工具管理大量并发连接。
+3. **VACUUM 和 Autovacuum**：定期清理死元组以回收空间和防止表膨胀。
+4. **内存参数配置**：调整 `shared_buffers`, `work_mem`, `maintenance_work_mem` 等参数以适应服务器硬件。

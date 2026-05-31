@@ -1,0 +1,26 @@
+---
+title: SQL Server 进阶与调优
+sidebar_position: 2
+---
+
+# 🪟 SQL Server 进阶与调优
+
+掌握 SQL Server 的高级特性和调优技术，可以显著提升系统的稳定性和响应速度。
+
+## T-SQL 高级特性
+
+T-SQL (Transact-SQL) 是 SQL Server 使用的 SQL 方言。
+
+- 掌握 CTE (Common Table Expressions) 和窗口函数。
+- 熟练编写存储过程和触发器。
+
+## 高可用性与灾备
+
+- **Always On 可用性组 (Availability Groups)**：提供企业级的高可用性和灾难恢复解决方案，支持多节点的故障转移。
+- 备份与还原策略 (完整、差异、事务日志备份)。
+
+## 性能调优
+
+1. **执行计划 (Execution Plans)**：在 SSMS 中分析图形化执行计划，识别缺失的索引或低效的运算符。
+2. **SQL Server Profiler / 扩展事件 (Extended Events)**：追踪和监控数据库活动，捕获慢查询。
+3. **索引碎片整理**：定期维护索引，处理内部和外部碎片 (`ALTER INDEX REBUILD/REORGANIZE`)。

@@ -1,0 +1,50 @@
+---
+title: SQL Server 基础与操作
+sidebar_position: 1
+---
+
+# 🪟 SQL Server (MSSQL) 基础与操作
+
+Microsoft SQL Server 是一款由微软开发的关系型数据库管理系统。在 Windows 生态系统中，它拥有无与伦比的集成度。
+
+## 简介
+
+SQL Server 提供了丰富的企业级功能、直观的管理工具（如 SSMS）以及强大的商业智能（BI）组件。近年来，SQL Server 也开始支持在 Linux 和容器中运行。
+
+## 安装
+
+### 使用 Docker 快速启动
+
+```bash
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=YourStrong!Passw0rd" \
+   -p 1433:1433 --name mssql-dev -d \
+   mcr.microsoft.com/mssql/server:2022-latest
+```
+
+## 基础操作
+
+可以使用内置的 `sqlcmd` 工具，或推荐使用客户端工具如 SQL Server Management Studio (SSMS) 或 Azure Data Studio 连接。
+
+### 基础 T-SQL 示例
+
+```sql
+-- 创建数据库
+CREATE DATABASE RetailDB;
+GO
+
+USE RetailDB;
+GO
+
+-- 创建表
+CREATE TABLE Products (
+    ProductID INT IDENTITY(1,1) PRIMARY KEY,
+    ProductName NVARCHAR(100) NOT NULL,
+    Price DECIMAL(18,2)
+);
+GO
+
+-- 插入与查询
+INSERT INTO Products (ProductName, Price) VALUES ('Laptop', 1200.00);
+SELECT * FROM Products;
+GO
+```

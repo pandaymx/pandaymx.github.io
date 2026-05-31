@@ -1,0 +1,52 @@
+---
+title: MySQL 基础与操作
+sidebar_position: 1
+---
+
+# 🐬 MySQL 基础与操作
+
+MySQL 是全球最受欢迎的开源关系型数据库管理系统之一，尤其在 Web 应用开发中占据主导地位（LAMP/LEMP 栈的核心组件）。
+
+## 简介
+
+MySQL 以其易用性、可靠性和高性能著称。默认的 InnoDB 存储引擎支持事务、行级锁和外键，非常适合在线事务处理 (OLTP) 场景。
+
+## 安装
+
+### 使用 Docker 快速启动
+
+```bash
+docker run -d \
+  --name mysql-dev \
+  -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+  -p 3306:3306 \
+  mysql:8.0
+```
+
+## 基础操作
+
+进入 MySQL CLI：
+
+```bash
+docker exec -it mysql-dev mysql -uroot -p
+```
+
+### 基础 SQL 示例
+
+```sql
+-- 创建数据库
+CREATE DATABASE my_app;
+USE my_app;
+
+-- 创建表
+CREATE TABLE employees (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    department VARCHAR(50),
+    hire_date DATE
+);
+
+-- 插入与查询
+INSERT INTO employees (name, department, hire_date) VALUES ('Bob', 'Engineering', '2023-01-15');
+SELECT * FROM employees WHERE department = 'Engineering';
+```
