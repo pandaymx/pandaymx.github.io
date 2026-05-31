@@ -1,0 +1,61 @@
+---
+title: 🎨 CSS 现代布局与样式
+description: 掌握 CSS 核心概念、现代布局方案（Flexbox/Grid）及前沿 CSS 工程化方案。
+position: 2
+---
+
+# 🎨 CSS (Cascading Style Sheets)
+
+为网页穿上华丽的外衣，掌控视觉表现与布局排版。
+
+## 🎯 核心概念
+
+### 1. 盒模型 (Box Model)
+
+每一个在网页上的元素都被描绘成一个矩形盒子。
+
+- **内容区 (Content)**: 元素的实际内容。
+- **内边距 (Padding)**: 内容与边框之间的透明区域。
+- **边框 (Border)**: 围绕内边距和内容的线条。
+- **外边距 (Margin)**: 边框外的透明区域，用于隔开相邻元素。
+
+_提示：在现代布局中，通常使用 `box-sizing: border-box;` 让元素的宽度和高度包含 `padding` 和 `border`。_
+
+### 2. 选择器与优先级
+
+- 基础选择器：元素 (`div`), 类 (`.class`), ID (`#id`), 通配符 (`*`)。
+- 组合选择器：后代 (`A B`), 子代 (`A > B`), 相邻兄弟 (`A + B`), 通用兄弟 (`A ~ B`)。
+- 伪类与伪元素：`:hover`, `:nth-child()`, `::before`, `::after`。
+- **优先级计算规则**：内联样式 > ID 选择器 > 类/属性/伪类选择器 > 元素/伪元素选择器。
+
+### 3. 现代布局系统
+
+- **Flexbox (弹性盒子)**: 一维布局模型，非常适合用于排列线性的一组项，处理元素的对齐、分布与空间分配极为方便。
+- **CSS Grid (网格布局)**: 二维布局模型，能够同时处理行和列的布局，非常适合用于构建复杂的网页整体架构。
+
+### 4. 响应式设计 (Responsive Design)
+
+通过媒体查询 (`@media`) 使网页能够适配不同屏幕尺寸（手机、平板、桌面）。
+
+```css
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+}
+```
+
+## 🛠️ CSS 工程化与生态
+
+随着前端项目复杂度的提升，原生 CSS 逐渐暴露出版图大、难维护的痛点，催生了多种工程化方案：
+
+- **CSS 预处理器**: Sass (SCSS), Less, Stylus。提供了变量、嵌套、混入 (Mixins) 等能力。
+- **CSS Modules**: 解决全局类名冲突问题，实现局部作用域的 CSS。
+- **CSS-in-JS**: 如 Styled-components, Emotion。将 CSS 样式与 JavaScript 组件逻辑绑定。
+- **Utility-First CSS**: 以 **Tailwind CSS** 为代表，通过组合原子化的工具类来快速构建 UI，也是当前极为流行的方案。
+
+## 📖 最佳实践
+
+- 避免过度嵌套选择器，保持较低的优先级以提升样式的可维护性。
+- 坚持 Mobile First（移动端优先）的响应式开发策略。
+- 善用 CSS 变量 (Custom Properties) 管理主题色、间距等全局设计 token。
