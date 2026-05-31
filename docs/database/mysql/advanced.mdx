@@ -1,0 +1,27 @@
+---
+title: MySQL 进阶与调优
+sidebar_position: 2
+---
+
+# 🐬 MySQL 进阶与调优
+
+当业务规模扩大时，深入了解 MySQL 的索引结构、锁机制和架构演进是必不可少的。
+
+## 索引原理 (B+ Tree)
+
+InnoDB 存储引擎使用 B+ 树作为索引结构。
+
+- **聚簇索引 (Clustered Index)**：叶子节点存储完整的数据行（通常是主键）。
+- **二级索引 (Secondary Index)**：叶子节点存储主键的值，查询时可能需要“回表”。
+
+## 事务与锁
+
+- 理解 ACID 特性。
+- InnoDB 的行级锁机制（共享锁、排他锁）与死锁排查。
+- 间隙锁 (Gap Locks) 与幻读问题。
+
+## 架构演进与优化
+
+1. **主从复制 (Master-Slave Replication)**：读写分离。
+2. **分库分表 (Sharding)**：解决单表数据量过大带来的性能瓶颈。
+3. **慢查询优化**：使用慢查询日志 (`slow_query_log`) 和 `EXPLAIN` 分析和优化 SQL 语句。

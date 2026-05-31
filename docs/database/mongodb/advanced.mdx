@@ -1,0 +1,32 @@
+---
+title: MongoDB 进阶与调优
+sidebar_position: 2
+---
+
+# 🍃 MongoDB 进阶与调优
+
+MongoDB 并非只能用于简单的数据存储，它同样具备强大的分析和分布式能力。
+
+## 聚合管道 (Aggregation Pipeline)
+
+聚合管道是 MongoDB 中用于数据处理和分析的强大框架，类似于 SQL 中的 `GROUP BY` 和多表连接。
+
+```javascript
+// 聚合示例：统计每个部门的平均年龄
+db.employees.aggregate([
+  { $match: { status: 'Active' } },
+  { $group: { _id: '$department', avgAge: { $avg: '$age' } } },
+]);
+```
+
+## 索引策略
+
+除了基础的单字段和复合索引，MongoDB 还支持：
+
+- **地理空间索引 (Geospatial Indexes)**：用于基于位置的查询。
+- **文本索引 (Text Indexes)**：用于全文搜索。
+
+## 高可用与分布式
+
+1. **副本集 (Replica Set)**：提供数据冗余和高可用性，自动故障转移。
+2. **分片集群 (Sharded Cluster)**：将数据水平切分到多台机器上，以支持海量数据和超高吞吐量。

@@ -1,0 +1,50 @@
+---
+title: PostgreSQL 基础与操作
+sidebar_position: 1
+---
+
+# 🐘 PostgreSQL 基础与操作
+
+PostgreSQL 是一个强大的、开源的对象-关系型数据库系统。它有着超过30年的活跃开发历史，在可靠性、数据完整性和正确性方面赢得了极高的声誉。
+
+## 简介
+
+PostgreSQL 支持大量的高级特性，包括复杂的 SQL 查询、外键、触发器、视图、事务完整性以及多版本并发控制（MVCC）。它还支持多种扩展，如地理空间数据（PostGIS）、JSON 文档查询等。
+
+## 安装
+
+### 使用 Docker 快速启动
+
+```bash
+docker run -d \
+  --name postgres-dev \
+  -e POSTGRES_PASSWORD=mysecretpassword \
+  -p 5432:5432 \
+  postgres:latest
+```
+
+## 基础操作
+
+进入 PostgreSQL 命令行 (psql)：
+
+```bash
+docker exec -it postgres-dev psql -U postgres
+```
+
+### 基础 SQL 示例
+
+```sql
+-- 创建表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入数据
+INSERT INTO users (username, email) VALUES ('alice', 'alice@example.com');
+
+-- 查询数据
+SELECT * FROM users WHERE username = 'alice';
+```

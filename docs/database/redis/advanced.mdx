@@ -1,0 +1,25 @@
+---
+title: Redis 进阶与调优
+sidebar_position: 2
+---
+
+# ⚡ Redis 进阶与调优
+
+当 Redis 被用于生产环境，或者需要处理海量数据与高并发时，掌握其进阶特性和调优手段至关重要。
+
+## 持久化机制
+
+- **RDB (Redis Database)**：在指定的时间间隔内将内存中的数据集快照写入磁盘。
+- **AOF (Append Only File)**：以日志的形式记录每个写操作，将 Redis 执行过的所有写指令记录下来。
+
+## 高可用与集群
+
+- **主从复制 (Replication)**：实现数据的读写分离。
+- **哨兵模式 (Sentinel)**：实现自动化的故障恢复。
+- **Redis Cluster**：实现数据的分布式存储和分片。
+
+## 性能调优最佳实践
+
+1. **避免大 Key (Big Key)**：会导致阻塞和网络拥堵。
+2. **使用 Pipeline**：批量执行命令，减少网络往返时间 (RTT)。
+3. **合理的内存淘汰策略 (maxmemory-policy)**：如 `allkeys-lru` 或 `volatile-lru`。

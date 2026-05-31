@@ -1,0 +1,54 @@
+---
+title: MongoDB 基础与操作
+sidebar_position: 1
+---
+
+# 🍃 MongoDB 基础与操作
+
+MongoDB 是一个基于分布式文件存储的数据库，是当前最流行的 NoSQL 文档型数据库。
+
+## 简介
+
+MongoDB 将数据存储为一个文档，数据结构由键值 (key=>value) 对组成。MongoDB 的文档类似于 JSON 对象（实际上是 BSON），字段值可以包含其他文档，数组及文档数组。这种灵活的 Schema 非常适合敏捷开发。
+
+## 安装
+
+### 使用 Docker 快速启动
+
+```bash
+docker run -d \
+  --name mongo-dev \
+  -p 27017:27017 \
+  mongo:latest
+```
+
+## 基础操作
+
+进入 Mongo Shell (mongosh)：
+
+```bash
+docker exec -it mongo-dev mongosh
+```
+
+### 基础命令示例
+
+```javascript
+// 切换数据库（如果不存在则隐式创建）
+use mydatabase;
+
+// 插入文档
+db.users.insertOne({
+  name: "Charlie",
+  age: 30,
+  skills: ["Node.js", "MongoDB"]
+});
+
+// 查询文档
+db.users.find({ age: { $gte: 25 } });
+
+// 更新文档
+db.users.updateOne(
+  { name: "Charlie" },
+  { $push: { skills: "React" } }
+);
+```
