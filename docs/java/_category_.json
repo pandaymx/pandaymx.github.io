@@ -1,0 +1,8 @@
+{
+  "label": "Java 生态",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Java 核心技术栈与 Spring 框架生态圈文档"
+  }
+}

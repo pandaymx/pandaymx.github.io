@@ -8,9 +8,9 @@ sidebar_position: 99
 
 GitHub Actions 常用语法和模式快速参考。
 
-## Workflow 语法 {#workflow-syntax}
+## Workflow 语法
 
-### 完整结构 {#full-structure}
+### 完整结构
 
 ```yaml
 name: Workflow Name
@@ -58,7 +58,7 @@ jobs:
         working-directory: ./dist
 ```
 
-### jobs 配置项 {#jobs-options}
+### jobs 配置项
 
 | 属性                | 说明             | 示例                                                   |
 | ------------------- | ---------------- | ------------------------------------------------------ |
@@ -74,7 +74,7 @@ jobs:
 | `container`         | Job 容器         | `{ image: node:20-alpine }`                            |
 | `concurrency`       | Job 级并发控制   | `{ group: 'deploy', cancel-in-progress: true }`        |
 
-### steps 配置项 {#steps-options}
+### steps 配置项
 
 | 属性                | 说明          | 示例                           |
 | ------------------- | ------------- | ------------------------------ |
@@ -90,9 +90,9 @@ jobs:
 | `shell`             | Shell 类型    | `bash`, `pwsh`, `python`, `sh` |
 | `working-directory` | 工作目录      | `./packages/frontend`          |
 
-## 触发事件 {#trigger-events}
+## 触发事件
 
-### push / pull_request {#event-push-pr}
+### push / pull_request
 
 ```yaml
 on:
@@ -113,7 +113,7 @@ on:
     #         review_requested, review_request_removed, auto_merge_disabled, auto_merge_enabled]
 ```
 
-### schedule {#event-schedule}
+### schedule
 
 ```yaml
 on:
@@ -126,7 +126,7 @@ on:
 
 Cron 语法：`分 时 日 月 周`
 
-### workflow_dispatch {#event-workflow-dispatch}
+### workflow_dispatch
 
 ```yaml
 on:
@@ -148,7 +148,7 @@ on:
         default: false
 ```
 
-### repository_dispatch {#event-repository-dispatch}
+### repository_dispatch
 
 ```yaml
 on:
@@ -156,7 +156,7 @@ on:
     types: [deploy-trigger, build-trigger]
 ```
 
-### workflow_call {#event-workflow-call}
+### workflow_call
 
 ```yaml
 on:
@@ -176,7 +176,7 @@ on:
         value: ${{ jobs.deploy.outputs.result }}
 ```
 
-### 其他常用事件 {#other-events}
+### 其他常用事件
 
 | 事件                   | 触发条件                                  |
 | ---------------------- | ----------------------------------------- |
@@ -189,9 +189,9 @@ on:
 | `workflow_run`         | 其他工作流完成时触发                      |
 | `registry_package`     | 包发布/更新                               |
 
-## 上下文对象 {#contexts}
+## 上下文对象
 
-### github 上下文 {#context-github}
+### github 上下文
 
 ```yaml
 ${{ github.actor }}                    # 触发用户
@@ -212,7 +212,7 @@ ${{ github.api_url }}                  # API URL
 ${{ github.event_path }}               # 事件 JSON 文件路径
 ```
 
-### 其他上下文 {#context-others}
+### 其他上下文
 
 ```yaml
 # env 上下文
@@ -258,9 +258,9 @@ ${{ github.event.commits[0].id }}       # 第一个 commit ID
 ${{ github.event.inputs.my-input }}     # workflow_dispatch 输入
 ```
 
-## 表达式语法 {#expressions}
+## 表达式语法
 
-### 条件判断 {#if-conditions}
+### 条件判断
 
 ```yaml
 if: github.event_name == 'push'
@@ -278,7 +278,7 @@ if: always() && steps.test.outcome == 'success'
 if: "!startsWith(github.ref, 'refs/tags/')"
 ```
 
-### 字符串函数 {#string-functions}
+### 字符串函数
 
 ```yaml
 contains(string, search)           # 包含
@@ -297,7 +297,7 @@ format('Hello {0}', github.actor)
 join(matrix.tags, ',')
 ```
 
-### 数学运算 {#math-operations}
+### 数学运算
 
 ```yaml
 # 基本运算
@@ -323,7 +323,7 @@ or: ${{ true || false }} # true
 not: ${{ !true }} # false
 ```
 
-### Status Check 函数 {#status-functions}
+### Status Check 函数
 
 | 函数          | 触发条件             |
 | ------------- | -------------------- |
@@ -346,9 +346,9 @@ not: ${{ !true }} # false
 if: success()  # 可省略，这是默认行为
 ```
 
-## 常用 Official Actions {#popular-actions}
+## 常用 Official Actions
 
-### 代码检出 {#action-checkout}
+### 代码检出
 
 ```yaml
 - uses: actions/checkout@v4
@@ -360,7 +360,7 @@ if: success()  # 可省略，这是默认行为
     token: ${{ secrets.PAT }}  # 使用自定义 token（默认 GITHUB_TOKEN）
 ```
 
-### 缓存 {#action-cache}
+### 缓存
 
 ```yaml
 # npm 缓存
@@ -386,7 +386,7 @@ if: success()  # 可省略，这是默认行为
     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 ```
 
-### 语言设置 {#action-setup-languages}
+### 语言设置
 
 ```yaml
 # Node.js
@@ -417,7 +417,7 @@ if: success()  # 可省略，这是默认行为
     cache: 'gradle' # gradle, maven
 ```
 
-### Docker 相关 {#action-docker}
+### Docker 相关
 
 ```yaml
 # Docker Login
@@ -461,7 +461,7 @@ if: success()  # 可省略，这是默认行为
     platforms: linux/amd64,linux/arm64
 ```
 
-### Artifact 上传下载 {#action-artifacts}
+### Artifact 上传下载
 
 ```yaml
 # 上传
@@ -496,9 +496,9 @@ if: success()  # 可省略，这是默认行为
     pattern: artifact-*
 ```
 
-## 常见模式 {#common-patterns}
+## 常见模式
 
-### Matrix（矩阵构建）{#pattern-matrix}
+### Matrix（矩阵构建）
 
 ```yaml
 strategy:
@@ -516,7 +516,7 @@ strategy:
         experimental: true
 ```
 
-### Concurrency（并发控制）{#pattern-concurrency}
+### Concurrency（并发控制）
 
 ```yaml
 # 同一分支只运行一个
@@ -530,7 +530,7 @@ concurrency:
   cancel-in-progress: true
 ```
 
-### OIDC 认证 {#pattern-oidc}
+### OIDC 认证
 
 ```yaml
 permissions:
@@ -557,7 +557,7 @@ permissions:
     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 ```
 
-### 通知模式 {#pattern-notify}
+### 通知模式
 
 ```yaml
 - name: Slack notification on failure
@@ -579,7 +579,7 @@ permissions:
       -f body=":x: Build failed. [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
 ```
 
-### 跳过 CI {#pattern-skip-ci}
+### 跳过 CI
 
 ```yaml
 # 方式 1：在 commit message 中检查
@@ -594,7 +594,7 @@ on:
       - '.github/workflows/docs.yml'
 ```
 
-### Git Tag 发布 {#pattern-tag-release}
+### Git Tag 发布
 
 ```yaml
 on:
@@ -621,7 +621,7 @@ jobs:
             dist/*.zip
 ```
 
-### Service Container {#pattern-services}
+### Service Container
 
 ```yaml
 jobs:
@@ -650,7 +650,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
 ```
 
-## 环境文件速查 {#env-files}
+## 环境文件速查
 
 | 文件变量               | 写入方式                              | 作用范围             |
 | ---------------------- | ------------------------------------- | -------------------- |
@@ -660,7 +660,7 @@ jobs:
 | `$GITHUB_STEP_SUMMARY` | `echo "text" >> $GITHUB_STEP_SUMMARY` | Step 摘要（MD 格式） |
 | `$GITHUB_STATE`        | `echo "KEY=value" >> $GITHUB_STATE`   | 当前 job 内          |
 
-## Shell 速查 {#shell-options}
+## Shell 速查
 
 | shell 值     | 实际命令                                     | 默认 OS         |
 | ------------ | -------------------------------------------- | --------------- |
@@ -671,7 +671,7 @@ jobs:
 | `python`     | `python {0}`                                 | All             |
 | `node`       | `node {0}`                                   | All             |
 
-## 其他文章 {#see-also}
+## 其他文章
 
 - [Actions 基础入门](./intro.mdx)
 - [CI/CD 流水线实战](./ci-cd.mdx)

@@ -9,7 +9,7 @@ sidebar_position: 1
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## 📚 什么是 Kubernetes？ {#what-is-k8s}
+## 📚 什么是 Kubernetes？
 
 **Kubernetes**（K8s）是一个开源的容器编排平台，用于自动化部署、扩展和管理容器化应用程序。它由 Google 发起，现在由 CNCF（Cloud Native Computing Foundation）维护。
 
@@ -33,11 +33,11 @@ import TabItem from '@theme/TabItem';
 - **服务发现与负载均衡**：自动分配 IP 和 DNS 名称
 - **滚动更新与回滚**：零停机更新，一键回滚 :::
 
-## 🏗️ Kubernetes 架构 {#architecture}
+## 🏗️ Kubernetes 架构
 
 Kubernetes 采用 **Master-Worker** 架构，分为 **Control Plane**（控制平面）和 **Worker Node**（工作节点）。
 
-### Control Plane 组件 {#control-plane}
+### Control Plane 组件
 
 Control Plane 负责集群的全局决策，包括：
 
@@ -60,7 +60,7 @@ graph TB
     CM --> Node2
 ```
 
-### Worker Node 组件 {#worker-node}
+### Worker Node 组件
 
 Worker Node 负责运行容器化应用：
 
@@ -87,7 +87,7 @@ graph LR
 - etcd 应该部署为 3 或 5 节点的集群以保证高可用
 - Worker Node 数量至少为 2 个以实现冗余 :::
 
-## 🛠️ 安装 Kubernetes {#installation}
+## 🛠️ 安装 Kubernetes
 
 有多种方式安装 Kubernetes，选择适合你的方案：
 
@@ -179,7 +179,7 @@ kubectl get nodes
 - **边缘计算**：使用 k3s
 - **生产环境**：使用 kubeadm、Rancher RKE2、或云厂商托管服务（EKS、GKE、AKS）:::
 
-## 🎯 第一个 Deployment {#first-deployment}
+## 🎯 第一个 Deployment
 
 让我们部署一个简单的 Nginx 应用：
 
@@ -260,7 +260,7 @@ kubectl port-forward svc/nginx-deployment 8080:80
 # 然后在浏览器访问 http://localhost:8080
 ```
 
-## 🔧 kubectl 基础操作 {#kubectl-basics}
+## 🔧 kubectl 基础操作
 
 `kubectl` 是 Kubernetes 的命令行工具，用于与集群交互。
 
@@ -313,7 +313,7 @@ kubectl top nodes
 
 :::tip kubectl 备忘单官方提供了详细的 [kubectl 备忘单](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)，建议收藏！:::
 
-## 📦 核心概念概述 {#core-concepts}
+## 📦 核心概念概述
 
 在开始深入之前，了解 Kubernetes 的核心概念非常重要：
 
@@ -328,7 +328,7 @@ kubectl top nodes
 | **Node**       | 运行 Pod 的物理机或虚拟机        |
 | **Volume**     | 持久化存储                       |
 
-## 🎓 下一步学习路径 {#next-steps}
+## 🎓 下一步学习路径
 
 现在你已经了解了 Kubernetes 的基础知识，建议按以下顺序深入学习：
 
@@ -345,7 +345,7 @@ kubectl top nodes
 - 参考 [Kubernetes 官方文档](https://kubernetes.io/docs/)
 - 加入 Kubernetes 中文社区交流 :::
 
-## 📚 参考资源 {#references}
+## 📚 参考资源
 
 - [Kubernetes 官方文档](https://kubernetes.io/docs/)
 - [Kubernetes 中文文档](https://kubernetes.io/zh-cn/docs/)
