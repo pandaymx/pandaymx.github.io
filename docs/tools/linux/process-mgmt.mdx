@@ -1,0 +1,293 @@
+---
+title: ⚙️ 进程与系统管理
+sidebar_position: 6
+description: ps/top/htop 进程查看、信号管理、systemd 基础、日志查看（journalctl）。
+---
+
+进程管理是开发者的日常——服务起不来？进程卡死？CPU 100%？本章教你快速定位和解决。
+
+:::tip[开发者视角]
+
+本章**不深入**系统管理员内容：
+
+- 不教 `cron` 定时任务（开发者用 CI/CD 或 systemd timer）
+- 不教 `logrotate` 日志轮转（通常由云平台处理）
+- 不教内核参数调优 `sysctl`（除非做底层开发）
+
+我们聚焦**开发者日常排查问题**的技能。
+
+:::
+
+## 📊 进程查看工具
+
+<a id="process-viewing"></a>
+
+### ps — 快照式查看
+
+```bash
+ps aux              # 查看所有进程（最常用）
+ps aux | grep nginx # 过滤特定进程
+ps -ef              # 另一种格式（显示 PPID）
+ps -p 1234          # 查看指定 PID 的进程
+```
+
+**输出解读：**
+
+```
+USER   PID  %CPU %MEM VSZ   RSS   TTY  STAT START  TIME COMMAND
+root  1234 2.3  1.5 123456 7890 ?    Sl   10:00  0:05 /usr/bin/nginx
+```
+
+| 列        | 含义                      |
+| --------- | ------------------------- |
+| `USER`    | 进程所属用户              |
+| `PID`     | 进程 ID（杀死进程用这个） |
+| `%CPU`    | CPU 使用率                |
+| `%MEM`    | 内存使用率                |
+| `VSZ`     | 虚拟内存大小（KB）        |
+| `RSS`     | 物理内存大小（KB）        |
+| `STAT`    | 进程状态（见下）          |
+| `COMMAND` | 启动命令                  |
+
+**进程状态速查：**
+
+| 状态 | 含义                                    |
+| ---- | --------------------------------------- |
+| `R`  | Running（运行中）                       |
+| `S`  | Sleeping（可中断睡眠）                  |
+| `D`  | Disk sleep（不可中断，通常是 I/O 等待） |
+| `Z`  | Zombie（僵尸进程，需处理）              |
+| `T`  | Stopped（被信号停止）                   |
+
+### top / htop — 实时监控
+
+```bash
+top         # 实时查看（默认 3 秒刷新）
+# top 内交互命令：
+# P — 按 CPU 排序
+# M — 按内存排序
+# k — 杀死进程
+# q — 退出
+
+htop        # 更友好的 top（彩色、鼠标支持）
+# htop 内交互命令类似，但支持鼠标点击
+```
+
+### pgrep — 按条件查找 PID
+
+```bash
+pgrep -u www-data nginx    # 查找 www-data 用户的 nginx 进程
+pgrep -f "node.*server"    # 按命令行匹配
+```
+
+## 📱 信号管理
+
+<a id="signal-mgmt"></a>
+
+信号是向进程发送**控制指令**的方式。
+
+### 常用信号
+
+| 信号      | 数字 | 含义                 | 典型场景                       |
+| --------- | ---- | -------------------- | ------------------------------ |
+| `SIGTERM` | 15   | 优雅终止（默认）     | `kill PID` 发送这个            |
+| `SIGKILL` | 9    | 强制终止             | 进程无响应时用                 |
+| `SIGHUP`  | 1    | 挂起（重新加载配置） | `kill -HUP PID` 让服务重载配置 |
+| `SIGINT`  | 2    | 中断（Ctrl+C）       | 终端中终止前台进程             |
+| `SIGSTOP` | 19   | 暂停进程             | `kill -STOP PID`               |
+| `SIGCONT` | 18   | 继续运行             | `kill -CONT PID`               |
+
+### 发送信号
+
+```bash
+# 方式 1：kill（最常用）
+kill 1234           # 发送 SIGTERM（优雅终止）
+kill -9 1234        # 发送 SIGKILL（强制终止）
+kill -HUP 1234      # 发送 SIGHUP（重载配置）
+
+# 方式 2：killall（按名称杀）
+killall nginx         # 杀死所有 nginx 进程
+killall -9 nginx     # 强制杀死
+
+# 方式 3：pkill（按模式杀）
+pkill -f "node.*api" # 杀死命令行匹配 "node.*api" 的进程
+```
+
+:::warning[不要随便 kill -9]
+
+`kill -9` 不给进程清理机会（不执行退出处理、不关闭文件）。只在 `kill`（SIGTERM）无效时使用。
+
+正确顺序：
+
+1. `kill PID`（等 5 秒）
+2. `kill -9 PID`（还不行才用）
+
+:::
+
+### 实战：优雅重启服务
+
+```bash
+# 场景：修改了 nginx 配置，需要重载
+sudo nginx -t                    # 先测试配置是否正确
+sudo kill -HUP $(cat /var/run/nginx.pid)  # 重载配置
+
+# 或用 systemctl（更好）
+sudo systemctl reload nginx
+```
+
+## 🎛️ systemd 基础
+
+<a id="systemd-basics"></a>
+
+systemd 是现代 Linux 的**服务管理器**（替代旧的 SysV init）。
+
+### 核心概念
+
+```
+systemd 架构：
+┌─────────────────────────────────┐
+│  systemd (PID 1，所有进程的父进程)  │
+├─────────────────────────────────┤
+│  -.mount          (挂载点)        │
+│  nginx.service    (Nginx 服务)   │
+│  redis.socket    (Redis 套接字)  │
+│  daily-backup.timer (定时任务)   │
+└─────────────────────────────────┘
+```
+
+### 常用 systemctl 命令
+
+```bash
+# 查看服务状态
+sudo systemctl status nginx
+
+# 启动/停止/重启服务
+sudo systemctl start nginx
+sudo systemctl stop nginx
+sudo systemctl restart nginx
+sudo systemctl reload nginx     # 优雅重载配置
+
+# 启用/禁用开机自启
+sudo systemctl enable nginx
+sudo systemctl disable nginx
+
+# 列出所有服务
+systemctl list-units --type=service
+
+# 查看服务日志
+sudo journalctl -u nginx -f
+```
+
+### 查看服务日志（journalctl）
+
+```bash
+# 查看某个服务的日志
+sudo journalctl -u nginx
+
+# 实时追踪（类似 tail -f）
+sudo journalctl -u nginx -f
+
+# 查看最近 100 行
+sudo journalctl -u nginx -n 100
+
+# 按时间过滤
+sudo journalctl --since "2026-05-31" --until "2026-06-01"
+
+# 按优先级过滤（err 及以上）
+sudo journalctl -p err -b
+```
+
+## 📜 日志查看
+
+<a id="log-viewing"></a>
+
+### 传统日志文件（/var/log/）
+
+| 日志文件                    | 含义                   |
+| --------------------------- | ---------------------- |
+| `/var/log/syslog`           | 系统全局日志（Ubuntu） |
+| `/var/log/messages`         | 系统全局日志（RHEL）   |
+| `/var/log/auth.log`         | 认证日志（SSH 登录等） |
+| `/var/log/kern.log`         | 内核日志               |
+| `/var/log/dpkg.log`         | 包管理日志             |
+| `/var/log/nginx/access.log` | Nginx 访问日志         |
+| `/var/log/nginx/error.log`  | Nginx 错误日志         |
+
+### 高效查看日志
+
+```bash
+# 实时追踪（排查问题最常用）
+tail -f /var/log/nginx/error.log
+
+# 查看最后 50 行
+tail -n 50 /var/log/nginx/error.log
+
+# 过滤错误
+grep -i "error\|exception" /var/log/app.log
+
+# 按时间过滤（今天）
+grep "$(date '+%Y-%m-%d')" /var/log/app.log
+
+# 统计错误数量
+grep -c "ERROR" /var/log/app.log
+
+# 多日志文件合并查看
+less /var/log/syslog /var/log/auth.log
+```
+
+## 🚨 常见场景
+
+### 场景 1：服务起不来
+
+```bash
+# 1. 查看服务状态
+sudo systemctl status myapp
+
+# 2. 查看详细日志
+sudo journalctl -u myapp -n 100 --no-pager
+
+# 3. 检查配置文件语法
+# (具体命令因服务而异)
+nginx -t
+redis-server --test-config /etc/redis/redis.conf
+
+# 4. 检查端口占用
+sudo lsof -i :3000
+```
+
+### 场景 2：进程卡死（CPU 100%）
+
+```bash
+# 1. 用 htop 找到高 CPU 进程
+htop
+# 按 P 按 CPU 排序，找到 PID
+
+# 2. 查看进程线程情况
+top -H -p <PID>
+
+# 3. 用 strace 追踪系统调用（高级）
+sudo apt install strace
+sudo strace -p <PID>     # 看进程在干嘛
+
+# 4. 实在不行，重启服务
+sudo systemctl restart <service>
+```
+
+### 场景 3：内存泄漏（OOM）
+
+```bash
+# 1. 查看 OOM killer 日志
+dmesg | grep -i "killed process"
+
+# 2. 查看进程内存使用
+ps aux --sort=-%mem | head -20
+
+# 3. 查看系统内存
+free -h
+cat /proc/meminfo
+```
+
+## 📚 下一步
+
+- 下一章：[🌐 网络配置与调试](./networking) — IP/路由/DNS、SSH、curl、防火墙
+- 进阶：[🐳 容器与虚拟化](./containers) — Docker 日常开发流、Dockerfile、docker-compose

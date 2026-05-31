@@ -1,0 +1,399 @@
+---
+title: 📜 Shell 脚本编程
+sidebar_position: 3
+description: Bash 基础语法、变量与参数、条件判断、循环、函数、错误处理与调试技巧。
+---
+
+Shell 脚本是把**重复命令自动化**的核心技能。不用学很深，掌握基础就能解决 80% 的问题。
+
+:::tip[选择哪个 Shell？]
+
+- **Bash**（推荐初学者）：最普及，所有 Linux 都装了
+- **Zsh**：macOS 默认，更好用但 Linux 服务器不一定有
+- **Fish**：最友好，但语法不兼容 Bash
+
+**本教程用 Bash**，因为服务器上 100% 有 Bash。
+
+:::
+
+## 🏗️ Bash 基础语法
+
+<a id="bash-basics"></a>
+
+### Hello World
+
+```bash
+#!/bin/bash
+# 这是注释
+echo "Hello, Linux!"
+```
+
+```bash
+# 运行脚本的 3 种方式
+bash script.sh          # 用 bash 解释器运行（最常用）
+chmod +x script.sh && ./script.sh  # 直接执行（需要 shebang）
+source script.sh        # 在当前 shell 执行（会改变当前环境变量）
+```
+
+> 💡 `#!/bin/bash` 叫 **shebang**，告诉系统用哪个解释器执行脚本。
+
+### 变量与参数
+
+```bash
+# 定义变量（注意：= 两边不能有空格！）
+name="World"
+count=42
+
+# 使用变量（加 $）
+echo "Hello, $name!"
+echo "Count: ${count}"
+
+# 特殊变量
+echo "脚本名: $0"        # 脚本名称
+echo "第一个参数: $1"     # 第一个命令行参数
+echo "所有参数: $@"       # 所有参数
+echo "参数个数: $#"       # 参数数量
+echo "当前 PID: $$"        # 当前进程 ID
+echo "上条命令退出码: $?"  # 0=成功，非 0=失败
+```
+
+**实战：带参数的脚本**
+
+```bash
+#!/bin/bash
+# deploy.sh - 部署脚本
+
+ENV=${1:-staging}          # 第一个参数，默认 staging
+echo "🚀 部署到环境: $ENV"
+
+if [ "$ENV" = "production" ]; then
+  echo "⚠️  生产环境，确认继续？(y/n)"
+  read -r confirm
+  [ "$confirm" != "y" ] && exit 1
+fi
+
+echo "✅ 开始部署..."
+```
+
+### 字符串操作
+
+```bash
+name="Alice"
+echo "${name^^}"          # ALICE（转大写）
+echo "${name,,}"          # alice（转小写）
+echo "${name:0:3}"       # Ali（子串，从 0 取 3 个字符）
+echo "${#name}"           # 5（字符串长度）
+
+# 替换
+path="/home/user/file.txt"
+echo "${path/.txt/.md}"   # /home/user/file.md
+```
+
+## 🔀 条件判断与循环
+
+<a id="conditionals-loops"></a>
+
+### 条件判断 `if`
+
+```bash
+# 基本语法
+if [ 条件 ]; then
+  # 条件为真时执行
+elif [ 另一个条件 ]; then
+  # ...
+else
+  # 条件为假时执行
+fi
+```
+
+**常用条件测试：**
+
+```bash
+# 文件测试
+[ -f "$file" ]    # 是普通文件
+[ -d "$dir" ]     # 是目录
+[ -e "$file" ]    # 文件存在
+[ -r "$file" ]    # 可读
+[ -w "$file" ]    # 可写
+[ -x "$file" ]    # 可执行
+
+# 字符串比较
+[ "$a" = "$b" ]   # 字符串相等
+[ "$a" != "$b" ]  # 字符串不等
+[ -z "$a" ]       # 字符串为空
+[ -n "$a" ]       # 字符串非空
+
+# 数值比较
+[ "$a" -eq "$b" ] # 相等
+[ "$a" -ne "$b" ] # 不等
+[ "$a" -gt "$b" ] # 大于
+[ "$a" -lt "$b" ] # 小于
+[ "$a" -ge "$b" ] # 大于等于
+[ "$a" -le "$b" ] # 小于等于
+
+# 逻辑组合
+[ "$a" -gt 0 ] && [ "$a" -lt 100 ]   # AND
+[ "$a" -lt 0 ] || [ "$a" -gt 100 ]   # OR
+[ ! -f "$file" ]                        # NOT
+```
+
+:::tip[[[ vs [[[
+
+- `[` 是 POSIX 标准，兼容所有 shell
+- `[[` 是 Bash 扩展，支持正则 `=~`、无需引号包裹变量
+
+```bash
+[[ "$email" =~ ^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]+$ ]] && echo "Valid email"
+```
+
+:::
+
+### case 多分支
+
+```bash
+case "$ENV" in
+  production)
+    echo "🚨 生产环境"
+    ;;
+  staging|test)
+    echo "🧪 测试环境"
+    ;;
+  *)
+    echo "❓ 未知环境: $ENV"
+    exit 1
+    ;;
+esac
+```
+
+### for 循环
+
+```bash
+# 方式 1：遍历列表
+for file in *.log; do
+  echo "处理: $file"
+  gzip "$file"
+done
+
+# 方式 2：C 风格
+for ((i=0; i<10; i++)); do
+  echo "Number: $i"
+done
+
+# 方式 3：遍历数字范围
+for i in {1..5}; do
+  echo "Step $i"
+done
+```
+
+### while 循环
+
+```bash
+# 读取文件每行
+while IFS= read -r line; do
+  echo "行: $line"
+done < input.txt
+
+# 无限循环（直到条件满足）
+while true; do
+  if curl -s http://localhost:3000/health > /dev/null; then
+    echo "✅ 服务已启动"
+    break
+  fi
+  echo "⏳ 等待服务启动..."
+  sleep 2
+done
+```
+
+## 📦 函数与参数
+
+<a id="functions-params"></a>
+
+### 定义函数
+
+```bash
+# 方式 1：function 关键字
+function greet() {
+  local name="$1"
+  echo "Hello, $name!"
+}
+
+# 方式 2：直接定义（推荐）
+greet() {
+  local name="$1"
+  echo "Hello, $name!"
+}
+
+# 调用
+greet "Alice"    # 输出: Hello, Alice!
+```
+
+### 函数返回值
+
+```bash
+# Bash 函数只能返回 0-255 的数字（退出码）
+# 要返回字符串/数据，用 echo + 命令替换
+
+get_user() {
+  echo "alice"    # 用 echo "返回" 数据
+}
+
+# 调用
+user=$(get_user)   # 命令替换捕获 echo 输出
+echo "User: $user"
+
+# 返回退出码（0=成功）
+check_file() {
+  [ -f "$1" ] && return 0 || return 1
+}
+
+check_file "/etc/passwd"
+echo "退出码: $?"    # 0
+```
+
+### 局部变量 `local`
+
+```bash
+outer="I'm global"
+
+my_func() {
+  local inner="I'm local"
+  echo "$inner"      # 正常访问
+}
+
+my_func
+echo "$outer"        # I'm global
+echo "$inner"        # 空（local 变量函数外不可见）
+```
+
+:::warning[不用 local 的陷阱]
+
+```bash
+# 错误示范
+counter=0
+increment() {
+  counter=$((counter + 1))   # 修改了全局变量！
+}
+
+# 正确示范
+increment() {
+  local counter=$counter     # 先拷贝全局值
+  counter=$((counter + 1))
+  echo "$counter"
+}
+```
+
+:::
+
+## 🐛 错误处理与调试
+
+<a id="error-debug"></a>
+
+### set 选项（最重要的技巧！）
+
+```bash
+#!/bin/bash
+set -euo pipefail
+# -e: 任何命令失败（退出码非 0）立即退出脚本
+# -u: 使用未定义变量时报错（而不是当作空字符串）
+# -o pipefail: 管道中任一命令失败，整个管道失败
+
+echo "开始部署..."
+rm -rf build/          # 如果 build/ 不存在，rm 会失败，脚本退出
+echo "这行不会执行"    # -e 确保了这里不会执行
+```
+
+**每个生产脚本都应该以 `set -euo pipefail` 开头！**
+
+### trap — 清理陷阱
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# 脚本退出时清理临时文件
+cleanup() {
+  echo "🧹 清理临时文件..."
+  rm -rf /tmp/my-app-*
+}
+trap cleanup EXIT
+
+# 即使脚本出错，cleanup 也会执行
+echo "运行中..."
+false   # 这会触发错误，但 cleanup 仍会执行
+```
+
+### 调试技巧
+
+```bash
+# 方式 1：bash -x（最常用）
+bash -x script.sh
+# 会打印每一行执行的命令和参数
+
+# 方式 2：在脚本里加 set -x
+#!/bin/bash
+set -x    # 开启调试
+echo "hello"
+set +x    # 关闭调试
+
+# 方式 3：PS4 自定义调试输出格式
+export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
+bash -x script.sh
+```
+
+## 📋 实战脚本示例
+
+### 示例 1：数据库备份脚本
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# 配置
+DB_NAME="${DB_NAME:-mydb}"
+BACKUP_DIR="${BACKUP_DIR:-/backups}"
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/db_$DATE.sql.gz"
+
+# 创建备份目录
+mkdir -p "$BACKUP_DIR"
+
+echo "📦 开始备份数据库: $DB_NAME"
+
+# 执行备份
+mysqldump --single-transaction "$DB_NAME" | gzip > "$BACKUP_FILE"
+
+# 验证
+if [ -s "$BACKUP_FILE" ]; then
+  echo "✅ 备份成功: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+else
+  echo "❌ 备份失败！"
+  exit 1
+fi
+
+# 清理 7 天前的备份
+find "$BACKUP_DIR" -name "db_*.sql.gz" -mtime +7 -delete
+echo "🧹 已清理 7 天前的旧备份"
+```
+
+### 示例 2：批量重命名文件
+
+```bash
+#!/bin/bash
+# rename-logs.sh - 给日志文件加日期前缀
+
+for file in *.log; do
+  # 跳过已经重命名的文件
+  [[ "$file" =~ ^[0-9]{8}_ ]] && continue
+
+  date_prefix=$(stat -c %y "$file" | cut -d' ' -f1 | tr -d '-')
+  new_name="${date_prefix}_${file}"
+
+  mv "$file" "$new_name"
+  echo "✅ $file → $new_name"
+done
+```
+
+## 📚 下一步
+
+- 下一章：[🛠️ 开发环境配置](./dev-env) — 配置编译器、调试器、构建工具
+- 进阶：[📦 软件包管理](./package-mgmt) — apt/dnf/pacman 实战

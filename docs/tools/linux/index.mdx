@@ -1,0 +1,132 @@
+---
+title: 🐧 Linux 开发者指南
+description: 面向开发者的 Linux 实用指南，涵盖命令行、Shell 脚本、开发环境、容器、网络、安全与故障排查。
+position: 4
+---
+
+本节旨在为开发者提供一份**实用、紧凑、开发者视角**的 🐧 Linux 使用指南，帮助你在日常开发中高效使用 Linux，而不陷入运维细节。
+
+## 🎯 教程目标
+
+通过本教程，读者将能够：
+
+- **🐧 掌握开发者必备命令**：文件操作、文本处理、进程管理、网络调试——日常开发 80% 场景覆盖。
+- **📜 编写 Shell 脚本**：Bash/Zsh 脚本基础、错误处理、调试技巧，把重复工作自动化。
+- **🛠️ 配置开发环境**：编译器、调试器、构建工具、版本控制、多版本管理（fnm/Volta/nvm）。
+- **📦 管理软件包**：apt/dnf/pacman 实战，从源码编译，处理依赖冲突。
+- **🐳 使用容器**：Docker/Podman 日常开发流，编写 Dockerfile，docker-compose 本地编排。
+- **🌐 调试网络问题**：curl/wget、ssh 配置、端口检查、防火墙规则，快速定位连接问题。
+- **🔒 践行安全习惯**：权限管理、SSH 密钥、 secrets 处理，避免开发者常见安全陷阱。
+- **🔍 排查性能问题**：top/htop/ps 进程分析，磁盘 I/O 瓶颈，网络延迟排查。
+
+## 👥 目标读者
+
+本节主要面向：
+
+- **💻 软件开发者**：日常在 Linux 上开发，需要高效使用命令行和工具链。
+- **🐳 容器开发者**：使用 Docker/Podman 构建和部署应用，需要理解 Linux 底层。
+- **🎓 Linux 初学者**：有开发经验但 Linux 不熟，想快速上手。
+- **🚚 迁移用户**：从 macOS/Windows 开发环境迁移到 Linux。
+
+:::tip[开发者视角]
+
+本教程**不是**系统管理员手册，不会深入讲解：
+
+- LVM/RAID/磁盘分区方案
+- 企业级高可用集群配置
+- 内核参数调优（sysctl）
+- SELinux/AppArmor 策略编写
+
+我们聚焦**开发者每天用得到的技能**。
+
+:::
+
+## 🗺️ 主要内容概览
+
+1. **Linux 基础入门**：什么是 Linux、为什么开发者需要 Linux、发行版选择指南、安装方式。
+2. **命令行基础**：文件系统导航、常用命令（ls/cat/grep/awk/sed）、管道与重定向、文本处理三剑客。
+3. **Shell 脚本编程**：Bash 基础语法、变量与参数、条件判断、循环、函数、错误处理与调试。
+4. **开发环境配置**：编译器（GCC/Clang）、调试器（GDB）、构建工具（Make/CMake）、多版本管理。
+5. **软件包管理**：apt/dnf/pacman 对比、从源码编译、依赖管理、清理与维护。
+6. **进程与系统管理**：ps/top/htop 进程查看、信号管理、systemd 基础、日志查看（journalctl）。
+7. **网络配置与调试**：IP/路由/DNS 配置、SSH 高级用法、curl/wget 调试、防火墙（ufw/firewalld）。
+8. **容器与虚拟化**：Docker 日常开发流、编写高效 Dockerfile、docker-compose 本地编排、Podman 入门。
+9. **安全实践**：文件权限与 sudo、SSH 密钥管理、secrets 处理（.env/密码管理器）、常见安全陷阱。
+10. **故障排查与性能优化**：日志分析、性能监控（top/iostat/netstat/ss）、常见故障场景与解决思路。
+11. **Linux 速查表**：按场景分类的核心命令速查。
+
+## 📖 如何使用本节
+
+- **按需查阅**：有经验的开发者可直接跳到需要的章节；初学者建议按顺序学习前 4 章。
+- **动手实践**：所有命令示例均可直接复制执行，在真实环境中验证理解。
+- **理解原理**：不只是背命令，理解 Linux 的设计哲学（一切皆文件、组合小程序）。
+
+## 🧭 目录
+
+- **[🚀 Linux 基础入门](./intro)**
+  - [❓ 什么是 Linux](./intro#what-is-linux)
+    - [💡 Linux 的作用](./intro#linux-benefits)
+    - [🤔 为什么开发者需要 Linux](./intro#why-linux-for-devs)
+    - [📦 发行版选择指南](./intro#distro-choice)
+  - [⚙️ 安装 Linux](./intro#install-linux)
+    - [💻 系统要求](./intro#system-requirements)
+    - [🚀 安装方式对比](./intro#install-methods)
+  - [🎉 第一次登录](./intro#first-login)
+- **[💻 命令行基础](./cli-basics)**
+  - [📁 文件系统导航](./cli-basics#file-system)
+  - [🔍 文本处理三剑客](./cli-basics#text-processing)
+  - [🔗 管道与重定向](./cli-basics#pipes-redirects)
+  - [⚡ 效率技巧](./cli-basics#efficiency-tips)
+- **[📜 Shell 脚本编程](./shell-scripting)**
+  - [🏗️ Bash 基础语法](./shell-scripting#bash-basics)
+  - [🔀 条件判断与循环](./shell-scripting#conditionals-loops)
+  - [📞 函数与参数](./shell-scripting#functions-params)
+  - [🐛 错误处理与调试](./shell-scripting#error-debug)
+- **[🛠️ 开发环境配置](./dev-env)**
+  - [⚙️ 编译器与调试器](./dev-env#compiler-debugger)
+  - [🏗️ 构建工具](./dev-env#build-tools)
+  - [🔀 版本控制辅助](./dev-env#vcs-helpers)
+  - [📦 多版本管理](./dev-env#version-managers)
+- **[📦 软件包管理](./package-mgmt)**
+  - [📋 包管理器对比](./package-mgmt#package-managers)
+  - [🔄 日常包管理操作](./package-mgmt#daily-operations)
+  - [🔨 从源码编译](./package-mgmt#build-from-source)
+  - [🧹 清理与维护](./package-mgmt#cleanup-maintenance)
+- **[⚙️ 进程与系统管理](./process-mgmt)**
+  - [👁️ 进程查看工具](./process-mgmt#process-viewing)
+  - [� signal 信号管理](./process-mgmt#signal-mgmt)
+  - [🎛️ systemd 基础](./process-mgmt#systemd-basics)
+  - [📜 日志查看](./process-mgmt#log-viewing)
+- **[🌐 网络配置与调试](./networking)**
+  - [🔌 网络配置基础](./networking#network-config)
+  - [🔑 SSH 高级用法](./networking#ssh-advanced)
+  - [🔍 curl/wget 调试](./networking#curl-wget)
+  - [🛡️ 防火墙配置](./networking#firewall)
+- **[🐳 容器与虚拟化](./containers)**
+  - [🐳 Docker 日常开发流](./containers#docker-daily)
+  - [📝 编写高效 Dockerfile](./containers#dockerfile)
+  - [🎼 docker-compose 编排](./containers#docker-compose)
+  - [🦭 Podman 入门](./containers#podman)
+- **[🔒 安全实践](./security)**
+  - [🔐 文件权限与 sudo](./security#permissions-sudo)
+  - [🔑 SSH 密钥管理](./security#ssh-keys)
+  - [🙈 Secrets 处理](./security#secrets-handling)
+  - [⚠️ 常见安全陷阱](./security#common-traps)
+- **[🔍 故障排查与性能优化](./troubleshooting)**
+  - [📊 性能监控工具](./troubleshooting#performance-monitoring)
+  - [📜 日志分析技巧](./troubleshooting#log-analysis)
+  - [🚨 常见故障场景](./troubleshooting#common-failures)
+  - [🏎️ 性能优化思路](./troubleshooting#performance-tuning)
+- **[📝 Linux 速查表](./cheat-sheet)**
+
+## 📝 版本说明
+
+Linux 发行版众多，本教程以 **Ubuntu/Debian** 为主要示例环境（apt 包管理器），同时标注 dnf/pacman 的对应命令。核心概念（文件系统、权限、进程）适用于所有发行版。
+
+## 🔍 对比官方文档的取舍
+
+- **🗑️ 删除系统管理员内容**：删除了 LVM、RAID、磁盘分区方案、高可用集群等运维内容，开发者通常通过云服务商或 DevOps 团队处理这些。
+- **🏢 删除企业级配置**：删除了 LDAP/AD 集成、Kerberos、企业代理配置等内容，这些通常由企业 IT 部门统一管理。
+- **🔧 删除内核编译与调优**：删除了自定义内核编译、sysctl 调优、内核模块开发等内容，除非你在做底层系统开发，否则不需要。
+- **📦 简化包管理理论**：删除了包管理器内部实现原理（dpkg/rpm 数据库格式），聚焦实用操作。
+- **🌐 省略高级网络**：删除了 VLAN、网桥、VXLAN、BGP 等网络工程师内容，开发者只需掌握基础网络调试。

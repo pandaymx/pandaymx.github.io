@@ -1,0 +1,259 @@
+---
+title: 📝 Linux 速查表
+sidebar_position: 99
+description: Linux 核心命令速查，按场景分类——文件操作、进程管理、网络调试、磁盘监控、权限管理、包管理、容器操作。
+---
+
+本文汇总开发者日常 80% 场景用到的 Linux 命令，按使用场景分类，方便快速查阅。
+
+:::tip[使用方式]
+
+- 遇到不熟悉的命令 → `命令 --help` 或 `man 命令`
+- 想不起来参数 → 查本文对应场景
+- 需要更复杂用法 → 回到对应章节详读
+
+:::
+
+## 📁 文件与目录操作
+
+### 导航与查看
+
+```bash
+pwd                          # 当前目录
+ls -la                       # 详细列表（含隐藏文件）
+tree -L 2                    # 目录树（2 层）
+cd ~                         # 回家目录
+cd -                         # 回到上一个目录
+cd ..                        # 上级目录
+
+# 查看文件
+cat file.txt                  # 全部输出
+less file.txt                 # 分页查看（空格翻页，q 退出）
+head -n 20 file.txt          # 前 20 行
+tail -n 20 file.txt          # 后 20 行
+tail -f /var/log/app.log     # 实时追踪日志
+```
+
+### 创建与删除
+
+```bash
+touch file.txt                # 创建空文件
+mkdir -p dir1/dir2           # 递归建目录
+cp file.txt backup.txt         # 复制文件
+cp -r dir1 dir2              # 递归复制目录
+mv old.txt new.txt             # 重命名
+mv file.txt dir/              # 移动
+rm file.txt                   # 删除文件
+rm -rf dir/                  # 递归强制删目录（危险！）
+```
+
+### 查找
+
+```bash
+find . -name "*.ts"            # 按名称查找
+find . -type f -size +10M    # 找大于 10MB 的文件
+fd "pattern"                   # fd 更快（需安装）
+locate nginx.conf              # 基于索引的快速查找
+```
+
+## 🔍 文本处理
+
+```bash
+# grep — 搜索
+grep "error" file.log               # 搜索关键词
+grep -i "error" file.log           # 忽略大小写
+grep -r "TODO" src/               # 递归搜索目录
+grep -v "info" file.log           # 反向匹配
+grep -E "error|warn" file.log    # 正则或
+
+# awk — 列处理
+awk '{print $1}' file.txt           # 第 1 列
+awk -F: '{print $1}' /etc/passwd # 用 : 分割
+
+# sed — 替换
+sed 's/old/new/g' file.txt        # 输出替换结果
+sed -i 's/old/new/g' file.txt   # 直接修改文件
+```
+
+## ⚙️ 进程管理
+
+```bash
+ps aux | grep nginx              # 查看进程
+htop                            # 实时监控（推荐）
+kill 1234                       # 优雅终止（SIGTERM）
+kill -9 1234                    # 强制终止（SIGKILL）
+killall nginx                    # 按名称杀进程
+pgrep -u www-data nginx         # 按条件查 PID
+```
+
+## 🌐 网络调试
+
+```bash
+# 连通性
+ping -c 4 google.com           # ping 4 次
+traceroute google.com          # 路由追踪
+mtr google.com                # 持续路由监控
+
+# DNS
+dig google.com                  # DNS 查询（推荐）
+dig @8.8.8.8 google.com    # 指定 DNS 服务器
+nslookup google.com            # 老命令
+
+# 端口与连接
+ip addr show                  # 查看 IP 地址
+ip route show                 # 查看路由表
+ss -tulnp | grep 3000          # 查看端口占用
+nc -zv google.com 443          # 测试端口连通性
+
+# HTTP 调试
+curl -I https://example.com    # 只看响应头
+curl -v https://example.com    # 详细请求过程
+curl -X POST -d '{"a":1}' https://api.example.com
+```
+
+## 💾 磁盘与内存监控
+
+```bash
+# 磁盘
+df -h                           # 磁盘使用率
+du -sh * | sort -rh | head -10  # 目录大小 TOP 10
+ncdu /                          # 交互式磁盘分析（需安装）
+
+# 内存
+free -h                         # 内存使用
+cat /proc/meminfo              # 详细内存信息
+
+# I/O
+iostat -x 2                    # 磁盘 I/O（需安装 sysstat）
+iotop                          # I/O 实时监控（需安装）
+```
+
+## 🔐 权限与安全
+
+```bash
+# 权限
+chmod 644 file.txt              # 修改权限
+chmod -R 755 dir/              # 递归修改
+chown user:group file.txt       # 修改所有者
+chown -R user:group dir/      # 递归修改
+
+# SSH
+ssh user@server.com            # 连接
+ssh -i key.pem user@server    # 指定密钥
+scp file.txt user@server:/tmp/ # 传文件
+
+# 防火墙（ufw）
+sudo ufw status                # 查看状态
+sudo ufw allow 80/tcp          # 开放端口
+sudo ufw delete allow 80/tcp  # 删除规则
+```
+
+## 📦 包管理
+
+### apt (Ubuntu/Debian)
+
+```bash
+sudo apt update                  # 更新索引
+sudo apt upgrade -y             # 升级软件
+sudo apt install pkg -y          # 安装
+sudo apt remove pkg             # 卸载（保留配置）
+sudo apt purge pkg              # 完全卸载
+sudo apt autoremove -y          # 清理无用依赖
+apt search keyword              # 搜索
+apt show pkg                   # 查看详情
+```
+
+### dnf (Fedora/RHEL)
+
+```bash
+sudo dnf check-update           # 更新索引
+sudo dnf upgrade -y            # 升级
+sudo dnf install pkg -y        # 安装
+sudo dnf remove pkg            # 卸载
+dnf search keyword              # 搜索
+dnf info pkg                   # 查看详情
+```
+
+### pacman (Arch)
+
+```bash
+sudo pacman -Syu                # 同步+升级
+sudo pacman -S pkg             # 安装
+sudo pacman -R pkg             # 卸载
+sudo pacman -Rs pkg            # 卸载+依赖
+pacman -Ss keyword             # 搜索
+pacman -Si pkg                # 查看详情
+```
+
+## 🐳 容器操作（Docker）
+
+```bash
+# 镜像
+docker images                    # 列出镜像
+docker pull nginx:alpine         # 拉取镜像
+docker rmi nginx:alpine          # 删除镜像
+docker build -t myapp:1.0 .    # 构建镜像
+
+# 容器
+docker ps                        # 运行中的容器
+docker ps -a                     # 所有容器
+docker run -d -p 8080:80 nginx  # 启动
+docker stop <id>                 # 停止
+docker rm <id>                   # 删除
+docker logs -f <id>             # 查看日志
+docker exec -it <id> bash       # 进入容器
+
+# 清理
+docker system prune -a           # 清理未使用资源
+docker volume prune              # 清理未使用卷
+```
+
+## 🐚 Shell 脚本速查
+
+```bash
+# 特殊变量
+$0    # 脚本名
+$1    # 第 1 个参数
+$@    # 所有参数
+$#    # 参数个数
+$$    # 当前 PID
+$?    # 上条命令退出码
+
+# 条件测试
+[ -f "$f" ]   # 是文件
+[ -d "$d" ]   # 是目录
+[ "$a" = "$b" ] # 字符串相等
+[ "$a" -gt 0 ] # 数字大于
+[[ "$s" =~ ^[0-9]+$ ]]  # 正则匹配
+
+# 错误处理（脚本开头必写）
+set -euo pipefail
+```
+
+## 🔧 系统信息
+
+```bash
+uname -a                     # 内核信息
+cat /etc/os-release          # OS 版本
+uptime                        # 运行时间+负载
+lscpu                         # CPU 信息
+lsblk                         # 磁盘信息
+lsusb                         # USB 设备
+lspci                         # PCI 设备
+```
+
+## 🚨 应急清单
+
+```
+服务器挂了？按顺序排查：
+
+1. 服务器在线吗？ → ping / SSH
+2. 服务在跑吗？ → systemctl status / ps aux
+3. 端口通吗？ → ss -tulnp / nc -zv
+4. 磁盘满了吗？ → df -h
+5. 内存不够吗？ → free -h
+6. 日志报错吗？ → journalctl -p err -n 50
+7. 最近改了什么？ → git log --since="1 day ago"
+
+还是不行？ → 重启大法 → sudo reboot
+```
