@@ -28,26 +28,26 @@ Git 是一个**分布式版本控制系统**（Distributed Version Control Syste
 
 在当今软件开发中，Git 已经成为**事实标准**。以下是选择 Git 的核心原因：
 
-| 理由 | 说明 |
-| :--- | :--- |
+| 理由                  | 说明                                                    |
+| :-------------------- | :------------------------------------------------------ |
 | **🌍 市场占有率最高** | 超过 90% 的开发者在使用 Git，GitHub/GitLab 生态极其丰富 |
-| **⚡ 性能卓越** | 本地操作极快，网络断开也能正常工作 |
-| **🛡️ 数据完整性** | 所有提交通过 SHA-1 校验，防止数据损坏或篡改 |
-| **🌿 分支模型优雅** | 创建、切换、合并分支的代价极低，鼓励频繁使用分支 |
-| **📦 分布式架构** | 每个克隆都是完整备份，无单点故障风险 |
+| **⚡ 性能卓越**       | 本地操作极快，网络断开也能正常工作                      |
+| **🛡️ 数据完整性**     | 所有提交通过 SHA-1 校验，防止数据损坏或篡改             |
+| **🌿 分支模型优雅**   | 创建、切换、合并分支的代价极低，鼓励频繁使用分支        |
+| **📦 分布式架构**     | 每个克隆都是完整备份，无单点故障风险                    |
 
 <a id="git-vs-svn"></a>
 ### ⚖️ Git vs. SVN vs. Mercurial 详细对比
 
-| 特性 | Git | SVN (Subversion) | Mercurial (Hg) |
-| :--- | :--- | :--- | :--- |
-| **架构类型** | 🌍 分布式 | 🏢 集中式 | 🌍 分布式 |
-| **离线工作** | ✅ 完整支持 | ❌ 需要服务器连接 | ✅ 完整支持 |
-| **分支性能** | ⚡ 极快（本地操作） | 🐢 较慢（服务器侧） | ⚡ 极快 |
-| **学习曲线** | 📈 中等（概念较多） | 📉 较平缓 | 📊 中等 |
-| **存储空间** | 📦 高效（压缩+去重） | 📂 较大 | 📦 高效 |
-| **主要用户** | 开源界/互联网公司 | 传统企业/游戏公司 | Facebook（已迁移至 Git）|
-| **推荐场景** | 💻 几乎所有场景 | 🏢 传统企业内部 | 🌐 已逐渐被 Git 取代 |
+| 特性         | Git                  | SVN (Subversion)    | Mercurial (Hg)           |
+| :----------- | :------------------- | :------------------ | :----------------------- |
+| **架构类型** | 🌍 分布式            | 🏢 集中式           | 🌍 分布式                |
+| **离线工作** | ✅ 完整支持          | ❌ 需要服务器连接   | ✅ 完整支持              |
+| **分支性能** | ⚡ 极快（本地操作）  | 🐢 较慢（服务器侧） | ⚡ 极快                  |
+| **学习曲线** | 📈 中等（概念较多）  | 📉 较平缓           | 📊 中等                  |
+| **存储空间** | 📦 高效（压缩+去重） | 📂 较大             | 📦 高效                  |
+| **主要用户** | 开源界/互联网公司    | 传统企业/游戏公司   | Facebook（已迁移至 Git） |
+| **推荐场景** | 💻 几乎所有场景      | 🏢 传统企业内部     | 🌐 已逐渐被 Git 取代     |
 
 :::tip[💡 迁移建议]
 
@@ -77,14 +77,14 @@ Git 是一个**分布式版本控制系统**（Distributed Version Control Syste
 2. 下载 64-bit Git for Windows Setup
 3. 运行安装程序，按以下建议配置：
 
-| 安装选项 | 推荐选择 | 说明 |
-| :--- | :--- | :--- |
-| Select Components | ✅ Git Bash Here | 右键菜单添加 Git Bash |
-| | ✅ Git GUI Here | 右键菜单添加 Git GUI |
-| Choosing HTTPS transport | ✅ Use the OpenSSL library | 使用系统证书存储 |
+| 安装选项                            | 推荐选择                        | 说明                   |
+| :---------------------------------- | :------------------------------ | :--------------------- |
+| Select Components                   | ✅ Git Bash Here                | 右键菜单添加 Git Bash  |
+|                                     | ✅ Git GUI Here                 | 右键菜单添加 Git GUI   |
+| Choosing HTTPS transport            | ✅ Use the OpenSSL library      | 使用系统证书存储       |
 | Configuring line ending conversions | ✅ Checkout as-is, commit as-is | 避免换行符自动转换问题 |
-| Configuring terminal emulator | ✅ Use MinTTY | 更好的终端体验 |
-| Default pull behavior | ✅ Fast-forward or merge | 保守策略，适合初学者 |
+| Configuring terminal emulator       | ✅ Use MinTTY                   | 更好的终端体验         |
+| Default pull behavior               | ✅ Fast-forward or merge        | 保守策略，适合初学者   |
 
 **方式二：Winget（Windows 11+）**
 

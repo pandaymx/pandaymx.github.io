@@ -9,12 +9,12 @@ description: 掌握 Conventional Commits 规范、Commit Message 编写技巧，
 <a id="why-conventions-matter"></a>
 ## 🤔 为什么需要提交规范
 
-| 问题 | 没有规范 | 有规范 |
-| :--- | :--- | :--- |
-| `git log` 可读性 | 一堆 `fix`、`update`、`wip` | 清晰的变更意图和历史 |
-| Code Review 效率 | Reviewer 需要先猜意图 | Message 本身就是最好的说明 |
-| 自动生成 Changelog | 无法自动化 | `feat:` → Changelog 新功能节 |
-| 语义化版本号 | 无法判断是否需要大版本号 | `BREAKING CHANGE:` → 自动 Major 版本 |
+| 问题               | 没有规范                    | 有规范                               |
+| :----------------- | :-------------------------- | :----------------------------------- |
+| `git log` 可读性   | 一堆 `fix`、`update`、`wip` | 清晰的变更意图和历史                 |
+| Code Review 效率   | Reviewer 需要先猜意图       | Message 本身就是最好的说明           |
+| 自动生成 Changelog | 无法自动化                  | `feat:` → Changelog 新功能节         |
+| 语义化版本号       | 无法判断是否需要大版本号    | `BREAKING CHANGE:` → 自动 Major 版本 |
 
 <a id="conventional-commits"></a>
 ## 📋 Conventional Commits 规范
@@ -31,18 +31,18 @@ description: 掌握 Conventional Commits 规范、Commit Message 编写技巧，
 
 ### Type 类型
 
-| Type | 说明 | 示例 |
-| :--- | :--- | :--- |
-| `feat` | 新功能（minor 版本） | `feat(auth): add OAuth2 login` |
-| `fix` | Bug 修复（patch 版本） | `fix(api): handle null pointer` |
-| `docs` | 文档变更 | `docs(README): update install guide` |
-| `style` | 代码格式（不影响功能） | `style(linter): fix eslint warnings` |
-| `refactor` | 重构（非 feat/fix） | `refactor(utils): extract date logic` |
-| `perf` | 性能优化 | `perf(query): add index to user_email` |
-| `test` | 测试相关 | `test(auth): add login flow tests` |
-| `build` | 构建/依赖变更 | `build(deps): upgrade react to v18` |
-| `ci` | CI 配置变更 | `ci(github): add PR lint workflow` |
-| `chore` | 其他杂项 | `chore(release): bump v1.2.0` |
+| Type       | 说明                   | 示例                                   |
+| :--------- | :--------------------- | :------------------------------------- |
+| `feat`     | 新功能（minor 版本）   | `feat(auth): add OAuth2 login`         |
+| `fix`      | Bug 修复（patch 版本） | `fix(api): handle null pointer`        |
+| `docs`     | 文档变更               | `docs(README): update install guide`   |
+| `style`    | 代码格式（不影响功能） | `style(linter): fix eslint warnings`   |
+| `refactor` | 重构（非 feat/fix）    | `refactor(utils): extract date logic`  |
+| `perf`     | 性能优化               | `perf(query): add index to user_email` |
+| `test`     | 测试相关               | `test(auth): add login flow tests`     |
+| `build`    | 构建/依赖变更          | `build(deps): upgrade react to v18`    |
+| `ci`       | CI 配置变更            | `ci(github): add PR lint workflow`     |
+| `chore`    | 其他杂项               | `chore(release): bump v1.2.0`          |
 
 ### Scope（可选）
 
@@ -180,18 +180,7 @@ module.exports = {
     'type-enum': [
       2,
       'always',
-      [
-        'feat',
-        'fix',
-        'docs',
-        'style',
-        'refactor',
-        'perf',
-        'test',
-        'build',
-        'ci',
-        'chore',
-      ],
+      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore'],
     ],
   },
 };
@@ -238,7 +227,7 @@ echo "feat(auth): add login" | npx commitlint
 ## 🧰 工具推荐
 
 | 工具 | 用途 | 推荐场景 |
-| :--- | :--- | :--- |
+| :-- | :-- | :-- |
 | **[commitlint](https://commitlint.js.org/)** | 检查 Commit Message 格式 | 团队规范强制执行 |
 | **[commitizen](https://github.com/commitizen/cz-cli)** | 交互式生成规范 Message | 个人/小团队提效 |
 | **[lint-staged](https://github.com/okonet/lint-staged)** | 只对暂存文件运行 Linter | 配合 husky 使用 |

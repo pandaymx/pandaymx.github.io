@@ -27,11 +27,11 @@ const timeout = 3000;  // 传入分支的版本
 >>>>>>> feature/optimize-timeout
 ```
 
-| 标记 | 含义 |
-| :--- | :--- |
-| `<<<<<<< HEAD` | 冲突开始，下面是当前分支的内容 |
-| `=======` | 分隔线，上面是当前分支，下面是传入分支 |
-| `>>>>>>> feature/...` | 冲突结束，标明传入分支名 |
+| 标记                  | 含义                                   |
+| :-------------------- | :------------------------------------- |
+| `<<<<<<< HEAD`        | 冲突开始，下面是当前分支的内容         |
+| `=======`             | 分隔线，上面是当前分支，下面是传入分支 |
+| `>>>>>>> feature/...` | 冲突结束，标明传入分支名               |
 
 ### 解决冲突的标准流程
 
@@ -54,20 +54,20 @@ git commit
 
 ### 使用工具辅助解决冲突
 
-| 工具 | 类型 | 推荐场景 |
-| :--- | :--- | :--- |
-| **VS Code** | GUI | 内置冲突编辑器，三栏对比，点击按钮选择 |
-| **GitKraken** | 独立 GUI | 可视化分支历史，拖拽合并 |
-| **Sourcetree** | 独立 GUI | 免费，功能全面 |
-| **vimdiff** | TUI | 终端党，`git mergetool` 配置 |
+| 工具           | 类型     | 推荐场景                               |
+| :------------- | :------- | :------------------------------------- |
+| **VS Code**    | GUI      | 内置冲突编辑器，三栏对比，点击按钮选择 |
+| **GitKraken**  | 独立 GUI | 可视化分支历史，拖拽合并               |
+| **Sourcetree** | 独立 GUI | 免费，功能全面                         |
+| **vimdiff**    | TUI      | 终端党，`git mergetool` 配置           |
 
 :::tip[💡 VS Code 解决冲突最佳配置]
 
 ```json
 // settings.json
 {
-  "git.mergeEditor": true,  // 启用 3-way merge 编辑器
-  "git.conflict.autoNavigate.next": true  // 自动跳到下一个冲突
+  "git.mergeEditor": true, // 启用 3-way merge 编辑器
+  "git.conflict.autoNavigate.next": true // 自动跳到下一个冲突
 }
 ```
 
@@ -80,8 +80,8 @@ git commit
 
 两个命令都能"撤销"，但机制和适用场景完全不同。
 
-| | `git revert` | `git reset` |
-| :--- | :--- | :--- |
+|  | `git revert` | `git reset` |
+| :-- | :-- | :-- |
 | **原理** | 创建一个**新提交**，内容是被撤销提交的逆操作 | **移动 HEAD**，直接改写历史 |
 | **历史保留** | ✅ 保留原提交（可追溯） | ❌ 丢弃原提交（除非 reflog 找回） |
 | **可否用于已推送** | ✅ 安全（推荐） | ⚠️ 危险（会改写公共历史） |
@@ -146,12 +146,12 @@ git log --oneline -5
 
 ### reflog 引用语法
 
-| 引用 | 含义 |
-| :--- | :--- |
-| `HEAD@{0}` | HEAD 当前位置 |
-| `HEAD@{1}` | HEAD 上一次所在位置 |
-| `HEAD@{2}` | HEAD 上上次所在位置 |
-| `main@{yesterday}` | main 分支昨天的位置 |
+| 引用                 | 含义                    |
+| :------------------- | :---------------------- |
+| `HEAD@{0}`           | HEAD 当前位置           |
+| `HEAD@{1}`           | HEAD 上一次所在位置     |
+| `HEAD@{2}`           | HEAD 上上次所在位置     |
+| `main@{yesterday}`   | main 分支昨天的位置     |
 | `main@{1.month.ago}` | main 分支一个月前的位置 |
 
 :::tip[💡 reflog 不是永久的]
@@ -191,6 +191,7 @@ git push origin main
 ```
 
 **为什么用 revert 而不是 reset？**
+
 - `revert` 不改写历史，其他开发者 `git pull` 会自动获得回滚
 - `reset` 会改写历史，需要所有人同步，容易出错
 
@@ -209,6 +210,7 @@ git push --force-with-lease origin main
 :::danger[🚨 `force push` 在生产分支是极度危险操作]
 
 只有在**生产事故、服务已中断、无法用 revert 快速解决**的情况下，才考虑 `git push --force-with-lease`。执行前必须：
+
 1. 通知所有团队成员"不要 push"
 2. 确认没有其他人正在基于 main 工作
 3. 用 `--force-with-lease` 而非 `--force`（前者会检查远程是否有你不知道的提交）
@@ -232,11 +234,13 @@ git push --force-with-lease origin main
 ## 事故报告：2024-03-15 用户登录失败
 
 ### 影响范围
+
 - 时间：14:32 - 14:47（15 分钟）
 - 影响：约 30% 用户无法登录
 - 根因：OAuth2 token 刷新逻辑 bug（commit: abc1234）
 
 ### 时间线
+
 - 14:32 部署 v1.3.2
 - 14:33 监控告警：登录失败率 30%
 - 14:35 确认根因：token 刷新超时
@@ -245,6 +249,7 @@ git push --force-with-lease origin main
 - 14:47 完全恢复
 
 ### 改进措施
+
 - [ ] 增加登录流程的端到端测试（Deadline: 2024-03-22）
 - [ ] 部署前增加 Canary 发布步骤（Deadline: 2024-03-20）
 - [ ] 接入 PagerDuty 自动告警（Deadline: 2024-03-18）
