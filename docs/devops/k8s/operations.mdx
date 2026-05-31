@@ -1,0 +1,834 @@
+---
+title: 🔧 集群运维与排障
+description: Kubernetes 集群运维与排障指南，涵盖节点维护、资源管理、自动扩缩容、调试技巧、监控告警、etcd 备份等内容
+sidebar_position: 6
+---
+
+# 🔧 集群运维与排障
+
+## 🖥️ 节点维护 {#node-maintenance}
+
+### Cordon：标记节点不可调度 {#cordon}
+
+**Cordon** 标记节点为 `SchedulingDisabled`，新的 Pod 不会被调度到该节点，但现有 Pod 继续运行。
+
+```bash
+# 标记节点不可调度
+kubectl cordon node-1
+
+# 取消标记（恢复可调度）
+kubectl uncordon node-1
+
+# 查看节点状态
+kubectl get nodes
+# 输出示例：
+# NAME    STATUS                     ROLES    AGE   VERSION
+# node-1  Ready,SchedulingDisabled  <none>   10d   v1.28.0
+```
+
+### Drain：驱逐节点上的 Pod {#drain}
+
+**Drain** 安全地驱逐节点上的所有 Pod，常用于节点维护前。
+
+```bash
+# 驱逐节点上的 Pod（会先 cordon）
+kubectl drain node-1 --ignore-daemonsets --delete-emptydir-data
+
+# 参数说明：
+# --ignore-daemonsets：忽略 DaemonSet 管理的 Pod（它们会在其他节点重启）
+# --delete-emptydir-data：删除使用 emptyDir 的 Pod
+# --force：强制删除（即使 Pod 不是通过 ReplicationController 管理）
+# --grace-period=-1：立即删除（不等待优雅终止）
+
+# 查看驱逐状态
+kubectl get pods --all-namespaces -o wide | grep node-1
+```
+
+:::warning Drain 注意事项
+
+- Drain 会触发 Pod 重新调度，确保有其他可用节点
+- 对于 StatefulSet，Pod 会在其他节点以相同名称重建（需要持久化存储）
+- 对于 DaemonSet，Pod 会在其他节点自动创建 :::
+
+### Taint：污点驱逐 {#taint}
+
+**Taint** 用于标记节点，只有容忍（Toleration）该污点的 Pod 才能调度到该节点。
+
+```bash
+# 添加污点（阻止新 Pod 调度）
+kubectl taint nodes node-1 key=value:NoSchedule
+
+# 添加污点（立即驱逐现有 Pod）
+kubectl taint nodes node-1 key=value:NoExecute
+
+# 移除污点
+kubectl taint nodes node-1 key=value:NoSchedule-
+
+# 查看节点污点
+kubectl describe node node-1 | grep Taint
+```
+
+**污点效果**：
+
+- `NoSchedule`：不调度新 Pod 到该节点
+- `PreferNoSchedule`：尽量不调度（软限制）
+- `NoExecute`：不调度新 Pod，并驱逐现有 Pod
+
+**Pod 容忍污点示例**：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: toleration-pod
+spec:
+  tolerations:
+    - key: 'key'
+      operator: 'Equal'
+      value: 'value'
+      effect: 'NoSchedule'
+  containers:
+    - name: nginx
+      image: nginx:1.25
+```
+
+## 📊 资源配额与限制 {#resource-quotas}
+
+### ResourceQuota：命名空间资源配额 {#resourcequota}
+
+**ResourceQuota** 限制命名空间内的资源使用总量。
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: production
+spec:
+  hard:
+    # Pod 数量限制
+    pods: '10'
+    replicationcontrollers: '5'
+
+    # 计算资源限制
+    requests.cpu: '4'
+    requests.memory: 16Gi
+    limits.cpu: '8'
+    limits.memory: 32Gi
+
+    # 存储资源限制
+    requests.storage: 100Gi
+    persistentvolumeclaims: '10'
+
+    # 负载均衡器限制
+    services.loadbalancers: '2'
+    services.nodeports: '5'
+```
+
+**查看配额使用情况**：
+
+```bash
+kubectl describe resourcequota compute-quota -n production
+```
+
+### LimitRange：默认资源限制 {#limitrange}
+
+**LimitRange** 为命名空间内的 Pod 设置默认资源请求和限制。
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+  namespace: production
+spec:
+  limits:
+    - default: # 默认限制
+        memory: 512Mi
+        cpu: 500m
+      defaultRequest: # 默认请求
+        memory: 256Mi
+        cpu: 100m
+      type: Container
+    - max: # 最大限制
+        memory: 1Gi
+        cpu: '1'
+      min: # 最小请求
+        memory: 128Mi
+        cpu: 50m
+      type: Container
+```
+
+:::tip 资源管理建议
+
+- 始终设置 `requests` 和 `limits`
+- `requests` 应反映应用真实需求
+- `limits` 应略高于 `requests`（防止 OOM）
+- 使用 ResourceQuota 防止资源耗尽
+- 使用 LimitRange 设置默认值 :::
+
+## 📈 自动扩缩容 {#autoscaling}
+
+### HPA：水平 Pod 自动扩缩容 {#hpa}
+
+**HPA**（Horizontal Pod Autoscaler）根据 CPU/内存使用率自动调整 Pod 副本数。
+
+#### HPA v2 示例 {#hpa-v2-example}
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webapp-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webapp
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+```
+
+**HPA 工作方式**：
+
+```bash
+# 查看 HPA 状态
+kubectl get hpa
+kubectl describe hpa webapp-hpa
+
+# 输出示例：
+# NAME        REFERENCE          TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+# webapp-hpa  Deployment/webapp  75%/70%, 60%/80%   2         10        5          10m
+```
+
+:::warning HPA 前提条件
+
+- 必须安装 Metrics Server：`kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml`
+- Pod 必须设置 `resources.requests`（否则无法计算使用率）
+- HPA 默认每 15 秒检查一次（可配置）:::
+
+### VPA：垂直 Pod 自动扩缩容 {#vpa}
+
+**VPA**（Vertical Pod Autoscaler）自动调整 Pod 的 CPU/内存请求。
+
+#### 安装 VPA {#install-vpa}
+
+```bash
+# 下载 VPA
+git clone https://github.com/kubernetes/autoscaler.git
+cd autoscaler/vertical-pod-autoscaler/
+
+# 部署 VPA
+./hack/vpa-up.sh
+
+# 验证安装
+kubectl get pods -n kube-system | grep vpa
+```
+
+#### VPA 示例 {#vpa-example}
+
+```yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: webapp-vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webapp
+  updatePolicy:
+    updateMode: 'Auto' # Auto、Initial、Off
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        maxAllowed:
+          cpu: 2
+          memory: 4Gi
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        controlledResources: ['cpu', 'memory']
+```
+
+**VPA UpdateMode**：
+
+- `Auto`：自动更新 Pod（需要重建）
+- `Initial`：仅在创建 Pod 时设置资源
+- `Off`：仅推荐，不执行
+
+### PDB：Pod 中断预算 {#pdb}
+
+**PDB**（PodDisruptionBudget）确保在自愿中断（如节点维护）期间，至少有指定数量的 Pod 保持运行。
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: webapp-pdb
+spec:
+  minAvailable: 2 # 至少 2 个 Pod 可用
+  # 或 maxUnavailable: 1  # 最多 1 个 Pod 不可用
+  selector:
+    matchLabels:
+      app: webapp
+```
+
+**PDB 参数**：
+
+- `minAvailable`：最小可用 Pod 数（绝对值或百分比）
+- `maxUnavailable`：最大不可用 Pod 数（绝对值或百分比）
+
+:::tip PDB 使用场景
+
+- 节点维护（drain）时需要 PDB 保护
+- 多副本应用必须配置 PDB
+- StatefulSet 也需要 PDB（保护有状态服务）:::
+
+## 🔍 调试 Pod {#debugging-pods}
+
+### kubectl describe：查看 Pod 详情 {#kubectl-describe}
+
+```bash
+# 查看 Pod 详情
+kubectl describe pod <pod-name> -n <namespace>
+
+# 关键信息：
+# - Events：事件日志（调度失败、镜像拉取失败等）
+# - Conditions：Pod 状态（PodScheduled、Initialized、ContainersReady、Ready）
+# - Container States：容器状态（Waiting、Running、Terminated）
+```
+
+**常见 Events 错误**：
+
+- `FailedScheduling`：调度失败（资源不足、节点不满足要求）
+- `FailedMount`：挂载卷失败（PVC 不存在、权限问题）
+- `FailedPullImage`：拉取镜像失败（镜像不存在、认证失败）
+- `BackOff`：容器启动失败，正在退避重启
+
+### kubectl logs：查看容器日志 {#kubectl-logs}
+
+```bash
+# 查看当前日志
+kubectl logs <pod-name>
+
+# 查看之前崩溃的容器日志
+kubectl logs <pod-name> --previous
+
+# 实时跟踪日志
+kubectl logs <pod-name> -f
+
+# 查看多容器 Pod 的特定容器日志
+kubectl logs <pod-name> -c <container-name>
+
+# 查看最近 100 行日志
+kubectl logs <pod-name> --tail=100
+
+# 查看最近 1 小时日志
+kubectl logs <pod-name> --since=1h
+```
+
+### kubectl exec：进入容器 {#kubectl-exec}
+
+```bash
+# 进入容器 Shell
+kubectl exec -it <pod-name> -- /bin/bash
+
+# 在容器中执行命令
+kubectl exec <pod-name> -- ls -la /app
+
+# 多容器 Pod 中指定容器
+kubectl exec -it <pod-name> -c <container-name> -- /bin/sh
+
+# 从本地复制文件到容器
+kubectl cp /local/file.txt <pod-name>:/app/file.txt
+
+# 从容器复制文件到本地
+kubectl cp <pod-name>:/app/file.txt /local/file.txt
+```
+
+### kubectl attach：附加到容器 {#kubectl-attach}
+
+```bash
+# 附加到正在运行的容器（查看输出）
+kubectl attach <pod-name> -c <container-name>
+
+# 发送信号
+kubectl attach <pod-name> -c <container-name> --sig=SIGTERM
+```
+
+## 🚨 常见故障场景与修复 {#common-failures}
+
+### 场景 1：Pod 一直处于 Pending 状态 {#pod-pending}
+
+**症状**：`kubectl get pods` 显示 `Pending`
+
+**诊断**：
+
+```bash
+kubectl describe pod <pod-name>
+# 查看 Events 部分，常见原因：
+# - 0/3 nodes are available: 3 Insufficient cpu/memory（资源不足）
+# - 0/3 nodes are available: 3 node(s) had taint {...}（节点有污点）
+```
+
+**修复**：
+
+```bash
+# 方案 1：增加集群资源（添加节点）
+# 方案 2：降低 Pod 资源请求
+kubectl edit deployment <deployment-name>
+# 修改 resources.requests.cpu/memory
+
+# 方案 3：移除节点污点
+kubectl taint nodes <node-name> key:NoSchedule-
+```
+
+### 场景 2：Pod 不断 CrashLoopBackOff {#crashloopbackoff}
+
+**症状**：Pod 反复崩溃重启
+
+**诊断**：
+
+```bash
+# 查看容器退出码
+kubectl describe pod <pod-name>
+# 查看日志
+kubectl logs <pod-name> --previous
+```
+
+**常见原因**：
+
+- 应用启动失败（配置错误、依赖服务不可用）
+- 健康检查失败（livenessProbe 配置错误）
+- 资源限制过低（OOMKilled）
+
+**修复**：
+
+```bash
+# 方案 1：检查应用日志，修复配置
+kubectl logs <pod-name> --previous
+
+# 方案 2：临时禁用健康检查（调试用）
+kubectl edit pod <pod-name>
+# 注释掉 livenessProbe
+
+# 方案 3：增加资源限制
+kubectl edit deployment <deployment-name>
+# 修改 resources.limits.memory
+```
+
+### 场景 3：Service 无法访问 {#service-unreachable}
+
+**症状**：Service Endpoints 为空或连接超时
+
+**诊断**：
+
+```bash
+# 查看 Service
+kubectl describe svc <service-name>
+
+# 查看 Endpoints（应该显示 Pod IP）
+kubectl get endpoints <service-name>
+
+# 如果 Endpoints 为空，检查 Selector 是否匹配 Pod 标签
+kubectl get pods --show-labels
+kubectl describe svc <service-name> | grep Selector
+```
+
+**修复**：
+
+```bash
+# 方案 1：修正 Service selector
+kubectl edit svc <service-name>
+# 确保 selector 匹配 Pod labels
+
+# 方案 2：检查 Pod 是否 Ready
+kubectl get pods
+# 如果 Pod 不是 Ready 状态，检查 readinessProbe
+
+# 方案 3：测试网络连通性
+kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- curl http://<service-name>
+```
+
+### 场景 4：PVC 无法绑定 {#pvc-pending}
+
+**症状**：PVC 状态为 `Pending`
+
+**诊断**：
+
+```bash
+kubectl describe pvc <pvc-name>
+# 常见原因：
+# - no persistent volumes available for this claim（没有可用 PV）
+# - storageclass.storage.k8s.io "xxx" not found（StorageClass 不存在）
+```
+
+**修复**：
+
+```bash
+# 方案 1：创建 StorageClass
+kubectl apply -f - <<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+EOF
+
+# 方案 2：手动创建 PV
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0001
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: /data/pv0001
+EOF
+```
+
+### 场景 5：节点 NotReady {#node-notready}
+
+**症状**：节点状态为 `NotReady`
+
+**诊断**：
+
+```bash
+# 查看节点状态
+kubectl describe node <node-name>
+
+# 登录节点，检查 kubelet 状态
+systemctl status kubelet
+
+# 查看 kubelet 日志
+journalctl -u kubelet -f
+
+# 检查节点资源（磁盘、内存）
+df -h
+free -h
+```
+
+**修复**：
+
+```bash
+# 方案 1：重启 kubelet
+systemctl restart kubelet
+
+# 方案 2：清理节点磁盘空间
+docker system prune -a -f
+rm -rf /var/lib/docker/tmp/*
+
+# 方案 3：如果节点无法恢复，驱逐 Pod 并移除节点
+kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
+kubectl delete node <node-name>
+```
+
+## 📊 监控：Prometheus + Grafana {#monitoring}
+
+### 安装 kube-prometheus-stack {#install-prometheus}
+
+```bash
+# 添加仓库
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# 安装（包含 Prometheus、Grafana、Alertmanager）
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --set grafana.adminPassword=admin123 \
+  --set prometheus.prometheusSpec.retention=30d
+```
+
+### 访问 Grafana 仪表盘 {#access-grafana}
+
+```bash
+# 端口转发
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+
+# 浏览器访问 http://localhost:3000
+# 用户名：admin
+# 密码：admin123
+
+# 导入常用仪表盘（在 Grafana 中）：
+# - Kubernetes / Compute Resources / Namespace (ID: 7464)
+# - Kubernetes / Compute Resources / Pod (ID: 7459)
+# - Node Exporter Full (ID: 1860)
+```
+
+### 关键监控指标 {#key-metrics}
+
+| 类别           | 指标                                          | 告警阈值      |
+| -------------- | --------------------------------------------- | ------------- |
+| **节点**       | `node_cpu_seconds_total`                      | CPU > 80%     |
+| **节点**       | `node_memory_MemAvailable_bytes`              | 内存 < 20%    |
+| **节点**       | `node_filesystem_avail_bytes`                 | 磁盘 < 20%    |
+| **Pod**        | `container_cpu_usage_seconds_total`           | CPU > limits  |
+| **Pod**        | `container_memory_usage_bytes`                | 内存 > limits |
+| **Pod**        | `kube_pod_status_ready`                       | Ready != 1    |
+| **Deployment** | `kube_deployment_status_replicas_unavailable` | > 0           |
+
+### Prometheus 告警规则示例 {#alert-rules}
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k8s-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: k8s.rules
+      rules:
+        - alert: HighCpuUsage
+          expr: sum(rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m])) by (pod) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Pod {{ $labels.pod }} CPU 使用率过高'
+            description: 'CPU 使用率超过 80%，当前值：{{ $value | humanizePercentage }}'
+
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Pod {{ $labels.pod }} 正在崩溃循环'
+            description: 'Pod 在过去 15 分钟内重启了 {{ $value }} 次'
+
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: '节点 {{ $labels.node }} 不可用'
+```
+
+## 💾 备份 etcd {#backup-etcd}
+
+**etcd** 是 Kubernetes 集群的状态存储，备份 etcd 是灾难恢复的关键。
+
+### 使用 etcdctl 备份 {#etcd-backup}
+
+```bash
+# 安装 etcdctl（如果尚未安装）
+# Ubuntu/Debian
+apt-get install -y etcd-client
+
+# 执行备份
+ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot.db \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+
+# 验证备份文件
+ETCDCTL_API=3 etcdctl --write-out=table snapshot status /backup/etcd-snapshot.db
+```
+
+### 自动化备份脚本 {#backup-script}
+
+```bash
+#!/bin/bash
+# etcd-backup.sh
+
+BACKUP_DIR="/backup/etcd"
+DATE=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/etcd-snapshot-${DATE}.db"
+RETENTION_DAYS=7
+
+# 创建备份目录
+mkdir -p ${BACKUP_DIR}
+
+# 执行备份
+echo "开始备份 etcd..."
+ETCDCTL_API=3 etcdctl snapshot save ${BACKUP_FILE} \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+
+if [ $? -eq 0 ]; then
+  echo "备份成功：${BACKUP_FILE}"
+
+  # 压缩备份文件
+  gzip ${BACKUP_FILE}
+
+  # 删除旧备份
+  find ${BACKUP_DIR} -name "etcd-snapshot-*.db.gz" -mtime +${RETENTION_DAYS} -delete
+  echo "清理 ${RETENTION_DAYS} 天前的旧备份"
+else
+  echo "备份失败！"
+  exit 1
+fi
+```
+
+**设置定时备份（cron）**：
+
+```bash
+# 编辑 crontab
+crontab -e
+
+# 每天凌晨 2 点备份
+0 2 * * * /path/to/etcd-backup.sh >> /var/log/etcd-backup.log 2>&1
+```
+
+### 恢复 etcd 备份 {#etcd-restore}
+
+```bash
+# 停止 kube-apiserver（防止写入）
+systemctl stop kube-apiserver
+
+# 恢复备份
+ETCDCTL_API=3 etcdctl snapshot restore /backup/etcd-snapshot.db \
+  --name=etcd-0 \
+  --initial-cluster=etcd-0=https://127.0.0.1:2380 \
+  --initial-cluster-token=etcd-cluster-1 \
+  --initial-advertise-peer-urls=https://127.0.0.1:2380 \
+  --data-dir=/var/lib/etcd
+
+# 启动 kube-apiserver
+systemctl start kube-apiserver
+
+# 验证集群状态
+kubectl get nodes
+```
+
+:::warning 备份恢复注意事项
+
+- 备份时确保 etcd 集群健康（使用 `etcdctl endpoint health` 检查）
+- 恢复会丢失备份时间点之后的所有数据
+- 多 etcd 节点环境需要逐个恢复并重新组建集群
+- 测试恢复流程，确保备份可用 :::
+
+## 🛠️ 集群运维工具 {#operations-tools}
+
+### kubectl 调试技巧 {#kubectl-debug-tips}
+
+```bash
+# 1. 使用 --field-selector 过滤资源
+kubectl get pods --field-selector=status.phase=Running
+
+# 2. 使用 JSONPath 提取特定字段
+kubectl get pods -o jsonpath='{.items[*].metadata.name}'
+
+# 3. 使用自定义列输出
+kubectl get pods -o custom-columns=NAME:.metadata.name,STATUS:.status.phase
+
+# 4. 查看资源事件（按时间排序）
+kubectl get events --sort-by='.lastTimestamp'
+
+# 5. 查看节点资源分配
+kubectl describe node <node-name> | grep -A 5 "Allocated resources"
+
+# 6. 调试 DNS 问题
+kubectl run dnsutils --image=gcr.io/kubernetes-e2e-test-images/dnsutils:1.3 --rm -it --restart=Never -- nslookup kubernetes.default
+
+# 7. 调试网络连通性
+kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- bash
+
+# 8. 查看 API Server 审计日志
+kubectl get events --sort-by='.lastTimestamp' -n kube-system
+```
+
+### 集群健康检查脚本 {#health-check-script}
+
+```bash
+#!/bin/bash
+# k8s-health-check.sh
+
+echo "=== Kubernetes 集群健康检查 ==="
+echo ""
+
+# 1. 检查节点状态
+echo "1. 节点状态："
+kubectl get nodes -o wide
+echo ""
+
+# 2. 检查系统 Pod 状态
+echo "2. 系统 Pod 状态（kube-system）："
+kubectl get pods -n kube-system
+echo ""
+
+# 3. 检查组件状态
+echo "3. 组件状态："
+kubectl get componentstatuses
+echo ""
+
+# 4. 检查 etcd 健康状态
+echo "4. etcd 健康状态："
+ETCDCTL_API=3 etcdctl endpoint health \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+echo ""
+
+# 5. 检查资源使用率
+echo "5. 节点资源使用率："
+kubectl top nodes
+echo ""
+
+echo "6. Pod 资源使用率（Top 10）："
+kubectl top pods --all-namespaces | sort -k3 -rn | head -10
+echo ""
+
+echo "=== 检查完成 ==="
+```
+
+## 📚 最佳实践 {#best-practices}
+
+1. **定期备份 etcd**：至少每天备份一次，测试恢复流程
+2. **使用 PDB 保护应用**：确保滚动更新和节点维护时不中断服务
+3. **配置资源请求和限制**：防止资源争抢和 OOM
+4. **启用监控告警**：使用 Prometheus + Grafana + Alertmanager
+5. **定期更新 Kubernetes**：关注 CVE 漏洞，及时打补丁
+6. **使用 RBAC 控制访问**：最小权限原则
+7. **启用审计日志**：记录所有 API 访问
+8. **测试灾难恢复**：定期演练 etcd 恢复、节点故障恢复
+
+## 📚 参考资源 {#references}
+
+- [Kubernetes 官方文档 - 管理集群](https://kubernetes.io/docs/tasks/administer-cluster/)
+- [Kubernetes 故障排查](https://kubernetes.io/docs/tasks/debug/debug-cluster/)
+- [etcd 官方文档](https://etcd.io/docs/)
+- [Prometheus 官方文档](https://prometheus.io/docs/)
+- [Grafana 官方文档](https://grafana.com/docs/)
+- [Kubernetes 最佳实践](https://kubernetes.io/docs/setup/best-practices/)

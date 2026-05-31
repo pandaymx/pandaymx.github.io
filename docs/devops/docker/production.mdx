@@ -1,0 +1,894 @@
+---
+title: 🏗️ 生产级最佳实践
+description: Docker 生产级部署全指南：镜像优化、多架构构建、安全扫描、CI/CD 集成与运维实践。
+sidebar_position: 5
+---
+
+# 🏗️ 生产级最佳实践
+
+<a id="image-size-optimization"></a>
+
+## 📦 镜像体积优化
+
+镜像体积直接影响部署速度、磁盘占用和攻击面。目标：**尽可能小的镜像，携带尽可能少的组件**。
+
+### 优化前后对比
+
+```bash title="查看镜像体积"
+docker images myapp
+# REPOSITORY   TAG       SIZE
+# myapp        naive     947MB    ← 优化前
+# myapp        optimized 87.3MB   ← 优化后（减少 90%）
+```
+
+### 1. 选择合适的基础镜像
+
+| 基础镜像                     | 体积             | Node.js 版本 | 推荐度      |
+| ---------------------------- | ---------------- | ------------ | ----------- |
+| `node:20`                    | ~1.1GB           | 20.x         | ❌ 不推荐   |
+| `node:20-slim`               | ~250MB           | 20.x         | ⚠️ 开发     |
+| `node:20-alpine`             | ~120MB           | 20.x         | ✅ 推荐     |
+| `node:20-alpine` (多阶段)    | ~80MB            | 20.x         | ✅ 生产推荐 |
+| `gcr.io/distroless/nodejs20` | ~120MB (含 Node) | 20.x         | ✅ 高安全   |
+
+```dockerfile title="对比：不同基础镜像的体积差异"
+# ❌ 866MB — 完整 Debian 系统
+FROM node:20
+
+# ⚠️ 250MB — Slim 版本（精简的 Debian）
+FROM node:20-slim
+
+# ✅ 120MB — Alpine（最终镜像约 80MB）
+FROM node:20-alpine
+```
+
+### 2. 精简安装依赖
+
+```dockerfile title="Node.js 依赖安装最佳实践"
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 1. 先复制依赖声明文件
+COPY package.json package-lock.json ./
+
+# 2. 仅安装生产依赖
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# 3. 再复制源码
+COPY . .
+
+# 对比：
+# npm install → 安装 dev + prod 依赖 + 保留 npm 缓存
+# npm ci --only=production → 仅 prod 依赖 + 清理缓存
+# 结果：减少 60-80% 依赖体积
+```
+
+```dockerfile title="Bun 依赖优化"
+FROM oven/bun:1
+
+WORKDIR /app
+COPY package.json bun.lockb ./
+
+# 仅安装生产依赖
+RUN bun install --production && \
+    rm -rf /root/.bun/install/cache
+```
+
+### 3. 多阶段构建
+
+快速回顾（详见 [Dockerfile 精通](./dockerfile)）：
+
+```dockerfile title="多阶段构建减少 70%+ 体积"
+# ─── 阶段 1：构建（含完整工具链） ──
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ─── 阶段 2：生产（仅运行时） ──
+FROM node:20-alpine AS production
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+USER node
+CMD ["node", "dist/server.js"]
+```
+
+### 4. .dockerignore
+
+排除不必要的文件是免费的体积优化：
+
+```title=".dockerignore — 关键项"
+# 依赖目录
+node_modules
+.pnpm-store
+
+# 开发文件
+.git
+.husky
+.vscode
+
+# 测试与覆盖
+__tests__
+coverage
+.nyc_output
+*.test.js
+*.spec.js
+
+# 文档
+docs
+*.md
+LICENSE
+
+# 环境文件
+.env*
+```
+
+### 5. 清理临时文件和缓存
+
+```dockerfile title="RUN 指令中的清理技巧"
+# Alpine 包管理器清理
+RUN apk add --no-cache \
+    curl wget bash \
+    && ... your commands ... \
+    && apk del curl wget  # 最后删除不需要的工具
+
+# 文件清理（在同一个 RUN 指令中）
+RUN npm ci && \
+    npm run build && \
+    npm prune --production && \
+    npm cache clean --force && \
+    rm -rf /tmp/* /var/tmp/* && \
+    rm -rf /root/.npm /root/.cache
+```
+
+<a id="multi-arch-builds"></a>
+
+## 🏗️ 多架构构建
+
+现代部署场景中，你可能需要在 amd64（Intel/AMD）和 arm64（Apple Silicon / Graviton）上运行同一份镜像。
+
+### 创建 multi-arch builder
+
+```bash title="创建 buildx 多架构构建器"
+# 创建新的 buildx builder
+docker buildx create \
+  --name multi-arch \
+  --driver docker-container \
+  --use
+
+# 启动并检查
+docker buildx inspect --bootstrap
+
+# 支持架构列表
+# Platforms: linux/amd64, linux/arm64, linux/arm/v7, ...
+```
+
+### 构建多架构镜像
+
+```bash title="为多个架构构建并推送"
+# 同时构建 amd64 和 arm64
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t myregistry/myapp:latest \
+  -t myregistry/myapp:1.0.0 \
+  .
+
+# 构建、推送、创建 manifest list
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t myregistry/myapp:latest \
+  --push \
+  .
+```
+
+### Dockerfile 多架构注意事项
+
+```dockerfile title="处理架构差异"
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+
+# 架构相关参数
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETARCH
+ARG TARGETOS
+
+RUN echo "Building on $BUILDPLATFORM for $TARGETPLATFORM"
+
+WORKDIR /app
+COPY . .
+RUN npm ci && npm run build
+
+FROM --platform=$TARGETPLATFORM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+RUN npm ci --only=production
+
+USER node
+CMD ["node", "dist/server.js"]
+```
+
+### GitHub Actions 多架构构建
+
+```yaml title=".github/workflows/build.yml"
+name: Build Multi-Arch Image
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+```
+
+<a id="health-checks"></a>
+
+## 🩺 健康检查（Health Checks）
+
+健康检查是容器编排的基础，Compose 用它来控制 `depends_on`，K8s 用它来决定是否路由流量。
+
+### HEALTHCHECK 指令详解
+
+```dockerfile title="Dockerfile HEALTHCHECK"
+# 语法
+HEALTHCHECK [OPTIONS] CMD <command>
+
+# 选项
+# --interval=DURATION    两次检查间隔（默认 30s）
+# --timeout=DURATION     单次检查超时（默认 30s）
+# --start-period=DURATION  启动缓冲期（默认 0s）
+# --retries=N            失败重试次数（默认 3）
+```
+
+### 各类应用的健康检查
+
+```dockerfile title="HTTP API 应用"
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+```
+
+```dockerfile title="PostgreSQL 数据库"
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD pg_isready -U postgres || exit 1
+```
+
+```dockerfile title="Redis"
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD redis-cli ping || exit 1
+```
+
+```dockerfile title="Nginx"
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost/ || exit 1
+```
+
+```dockerfile title="Node.js 应用"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health',(r)=>{process.exit(r.statusCode===200?0:1)})"
+```
+
+### Compose 中的 depends_on 健康检查
+
+```yaml title="compose.yml — condition: service_healthy"
+services:
+  db:
+    image: postgres:16-alpine
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: myapp:latest
+    depends_on:
+      db:
+        condition: service_healthy # 等待 db 健康后才启动
+```
+
+<a id="resource-limits"></a>
+
+## 📊 资源限制
+
+生产环境中必须限制容器的 CPU 和内存，防止单个容器耗尽宿主机资源。
+
+### Docker CLI 资源限制
+
+```bash title="docker run 资源限制"
+# CPU 限制：最多使用 1 个 CPU 核心
+docker run --cpus="1.0" myapp:latest
+
+# CPU 限制：使用 2 个特定 CPU 核心
+docker run --cpuset-cpus="0-1" myapp:latest
+
+# CPU 份额：相对权重（默认 1024）
+docker run --cpu-shares=512 myapp:latest
+
+# 内存限制
+docker run --memory="512m" --memory-swap="1g" myapp:latest
+
+# 内存预留（软限制）
+docker run --memory="1g" --memory-reservation="512m" myapp:latest
+
+# 完整示例
+docker run -d \
+  --name myapp \
+  --cpus="0.5" \
+  --memory="512M" \
+  --memory-swap="1G" \
+  --pids-limit=100 \
+  myapp:latest
+```
+
+### Compose 资源限制
+
+```yaml title="compose.yml — 资源限制"
+services:
+  web:
+    image: myapp:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  db:
+    image: postgres:16-alpine
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+```
+
+### Node.js 应用的 CPU/内存建议
+
+| 应用类型 | CPU 限制   | 内存限制    | 说明                     |
+| -------- | ---------- | ----------- | ------------------------ |
+| 轻量 API | 0.25 - 0.5 | 128M - 256M | Express / Fastify 微服务 |
+| 中型应用 | 0.5 - 1.0  | 256M - 512M | NestJS / Next.js         |
+| 大型应用 | 1.0 - 2.0  | 512M - 1G   | 企业应用 / 数据处理      |
+| 构建任务 | 2.0 - 4.0  | 2G - 4G     | CI 工作节点              |
+
+:::warning OOM 风险
+
+如果容器内存使用超过 `--memory` 限制，Docker 会 **OOM Kill** 该容器。建议：
+
+- 设置 `--memory-swap` 为 `--memory` 的 1.5 - 2 倍
+- 在 Node.js 中使用 `--max-old-space-size` 限制堆内存
+
+```bash title="Node.js 内存限制"
+# Docker 限制 512M，Node.js 堆限制 400M（留 112M 给系统）
+docker run --memory="512M" -e "NODE_OPTIONS=--max-old-space-size=400" myapp:latest
+```
+
+:::
+
+<a id="logging-config"></a>
+
+## 📋 日志配置
+
+### 日志驱动选择
+
+| 驱动        | 输出位置         | 适用场景           |
+| ----------- | ---------------- | ------------------ |
+| `json-file` | 宿主机 JSON 文件 | 默认驱动，本地开发 |
+| `journald`  | systemd journal  | Linux 系统日志集成 |
+| `fluentd`   | Fluentd 收集器   | 集中式日志管理     |
+| `gelf`      | Graylog          | 企业日志平台       |
+| `awslogs`   | CloudWatch       | AWS 环境           |
+| `loki`      | Grafana Loki     | 与 Grafana 集成    |
+
+```bash title="docker run 日志配置"
+# JSON 日志配置（默认驱动）
+docker run \
+  --log-driver json-file \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+  --log-opt labels=app,environment \
+  myapp:latest
+```
+
+```yaml title="compose.yml — 日志配置"
+services:
+  web:
+    image: myapp:latest
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+        labels: 'app,environment'
+
+  db:
+    image: postgres:16-alpine
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+```
+
+### 应用日志最佳实践
+
+```dockerfile title="应用日志应输出到 stdout/stderr"
+# ✅ 正确：日志输出到标准输出
+CMD ["node", "server.js"]
+# App 中使用 console.log() → stdout
+# Node.js Pino 默认输出到 stdout
+
+# ❌ 错误：日志写入文件
+CMD ["sh", "-c", "node server.js > /var/log/app.log 2>&1"]
+# 文件日志在容器内，容器删除后丢失
+```
+
+:::tip 十二要素日志原则
+
+应用不应关心日志存储，只需将所有日志输出到 **stdout/stderr**。Docker 日志驱动负责收集和路由。这样换一个日志系统（从 ELK 到 Loki），只需改 Docker 日志驱动，无需改应用代码。
+
+:::
+
+<a id="signal-handling"></a>
+
+## 🔄 信号处理与 PID 1 问题
+
+### PID 1 是什么
+
+在 Linux 中，PID 1 是容器内的第一个进程（init 进程），承担特殊职责：
+
+- 接收并转发系统信号（SIGTERM、SIGINT）
+- 回收孤儿进程
+- 决定容器何时退出
+
+```bash title="PID 1 进程示例"
+docker exec myapp ps aux
+# USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+# root         1  0.0  0.1  12345  6789 ?        Ssl  10:00   0:00 node server.js  ← PID 1
+# node       15  0.0  0.1  34567  7890 ?        Sl   10:02   0:00 node worker.js
+```
+
+### 问题：shell 格式导致信号丢失
+
+```dockerfile title="❌ 错误：shell 格式"
+CMD node server.js  # /bin/sh -c "node server.js" 成为 PID 1
+# sh 进程不转发 SIGTERM 给 node 子进程
+# docker stop 时，容器要等待 10 秒超时
+```
+
+```dockerfile title="✅ 正确：exec 格式"
+CMD ["node", "server.js"]  # node 直接成为 PID 1
+# Node.js 进程直接接收 SIGTERM，优雅退出
+```
+
+### Node.js 优雅退出
+
+```javascript title="server.js — 优雅退出示例"
+const server = app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+
+// 优雅退出处理
+async function gracefulShutdown(signal) {
+  console.log(`Received ${signal}, starting graceful shutdown...`);
+
+  // 1. 停止接收新请求
+  server.close();
+
+  // 2. 等待现有请求完成（最长 30 秒）
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+
+  // 3. 关闭数据库连接
+  await db.disconnect();
+
+  // 4. 关闭其他资源
+  await redis.quit();
+
+  process.exit(0);
+}
+
+// 注册信号处理
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
+```
+
+### 使用 tini 或 dumb-init 解决 PID 1 问题
+
+```dockerfile title="使用 dumb-init 作为 PID 1（推荐）"
+FROM node:20-alpine
+
+# 安装 dumb-init
+RUN apk add --no-cache dumb-init
+
+WORKDIR /app
+COPY . .
+RUN npm ci --only=production
+
+USER node
+
+# dumb-init 作为 PID 1，正确转发信号
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"]
+```
+
+```bash title="dumb-init 信号转发示例"
+# 发送 SIGTERM → dumb-init → Node.js → gracefulShutdown
+docker stop myapp
+
+# 进程树：
+# PID 1: dumb-init (正确转发所有信号给子进程)
+#   PID 8: node server.js
+```
+
+:::tip 何时需要 init 进程
+
+以下场景建议添加 `dumb-init` 或 `tini`：
+
+- 通过 shell 脚本启动应用
+- 应用会 fork 子进程
+- 需要处理僵尸进程
+- 应用无内置信号处理
+
+Alpine 镜像中可安装 `tini`：`apk add --no-cache tini`。
+
+:::
+
+<a id="image-scanning"></a>
+
+## 🔍 镜像漏洞扫描（Trivy）
+
+### Trivy 安装与使用
+
+```bash title="安装 Trivy"
+# macOS
+brew install trivy
+
+# Linux
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+
+# Windows
+choco install trivy
+```
+
+```bash title="基本扫描"
+# 扫描本地镜像
+trivy image myapp:latest
+
+# 扫描指定严重级别
+trivy image --severity HIGH,CRITICAL myapp:latest
+
+# 输出 JSON 格式报告
+trivy image -f json -o scan-report.json myapp:latest
+
+# 仅显示有修复方案的漏洞
+trivy image --ignore-unfixed myapp:latest
+
+# 扫描远程镜像（不拉取到本地）
+trivy image nginx:1.25-alpine
+```
+
+```bash title="Trivy 扫描结果示例"
+# 常见漏洞输出
+myapp:latest (alpine 3.19.0)
+
+Total: 5 (UNKNOWN: 0, LOW: 0, MEDIUM: 3, HIGH: 2, CRITICAL: 0)
+
+┌──────────┬───────────────┬──────────┬────────┬──────────────────┬───────────────┐
+│ Library  │ Vulnerability │ Severity │ Status │ Installed Version│ Fixed Version │
+├──────────┼───────────────┼──────────┼────────┼──────────────────┼───────────────┤
+│ libssl3  │ CVE-2024-...  │ HIGH     │ fixed  │ 3.1.4-r2         │ 3.1.4-r3      │
+│ libcrypto│ CVE-2024-...  │ MEDIUM   │ fixed  │ 3.1.4-r2         │ 3.1.4-r3      │
+└──────────┴───────────────┴──────────┴────────┴──────────────────┴───────────────┘
+```
+
+### CI/CD 集成 Trivy
+
+```yaml title="GitHub Actions — Trivy 扫描"
+name: Container Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Image
+        run: docker build -t myapp:${{ github.sha }} .
+
+      - name: Scan Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: myapp:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: 1 # 发现漏洞时 CI 失败
+
+      - name: Upload Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+```
+
+### Trivy .trivyignore 排除文件
+
+```title=".trivyignore"
+# 接受的风险（有补偿性控制或已评估）
+CVE-2024-0001
+CVE-2023-38545  # 仅影响已禁用的 curl --no-clobber 功能
+```
+
+<a id="buildkit-bake"></a>
+
+## ⚙️ CI/CD 集成：BuildKit + Bake
+
+### Docker BuildKit
+
+BuildKit 是 Docker 的下一代构建引擎，提供并行构建、缓存挂载、秘密管理等特性。
+
+```bash title="启用 BuildKit"
+# 设置环境变量（Docker Desktop 默认启用）
+export DOCKER_BUILDKIT=1
+
+# 或在 /etc/docker/daemon.json 中永久启用
+{
+  "features": {
+    "buildkit": true
+  }
+}
+```
+
+```bash title="BuildKit 高级特性"
+# 构建时传输 Git 仓库上下文
+docker build --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+  -t myapp:latest \
+  https://github.com/user/repo.git#main:app/dir
+
+# 输出构建结果到本地目录
+docker build --output=./dist -t myapp:dist .
+
+# 内联缓存（加速 CI 构建）
+docker build --cache-from myapp:latest -t myapp:latest .
+```
+
+### Docker Bake
+
+Bake 允许使用 HCL/JSON 文件编排多镜像构建，适合 Monorepo 场景。
+
+```hcl title="docker-bake.hcl"
+group "default" {
+  targets = ["web", "worker"]
+}
+
+// 公共配置
+variable "REGISTRY" {
+  default = "ghcr.io/myorg"
+}
+variable "TAG" {
+  default = "latest"
+}
+
+target "_common" {
+  platforms = ["linux/amd64", "linux/arm64"]
+  context = "."
+}
+
+// Web 服务
+target "web" {
+  inherits = ["_common"]
+  dockerfile = "apps/web/Dockerfile"
+  tags = ["${REGISTRY}/web:${TAG}"]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/myorg/myapp"
+  }
+}
+
+// Worker 服务
+target "worker" {
+  inherits = ["_common"]
+  dockerfile = "apps/worker/Dockerfile"
+  tags = ["${REGISTRY}/worker:${TAG}"]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/myorg/myapp"
+  }
+}
+```
+
+```bash title="Bake 命令"
+# 构建所有 targets
+docker buildx bake
+
+# 构建指定 target
+docker buildx bake web
+
+# 构建并推送
+docker buildx bake --push
+
+# 覆盖变量
+docker buildx bake --set "*.tags=myregistry/myapp:v2.0.0"
+```
+
+### GitHub Actions 完整 CI/CD 流程
+
+```yaml title=".github/workflows/docker-build.yml"
+name: Docker Build and Push
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (多架构模拟)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true # 生成 Software Bill of Materials
+```
+
+<a id="security-checklist"></a>
+
+## 🔒 生产安全检查清单
+
+| 检查项         | 做法                                | 严重程度 |
+| -------------- | ----------------------------------- | -------- |
+| 非 root 运行   | `USER appuser`                      | **关键** |
+| 镜像扫描       | CI 中集成 Trivy                     | **关键** |
+| 固定版本       | `node:20.11-alpine`                 | **高**   |
+| 最小权限       | 挂载卷使用 `:ro`、限制 capabilities | **高**   |
+| 密钥保护       | BuildKit secrets、不在镜像中硬编码  | **高**   |
+| 资源限制       | CPU/Memory 限制 + PID limit         | **中**   |
+| 只读根文件系统 | `--read-only` + tmpfs               | **中**   |
+| 健康检查       | 所有核心服务启用 HEALTHCHECK        | **中**   |
+| 日志管理       | 日志输出到 stdout + 日志轮转        | **低**   |
+| 构建缓存       | BuildKit cache mount + GHA cache    | **低**   |
+
+<a id="production-checklist"></a>
+
+## 📋 生产部署完整清单
+
+```bash title="docker run 生产部署完整参数"
+docker run -d \
+  # 基础配置
+  --name myapp \
+  --restart unless-stopped \
+  --init \  # 使用 docker-init (tini) 处理 PID 1
+
+  # 端口
+  -p 8080:3000 \
+
+  # 挂载
+  -v app_data:/app/data \  # 命名卷
+  --tmpfs /tmp \  # 临时文件系统
+
+  # 资源限制
+  --cpus="0.5" \
+  --memory="512M" \
+  --memory-swap="1G" \
+  --pids-limit=100 \
+
+  # 安全
+  --user=1001:1001 \
+  --read-only \  # 只读根文件系统
+  --cap-drop=ALL \
+  --cap-add=NET_BIND_SERVICE \
+
+  # 健康检查
+  --health-cmd="curl -f http://localhost:3000/health || exit 1" \
+  --health-interval=30s \
+  --health-timeout=10s \
+  --health-retries=3 \
+  --health-start-period=40s \
+
+  # 日志
+  --log-driver json-file \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+
+  # 镜像
+  myapp:1.0.0
+```
+
+:::warning 生产环境禁止使用 latest 标签
+
+`latest` 标签会导致：
+
+- 无法确定运行的镜像版本（回滚时无从下手）
+- 缓存行为不一致
+- 不同节点可能运行不同版本
+
+始终使用语义化版本或 Git SHA 作为镜像标签。
+
+:::
+
+## 🔗 相关阅读
+
+- [📄 Dockerfile 精通](./dockerfile) — 编写高效安全的 Dockerfile
+- [🎼 Docker Compose 编排](./compose) — 多容器应用编排
+- [🌐 网络与存储](./network-storage) — 网络配置与数据持久化
+- [Docker 官方最佳实践指南](https://docs.docker.com/develop/dev-best-practices/)
+- [OWASP Docker 安全备忘单](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html)

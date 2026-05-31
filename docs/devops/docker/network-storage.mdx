@@ -1,0 +1,537 @@
+---
+title: 🌐 网络与存储
+description: 掌握 Docker 网络类型配置、容器间通信，以及数据卷（Volume）的实现与最佳实践。
+sidebar_position: 4
+---
+
+# 🌐 网络与存储
+
+<a id="network-intro"></a>
+
+## 🌐 Docker 网络概览
+
+Docker 网络让容器之间、容器与外部世界能够通信。默认情况下，每个容器拥有自己的网络命名空间，通过虚拟网络接口连接。
+
+### 架构视图
+
+```
+宿主机
+├── eth0 (物理网卡)
+├── docker0 (默认 bridge)
+│   ├── veth-container1 → container1 (172.17.0.2)
+│   ├── veth-container2 → container2 (172.17.0.3)
+│   └── veth-container3 → container3 (172.17.0.4)
+├── my-bridge (自定义网络)
+│   ├── veth-container4 → container4 (172.18.0.2)
+│   └── veth-container5 → container5 (172.18.0.3)  # 自定义 DNS 互通
+└── host (容器共享宿主机网络栈)
+```
+
+<a id="network-types"></a>
+
+## 📡 Docker 网络类型
+
+<a id="network-bridge"></a>
+
+### 1. Bridge 网络（默认）
+
+默认的 Docker 网络，NAT 方式连接外部。
+
+```bash title="bridge 网络使用"
+# 查看默认 bridge
+docker network ls
+# NETWORK ID     NAME      DRIVER    SCOPE
+# bridge         bridge    bridge    local  ← 默认 bridge
+# host           host      host      local
+# none           null      null      local
+
+# 默认 bridge 使用
+docker run -d --name nginx1 nginx:alpine
+docker run -d --name nginx2 nginx:alpine
+# nginx1 (172.17.0.2) ←→ nginx2 (172.17.0.3)
+# 但默认 bridge 不支持 DNS 解析！
+```
+
+:::warning 默认 bridge 的局限
+
+默认 bridge 网络**不支持容器间 DNS 解析**（`nginx1`无法通过 `nginx2` 主机名访问 nginx2）。生产环境应使用自定义网络。
+
+:::
+
+<a id="network-host"></a>
+
+### 2. Host 网络
+
+容器直接使用宿主机网络栈，无网络隔离。
+
+```bash title="host 网络使用"
+docker run --network host -d nginx:alpine
+# Nginx 直接监听宿主机 80 端口
+```
+
+| 优点                   | 缺点                             |
+| ---------------------- | -------------------------------- |
+| 性能最优（无网络转换） | 安全性差（容器网络与宿主机混用） |
+| 适合性能敏感应用       | 端口冲突风险                     |
+| 无需端口映射           | 缺乏隔离                         |
+
+:::tip Host 网络适用场景
+
+- 高性能网络处理（如实时流媒体）
+- 需要直接访问宿主机网络（如网络监控）
+- Windows / macOS 不支持 host 网络（Docker Desktop 使用 VM）
+
+:::
+
+<a id="network-none"></a>
+
+### 3. None 网络
+
+完全禁用网络，容器没有任何网络接口。
+
+```bash title="none 网络使用"
+docker run --network none -it alpine sh
+# 容器内只有 lo 接口（127.0.0.1），无其他网络
+```
+
+**适用场景**：
+
+- 安全审计容器
+- 离线计算任务（不需要网络）
+- 定义仅通过卷输出结果的 batch 任务
+
+<a id="network-macvlan"></a>
+
+### 4. Macvlan 网络
+
+为容器分配物理 MAC 地址，像物理机一样接入局域网。
+
+```bash title="macvlan 网络创建"
+# 创建 macvlan 网络（需要指定物理网卡接口）
+docker network create -d macvlan \
+  --subnet=192.168.1.0/24 \
+  --gateway=192.168.1.1 \
+  -o parent=eth0 \
+  my_macvlan
+
+# 容器直接获得 LAN IP
+docker run --network my_macvlan \
+  --ip 192.168.1.100 \
+  -d nginx:alpine
+```
+
+| 优点                 | 缺点             |
+| -------------------- | ---------------- |
+| 容器直接接入物理网络 | 需要物理网卡支持 |
+| 无 NAT 性能损耗      | 配置复杂         |
+| 支持广播/多播        | DHCP 冲突风险    |
+
+<a id="network-types-comparison"></a>
+
+### 网络类型对比表
+
+| 特性             | bridge            | host          | none     | macvlan    | 自定义 bridge |
+| ---------------- | ----------------- | ------------- | -------- | ---------- | ------------- |
+| **网络隔离**     | ✅                | ❌            | ✅       | ⚠️ 部分    | ✅            |
+| **访问外网**     | ✅ NAT            | ✅ 直接       | ❌       | ✅ 直接    | ✅ NAT        |
+| **外网访问容器** | ✅ 端口映射       | ✅ 端口已暴露 | ❌       | ✅ 直接 IP | ✅ 端口映射   |
+| **DNS 解析**     | 默认❌ / 自定义✅ | ❌ N/A        | ❌       | ❌         | ✅            |
+| **性能**         | 中                | 高            | N/A      | 高         | 中            |
+| **跨宿主机**     | ❌                | ❌            | ❌       | ✅         | ❌            |
+| **推荐场景**     | 开发/通用         | 性能监控      | 安全隔离 | 遗留系统   | 多容器应用    |
+
+<a id="custom-networks"></a>
+
+## 🌉 自定义网络（推荐）
+
+自定义 bridge 网络是最推荐的容器间通信方式。
+
+<a id="custom-network-create"></a>
+
+### 创建与使用
+
+```bash title="自定义网络操作"
+# 创建自定义 bridge 网络
+docker network create --driver bridge my-app-net
+
+# 查看网络详情
+docker network inspect my-app-net
+```
+
+```json title="docker network inspect 输出示例"
+{
+  "Name": "my-app-net",
+  "Driver": "bridge",
+  "IPAM": {
+    "Config": [
+      {
+        "Subnet": "172.18.0.0/16",
+        "Gateway": "172.18.0.1"
+      }
+    ]
+  },
+  "Containers": {
+    "...": {
+      "Name": "my-web",
+      "IPv4Address": "172.18.0.2/16",
+      "MacAddress": "02:42:ac:12:00:02"
+    }
+  }
+}
+```
+
+```bash title="将容器加入自定义网络"
+# 创建时指定
+docker run -d --name web --network my-app-net nginx:alpine
+
+# 运行时连接
+docker network connect my-app-net web
+
+# 断开网络
+docker network disconnect my-app-net web
+```
+
+### DNS 解析验证
+
+```bash title="验证自定义网络的 DNS 解析"
+# 创建网络和容器
+docker network create test-net
+docker run -d --name server --network test-net nginx:alpine
+docker run -it --name client --network test-net alpine sh
+
+# 在 client 容器内通过主机名访问 server
+ping server  # ✅ 成功！自定义网络支持 DNS 解析
+curl server  # ✅ 获取 Nginx 欢迎页
+
+# 查看 DNS 记录
+nslookup server
+# Server: 127.0.0.11  ← Docker 嵌入式 DNS
+# Address: 172.18.0.3
+```
+
+<a id="port-mapping-vs-expose"></a>
+
+## 🔌 端口映射 vs EXPOSE
+
+| 特性           | `EXPOSE`（Dockerfile）  | 端口映射（`-p` / `ports`） |
+| -------------- | ----------------------- | -------------------------- |
+| **作用**       | 声明服务的监听端口      | 将容器端口映射到宿主机     |
+| **宿主机访问** | ❌ 不能直接从宿主机访问 | ✅ 可从宿主机直接访问      |
+| **对外暴露**   | ❌ 仅容器间内部可见     | ✅ 映射后可从外部访问      |
+| **用途**       | 文档作用，帮助理解      | 实际网络连接               |
+
+```dockerfile title="Dockerfile EXPOSE"
+EXPOSE 3000
+# 声明 => "这个容器监听 3000 端口"
+# 不映射，宿主机无法直接访问
+```
+
+```bash title="端口映射的三种方式"
+# 1. 指定宿主机端口
+docker run -p 8080:3000 myapp:latest
+# 访问 http://localhost:8080 → 容器 3000
+
+# 2. 随机端口
+docker run -P myapp:latest
+# Docker 随机映射一个宿主机端口
+
+# 3. 绑定 IP + 端口
+docker run -p 127.0.0.1:8080:3000 myapp:latest
+# 仅本地回环 IP 可访问
+```
+
+<a id="dns-resolution"></a>
+
+## 🔍 容器间 DNS 解析
+
+### 解析规则
+
+| 网络类型         | 通过容器名访问    | 通过 IP 访问 | 使用 Compose |
+| ---------------- | ----------------- | ------------ | ------------ |
+| 默认 bridge      | ❌ 不支持         | ✅ 支持      | N/A          |
+| 自定义 bridge    | ✅ 支持           | ✅ 支持      | ✅ 支持      |
+| Compose 默认网络 | ✅ 支持（服务名） | ✅ 支持      | ✅ 自动创建  |
+
+```bash title="Compose 网络中的 DNS 解析"
+# compose.yml
+networks:
+  app:
+    driver: bridge
+
+services:
+  web:
+    networks:
+      - app
+
+  api:
+    networks:
+      - app
+
+  db:
+    networks:
+      - app
+```
+
+在 `web` 容器中可以通过 `http://api:3000` 访问 API 服务，通过 `postgresql://db:5432` 访问数据库。Compose 自动将**服务名**注册为 DNS 记录。
+
+<a id="storage-intro"></a>
+
+## 💾 Docker 存储概览
+
+Docker 容器是**无状态**的 —— 容器删除后，其文件系统也一并销毁。Docker 提供三种方式来持久化数据：
+
+```
+数据持久化方式
+├── Volumes（数据卷）
+│   ├── 命名卷（Named Volumes）   # 推荐：Docker 管理
+│   └── 匿名卷（Anonymous Volumes） # 自动生成 UUID 名称
+├── Bind Mounts（绑定挂载）        # 直接挂载宿主机路径
+└── tmpfs Mounts（临时文件系统）    # 仅在内存中
+```
+
+<a id="volumes-vs-binds"></a>
+
+## ⚖️ Volumes vs Bind Mounts vs tmpfs
+
+| 特性 | Volumes | Bind Mounts | tmpfs |
+| --- | --- | --- | --- |
+| **存储位置** | Docker 托管目录（`/var/lib/docker/volumes/`） | 宿主机任意路径 | 内存 |
+| **创建者** | Docker 管理 | 用户手动创建 | 运行时创建 |
+| **备份** | 通过 `docker volume` 命令 | 手动复制文件 | ❌ 无法备份 |
+| **可移植性** | ✅ 跨宿主机 | ❌ 依赖宿主机路径 | ❌ 内存 |
+| **性能** | 高（原生 FS） | 中（路径转换开销） | 极高 |
+| **安全性** | 低（Docker 权限控制） | 中（文件权限可控） | 高 |
+| **使用场景** | 数据库数据、应用日志 | 开发时挂载源码 | 缓存、临时数据 |
+| **命令示例** | `-v myvol:/app/data` | `-v $(pwd):/app` | `--tmpfs /app/tmp` |
+
+```bash title="三种方式对比示例"
+# Volume：Docker 管理存储
+docker run -v my_data:/data alpine
+
+# Bind Mount：直接挂载宿主机目录
+docker run -v $(pwd)/src:/app/src alpine
+
+# tmpfs：仅在内存中，容器停即失
+docker run --tmpfs /app/tmp alpine
+```
+
+<a id="named-vs-anonymous"></a>
+
+## 📦 命名卷 vs 匿名卷
+
+### 命名卷（Named Volumes）
+
+```bash title="命名卷操作"
+# 创建命名卷
+docker volume create my-db-data
+
+# 使用命名卷
+docker run -v my-db-data:/var/lib/postgresql/data postgres:16-alpine
+
+# 查看卷
+docker volume ls
+# DRIVER    VOLUME NAME
+# local     my-db-data
+
+# 查看卷详情
+docker volume inspect my-db-data
+```
+
+```json title="docker volume inspect 输出"
+{
+  "Name": "my-db-data",
+  "Driver": "local",
+  "Mountpoint": "/var/lib/docker/volumes/my-db-data/_data",
+  "CreatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+### 匿名卷（Anonymous Volumes）
+
+```bash title="匿名卷创建"
+# 不指定名，Docker 自动生成 UUID
+docker run -v /var/lib/mysql/data mysql:8
+
+# 匿名卷查看（名称难以理解）
+docker volume ls
+# DRIVER    VOLUME NAME
+# local     e5a3f8b9c2d1e4f6a8b0c3d5e7f9a1b4
+
+# 匿名卷问题：容器删除后，匿名卷变成孤儿卷
+docker rm my-container  # 匿名卷不自动删除
+docker volume prune     # 清理所有孤儿卷
+```
+
+:::tip 命名卷 vs 匿名卷选择
+
+- **命名卷**：推荐，可识别、可备份、可复用
+- **匿名卷**：仅用于临时数据，随容器删除或清理
+
+:::
+
+<a id="volume-lifecycle"></a>
+
+## 🔄 Volume 生命周期命令
+
+```bash title="Volume 管理命令速查"
+# 创建卷
+docker volume create --name my-vol
+
+# 查看所有卷
+docker volume ls
+
+# 查看卷详细信息（包括挂载点）
+docker volume inspect my-vol
+
+# 删除卷（卷未被使用时）
+docker volume rm my-vol
+
+# 强制删除卷（即使被使用）
+docker volume rm -f my-vol
+
+# 清理所有未使用的卷（孤儿卷）
+docker volume prune
+
+# 带确认提示的清理
+docker volume prune --filter "label=app=myapp"
+
+# 删除容器时同时删除匿名卷
+docker rm -v my-container
+
+# 查看卷使用情况
+docker system df -v  # 显示所有卷的磁盘使用
+```
+
+<a id="backup-restore"></a>
+
+## 💾 卷的备份与恢复
+
+### 备份卷数据
+
+```bash title="备份命名卷到 tar 文件"
+# 1. 创建临时容器，挂载卷并压缩
+docker run --rm \
+  -v my-db-data:/data \
+  -v $(pwd):/backup \
+  alpine \
+  tar czf /backup/my-db-data-backup.tar.gz -C /data .
+
+# 2. 备份时带时间戳
+docker run --rm \
+  -v my-db-data:/data \
+  -v $(pwd):/backup \
+  alpine \
+  tar czf /backup/my-db-data-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+```
+
+```bash title="备份 PostgreSQL 卷（推荐：使用工具备份）"
+# 方法一：使用 pg_dump（推荐，保证数据一致性）
+docker exec myapp-db pg_dump -U postgres myapp > backup.sql
+
+# 方法二：归档文件备份（需确保数据库已停止或仅读）
+docker run --rm \
+  -v myapp_db_data:/data \
+  -v $(pwd):/backup \
+  ubuntu bash -c "tar czf /backup/db-backup.tar.gz -C /data ."
+```
+
+### 恢复卷数据
+
+```bash title="从备份文件恢复卷"
+# 1. 创建新卷
+docker volume create my-db-data-restored
+
+# 2. 恢复数据
+docker run --rm \
+  -v my-db-data-restored:/data \
+  -v $(pwd):/backup \
+  alpine \
+  tar xzf /backup/my-db-data-backup.tar.gz -C /data
+
+# 3. 验证
+docker run --rm -v my-db-data-restored:/data alpine ls -la /data
+```
+
+### 自动化备份脚本
+
+```bash title="backup-volume.sh — 通用备份脚本"
+#!/bin/bash
+# usage: ./backup-volume.sh my-volume-name
+
+VOLUME_NAME=$1
+BACKUP_DIR="./backups"
+mkdir -p "$BACKUP_DIR"
+
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="${VOLUME_NAME}-${TIMESTAMP}.tar.gz"
+
+docker run --rm \
+  -v "${VOLUME_NAME}:/source:ro" \
+  -v "$(pwd)/${BACKUP_DIR}:/backup" \
+  alpine \
+  tar czf "/backup/${BACKUP_FILE}" -C /source .
+
+echo "Backup saved: ${BACKUP_DIR}/${BACKUP_FILE}"
+```
+
+<a id="storage-best-practices"></a>
+
+## 📋 存储最佳实践
+
+### 1. 区分临时与持久数据
+
+```yaml title="compose.yml — 正确使用 volume"
+services:
+  db:
+    volumes:
+      - db_data:/var/lib/postgresql/data # 命名卷：持久
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro # 绑定：初始化
+    tmpfs:
+      - /tmp # tmpfs：临时
+```
+
+### 2. 使用只读挂载保护数据
+
+```bash title="只读挂载防止容器修改源码"
+# 只读挂载配置文件
+docker run -v ./nginx.conf:/etc/nginx/nginx.conf:ro nginx:alpine
+
+# ：ro 表示 read-only
+```
+
+```yaml title="Compose 中的只读配置"
+services:
+  web:
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - /etc/nginx/logs # 匿名卷：日志写入 // 匿名卷挂载点
+```
+
+### 3. 生产环境使用命名卷
+
+```yaml title="❌ 开发环境"
+volumes:
+  - ./data:/app/data # 绑定挂载
+```
+
+```yaml title="✅ 生产环境"
+volumes:
+  app_data: # 命名卷定义
+services:
+  web:
+    volumes:
+      - app_data:/app/data # 使用命名卷
+```
+
+### 4. 数据安全建议
+
+- **定期备份**：使用 cron 或 CI pipeline 自动备份卷
+- **加密存储**：对敏感数据使用加密卷驱动
+- **监控空间**：`docker system df -v` 监控卷大小
+- **清理孤儿卷**：定期执行 `docker volume prune`
+
+## 🔗 下一步
+
+- [🏗️ 生产级最佳实践](./production) — 镜像优化、多架构、CI/CD 集成
+- [📄 Dockerfile 精通](./dockerfile) — 高效安全的 Dockerfile 编写

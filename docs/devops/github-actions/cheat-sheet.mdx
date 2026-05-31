@@ -1,0 +1,678 @@
+---
+title: 📝 GitHub Actions 速查表
+description: GitHub Actions 快速参考，包含工作流语法、触发事件、上下文对象、表达式语法、常用 Action 和常见模式
+sidebar_position: 99
+---
+
+# 📝 GitHub Actions 速查表
+
+GitHub Actions 常用语法和模式快速参考。
+
+## Workflow 语法 {#workflow-syntax}
+
+### 完整结构 {#full-structure}
+
+```yaml
+name: Workflow Name
+on:
+  # 触发事件
+  # ...
+permissions:
+  # 权限声明
+  # ...
+env:
+  # 全局环境变量
+  # ...
+defaults:
+  run:
+    shell: bash
+    working-directory: ./src
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  job-id:
+    name: Display Name
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [other-job]
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
+    outputs:
+      key: ${{ steps.step-id.outputs.key }}
+    env:
+      JOB_VAR: value
+    steps:
+      - id: step-id
+        name: Step Name
+        uses: action@v1
+        with:
+          input: value
+        env:
+          STEP_VAR: value
+        continue-on-error: true
+        timeout-minutes: 5
+      - name: Run command
+        run: echo "Hello"
+        shell: bash
+        working-directory: ./dist
+```
+
+### jobs 配置项 {#jobs-options}
+
+| 属性                | 说明             | 示例                                                   |
+| ------------------- | ---------------- | ------------------------------------------------------ |
+| `runs-on`           | Runner 类型      | `ubuntu-latest`, `self-hosted`, `[self-hosted, linux]` |
+| `timeout-minutes`   | 超时时间（分钟） | `30`                                                   |
+| `needs`             | 依赖的 job       | `[test, lint]`                                         |
+| `if`                | 条件执行         | `${{ github.ref == 'refs/heads/main' }}`               |
+| `environment`       | 部署环境         | `production`, `staging`                                |
+| `outputs`           | Job 输出         | `result: ${{ steps.step.outputs.value }}`              |
+| `continue-on-error` | 失败时继续       | `true`                                                 |
+| `strategy`          | 矩阵策略         | 见下文                                                 |
+| `services`          | 服务容器         | `{ redis: { image: redis:7 } }`                        |
+| `container`         | Job 容器         | `{ image: node:20-alpine }`                            |
+| `concurrency`       | Job 级并发控制   | `{ group: 'deploy', cancel-in-progress: true }`        |
+
+### steps 配置项 {#steps-options}
+
+| 属性                | 说明          | 示例                           |
+| ------------------- | ------------- | ------------------------------ |
+| `id`                | Step ID       | `build`                        |
+| `name`              | Step 名称     | `Build application`            |
+| `uses`              | 调用 action   | `actions/checkout@v4`          |
+| `run`               | 执行命令      | `npm run build`                |
+| `with`              | Action 参数   | `{ node-version: '20' }`       |
+| `env`               | Step 环境变量 | `{ NODE_ENV: 'test' }`         |
+| `if`                | 条件执行      | `${{ success() }}`             |
+| `continue-on-error` | 失败继续      | `true`                         |
+| `timeout-minutes`   | Step 超时     | `5`                            |
+| `shell`             | Shell 类型    | `bash`, `pwsh`, `python`, `sh` |
+| `working-directory` | 工作目录      | `./packages/frontend`          |
+
+## 触发事件 {#trigger-events}
+
+### push / pull_request {#event-push-pr}
+
+```yaml
+on:
+  push:
+    branches: [main, develop, 'release/**']
+    branches-ignore: [dev/**]
+    tags: ['v*']
+    tags-ignore: ['v*-alpha']
+    paths: ['src/**', 'package.json', 'Dockerfile']
+    paths-ignore: ['docs/**', '*.md', '**.test.js']
+
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+    # types: [assigned, unassigned, labeled, unlabeled, opened,
+    #         edited, closed, reopened, synchronize,
+    #         ready_for_review, locked, unlocked,
+    #         review_requested, review_request_removed, auto_merge_disabled, auto_merge_enabled]
+```
+
+### schedule {#event-schedule}
+
+```yaml
+on:
+  schedule:
+    - cron: '0 2 * * *' # 每天 UTC 2:00
+    - cron: '0 9 * * 1' # 每周一 UTC 9:00
+    - cron: '*/30 * * * *' # 每 30 分钟
+    - cron: '0 */6 * * *' # 每 6 小时
+```
+
+Cron 语法：`分 时 日 月 周`
+
+### workflow_dispatch {#event-workflow-dispatch}
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [staging, production]
+      tag:
+        description: 'Git tag to deploy'
+        required: false
+        type: string
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        type: boolean
+        default: false
+```
+
+### repository_dispatch {#event-repository-dispatch}
+
+```yaml
+on:
+  repository_dispatch:
+    types: [deploy-trigger, build-trigger]
+```
+
+### workflow_call {#event-workflow-call}
+
+```yaml
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: false
+    secrets:
+      token:
+        required: true
+    outputs:
+      result:
+        value: ${{ jobs.deploy.outputs.result }}
+```
+
+### 其他常用事件 {#other-events}
+
+| 事件                   | 触发条件                                  |
+| ---------------------- | ----------------------------------------- |
+| `issues`               | Issue 操作（opened, closed, labeled 等）  |
+| `issue_comment`        | Issue 评论（created, edited, deleted）    |
+| `pull_request_review`  | PR review（submitted, edited, dismissed） |
+| `pull_request_comment` | PR 评论                                   |
+| `release`              | Release 创建/编辑/删除                    |
+| `page_build`           | GitHub Pages 构建                         |
+| `workflow_run`         | 其他工作流完成时触发                      |
+| `registry_package`     | 包发布/更新                               |
+
+## 上下文对象 {#contexts}
+
+### github 上下文 {#context-github}
+
+```yaml
+${{ github.actor }}                    # 触发用户
+${{ github.ref }}                      # 完整 ref（refs/heads/main）
+${{ github.head_ref }}                 # PR 源分支
+${{ github.base_ref }}                 # PR 目标分支
+${{ github.sha }}                      # Commit SHA
+${{ github.event_name }}               # 事件名（push, pull_request）
+${{ github.event.action }}             # 事件动作（opened, closed）
+${{ github.repository }}              # owner/repo
+${{ github.repository_owner }}         # owner
+${{ github.run_id }}                   # 运行 ID
+${{ github.run_number }}               # 运行序号
+${{ github.run_attempt }}              # 重试次数
+${{ github.workflow }}                 # 工作流文件名
+${{ github.server_url }}                # GitHub URL
+${{ github.api_url }}                  # API URL
+${{ github.event_path }}               # 事件 JSON 文件路径
+```
+
+### 其他上下文 {#context-others}
+
+```yaml
+# env 上下文
+${{ env.NODE_ENV }}
+${{ env.VARIABLE_NAME }}
+
+# vars 上下文（Repository/Org Variables）
+${{ vars.MY_VARIABLE }}
+
+# secrets 上下文
+${{ secrets.MY_SECRET }}
+
+# runner 上下文
+${{ runner.os }}              # linux, windows, macos
+${{ runner.arch }}            # X64, ARM64
+${{ runner.temp }}            # 临时目录路径
+${{ runner.tool_cache }}      # 工具缓存目录
+${{ runner.workspace }}       # 工作目录
+
+# steps 上下文
+${{ steps.my-step.outcome }}           # success, failure
+${{ steps.my-step.conclusion }}        # success, failure, skipped, cancelled
+${{ steps.my-step.outputs.my-output }} # step 输出值
+
+# job 上下文
+${{ job.status }}            # success, failure, cancelled
+${{ job.container.id }}       # 容器 ID
+${{ job.services }}          # 服务容器映射
+
+# matrix 上下文
+${{ matrix.node-version }}
+${{ matrix.os }}
+${{ matrix.configuration }}
+
+# strategy 上下文
+${{ strategy.job-index }}     # 矩阵中当前 job 索引
+${{ strategy.job-total }}     # 矩阵中 job 总数
+
+# github.event 上下文（常用子属性）
+${{ github.event.head_commit.message }}  # Commit 消息
+${{ github.event.pull_request.number }} # PR 编号
+${{ github.event.commits[0].id }}       # 第一个 commit ID
+${{ github.event.inputs.my-input }}     # workflow_dispatch 输入
+```
+
+## 表达式语法 {#expressions}
+
+### 条件判断 {#if-conditions}
+
+```yaml
+if: github.event_name == 'push'
+if: github.ref == 'refs/heads/main'
+if: github.ref != 'refs/heads/main'
+if: github.event.pull_request.draft == false
+if: matrix.node-version != '14'
+
+# 逻辑运算
+if: success() && github.ref == 'refs/heads/main'
+if: failure() || cancelled()
+if: always() && steps.test.outcome == 'success'
+
+# 否定
+if: "!startsWith(github.ref, 'refs/tags/')"
+```
+
+### 字符串函数 {#string-functions}
+
+```yaml
+contains(string, search)           # 包含
+contains(fromJSON(steps.out.json), 'key')  # JSON 包含
+startsWith(string, prefix)         # 前缀
+endsWith(string, suffix)           # 后缀
+format(string, args...)           # 格式化
+join(array, separator)             # 数组拼接
+toJSON(value)                      # 转为 JSON 字符串
+fromJSON(value)                    # 解析 JSON
+
+# 示例
+contains(github.event.head_commit.message, '[skip ci]')
+startsWith(github.ref, 'refs/tags/v')
+format('Hello {0}', github.actor)
+join(matrix.tags, ',')
+```
+
+### 数学运算 {#math-operations}
+
+```yaml
+# 基本运算
+sum: ${{ 1 + 2 }} # 3
+sub: ${{ 10 - 3 }} # 7
+mul: ${{ 4 * 5 }} # 20
+div: ${{ 20 / 4 }} # 5
+mod: ${{ 17 % 5 }} # 2
+pow: ${{ 2 ** 10 }} # 1024
+neg: ${{ -5 }} # -5
+
+# 比较
+eq: ${{ 1 == 1 }} # true
+ne: ${{ 1 != 2 }} # true
+gt: ${{ 5 > 3 }} # true
+ge: ${{ 5 >= 5 }} # true
+lt: ${{ 3 < 5 }} # true
+le: ${{ 3 <= 3 }} # true
+
+# 逻辑
+and: ${{ true && false }} # false
+or: ${{ true || false }} # true
+not: ${{ !true }} # false
+```
+
+### Status Check 函数 {#status-functions}
+
+| 函数          | 触发条件             |
+| ------------- | -------------------- |
+| `success()`   | 所有依赖步骤成功     |
+| `failure()`   | 任一依赖步骤失败     |
+| `always()`    | 总是执行（无论结果） |
+| `cancelled()` | 工作流被取消         |
+
+```yaml
+# 始终上传测试结果
+- uses: actions/upload-artifact@v4
+  if: always()
+
+# 失败时发送通知
+- name: Notify on failure
+  if: failure()
+  run: ./notify.sh
+
+# 默认条件（success()）
+if: success()  # 可省略，这是默认行为
+```
+
+## 常用 Official Actions {#popular-actions}
+
+### 代码检出 {#action-checkout}
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0         # 完整历史（用于 git blame、version 计算）
+    fetch-depth: 1         # 仅最新 commit（默认）
+    ref: develop           # 检出特定分支
+    submodules: true       # 拉取子模块
+    token: ${{ secrets.PAT }}  # 使用自定义 token（默认 GITHUB_TOKEN）
+```
+
+### 缓存 {#action-cache}
+
+```yaml
+# npm 缓存
+- uses: actions/cache@v4
+  with:
+    path: ~/.npm
+    key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-npm-
+
+# pip 缓存
+- uses: actions/cache@v4
+  with:
+    path: ~/.cache/pip
+    key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+# Go 模块缓存
+- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.cache/go-build
+      ~/go/pkg/mod
+    key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+```
+
+### 语言设置 {#action-setup-languages}
+
+```yaml
+# Node.js
+- uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    node-version-file: '.nvmrc' # 从文件读取
+    cache: 'npm' # npm, yarn, pnpm
+
+# Python
+- uses: actions/setup-python@v5
+  with:
+    python-version: '3.11'
+    cache: 'pip'
+    cache-dependency-path: 'requirements.txt'
+
+# Go
+- uses: actions/setup-go@v5
+  with:
+    go-version: '1.22'
+    cache: true
+
+# Java
+- uses: actions/setup-java@v4
+  with:
+    java-version: '17'
+    distribution: 'temurin' # temurin, zulu, microsoft, corretto
+    cache: 'gradle' # gradle, maven
+```
+
+### Docker 相关 {#action-docker}
+
+```yaml
+# Docker Login
+- uses: docker/login-action@v3
+  with:
+    registry: ghcr.io # 默认 docker.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+
+# Docker Buildx 设置
+- uses: docker/setup-buildx-action@v3
+  with:
+    version: 'v0.16.0'
+    driver-opts: network=host
+
+# Docker Metadata（自动生成标签）
+- uses: docker/metadata-action@v5
+  id: meta
+  with:
+    images: ghcr.io/owner/repo
+    tags: |
+      type=ref,event=branch
+      type=ref,event=pr
+      type=semver,pattern={{version}}
+      type=semver,pattern={{major}}.{{minor}}
+      type=sha
+      type=raw,value=latest,enable={{is_default_branch}}
+
+# Docker Build & Push
+- uses: docker/build-push-action@v6
+  with:
+    context: .
+    push: true
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
+    cache-from: type=gha
+    cache-to: type=gha,mode=max
+    build-args: |
+      BUILDKIT_INLINE_CACHE=1
+      APP_VERSION=${{ github.sha }}
+    platforms: linux/amd64,linux/arm64
+```
+
+### Artifact 上传下载 {#action-artifacts}
+
+```yaml
+# 上传
+- uses: actions/upload-artifact@v4
+  with:
+    name: my-artifact
+    path: |
+      dist/
+      build/
+    retention-days: 30
+    compression-level: 6 # 0-9
+    if-no-files-found: error # error, warn, ignore
+    overwrite: true
+
+# 下载（指定名称）
+- uses: actions/download-artifact@v4
+  with:
+    name: my-artifact
+    path: ./downloaded/
+
+# 下载（匹配模式）
+- uses: actions/download-artifact@v4
+  with:
+    pattern: test-results-*
+    path: results/
+    merge-multiple: true
+
+# 删除 artifact
+- uses: actions/upload-artifact/merge@v4
+  with:
+    name: merged-artifact
+    pattern: artifact-*
+```
+
+## 常见模式 {#common-patterns}
+
+### Matrix（矩阵构建）{#pattern-matrix}
+
+```yaml
+strategy:
+  fail-fast: false
+  max-parallel: 4
+  matrix:
+    node: ['18', '20', '22']
+    os: [ubuntu-latest, macos-latest]
+    exclude:
+      - node: '18'
+        os: macos-latest
+    include:
+      - node: '22'
+        os: ubuntu-latest
+        experimental: true
+```
+
+### Concurrency（并发控制）{#pattern-concurrency}
+
+```yaml
+# 同一分支只运行一个
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# PR 取消但 main 不取消
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+```
+
+### OIDC 认证 {#pattern-oidc}
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+# AWS
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: arn:aws:iam::ACCOUNT_ID/role/MyRole
+    aws-region: us-east-1
+
+# GCP
+- uses: google-github-actions/auth@v2
+  with:
+    workload_identity_provider: projects/NUM/locations/global/workloadIdentityPools/POOL/providers/PROVIDER
+    service_account: sa@project.iam.gserviceaccount.com
+
+# Azure
+- uses: azure/login@v2
+  with:
+    client-id: ${{ secrets.AZURE_CLIENT_ID }}
+    tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+    subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+```
+
+### 通知模式 {#pattern-notify}
+
+```yaml
+- name: Slack notification on failure
+  if: failure()
+  uses: slackapi/slack-github-action@v1.27.0
+  with:
+    payload: |
+      {"text":"Build failed: ${{ github.event.head_commit.message }}", "channel":"#ci-alerts"}
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+- name: Notify via GitHub commit comment
+  if: failure()
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
+      --method POST \
+      -f body=":x: Build failed. [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+```
+
+### 跳过 CI {#pattern-skip-ci}
+
+```yaml
+# 方式 1：在 commit message 中检查
+if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+# 方式 2：在 push 配置中用 paths 过滤
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+```
+
+### Git Tag 发布 {#pattern-tag-release}
+
+```yaml
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          files: |
+            dist/*.zip
+```
+
+### Service Container {#pattern-services}
+
+```yaml
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - run: npm test
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379
+```
+
+## 环境文件速查 {#env-files}
+
+| 文件变量               | 写入方式                              | 作用范围             |
+| ---------------------- | ------------------------------------- | -------------------- |
+| `$GITHUB_ENV`          | `echo "KEY=value" >> $GITHUB_ENV`     | 后续所有 step        |
+| `$GITHUB_PATH`         | `echo "/path" >> $GITHUB_PATH`        | 后续所有 step PATH   |
+| `$GITHUB_OUTPUT`       | `echo "KEY=value" >> $GITHUB_OUTPUT`  | 当前 step 输出       |
+| `$GITHUB_STEP_SUMMARY` | `echo "text" >> $GITHUB_STEP_SUMMARY` | Step 摘要（MD 格式） |
+| `$GITHUB_STATE`        | `echo "KEY=value" >> $GITHUB_STATE`   | 当前 job 内          |
+
+## Shell 速查 {#shell-options}
+
+| shell 值     | 实际命令                                     | 默认 OS         |
+| ------------ | -------------------------------------------- | --------------- |
+| `bash`       | `bash --noprofile --norc -e -o pipefail {0}` | Linux/macOS     |
+| `sh`         | `sh -e {0}`                                  | Linux/macOS     |
+| `pwsh`       | `pwsh -command ". '{0}'"`                    | Windows（推荐） |
+| `powershell` | `powershell -Command ". '{0}'"`              | Windows         |
+| `python`     | `python {0}`                                 | All             |
+| `node`       | `node {0}`                                   | All             |
+
+## 其他文章 {#see-also}
+
+- [Actions 基础入门](./intro.mdx)
+- [CI/CD 流水线实战](./ci-cd.mdx)
+- [高级技巧与自定义 Action](./advanced.mdx)
+- [自托管 Runner](./self-hosted.mdx)
