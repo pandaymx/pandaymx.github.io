@@ -9,6 +9,7 @@ Linux 是开发者最重要的操作系统之一。无论你是做后端、前�
 :::tip[本文定位]
 
 本文从**开发者视角**介绍 Linux，不会深入内核原理或运维细节。如果你需要：
+
 - 内核开发 → 参考 [Linux Kernel Documentation](https://www.kernel.org/doc/)
 - 系统运维 → 参考 [Linux Administration Guide](https://tldp.org/LDP/sag/html/index.html)
 
@@ -35,13 +36,13 @@ graph TD
 
 <a id="linux-benefits"></a>
 
-| 价值点 | 说明 |
-|---|---|
-| **一致的部署环境** | 本地开发环境 ≈ 生产环境，避免"在我机器上能跑"问题 |
-| **强大的命令行** | grep/awk/sed/find/xargs 等工具链，文本处理能力无与伦比 |
-| **容器原生支持** | Docker/K8s 底层依赖 Linux namespace/cgroup，本地调试更真实 |
-| **丰富的开发工具** | GCC/Clang、GDB、perf、strace 等原生支持 |
-| **开源生态** | 几乎所有开发工具都有 Linux 版本，且通常先在 Linux 上发布 |
+| 价值点             | 说明                                                       |
+| ------------------ | ---------------------------------------------------------- |
+| **一致的部署环境** | 本地开发环境 ≈ 生产环境，避免"在我机器上能跑"问题          |
+| **强大的命令行**   | grep/awk/sed/find/xargs 等工具链，文本处理能力无与伦比     |
+| **容器原生支持**   | Docker/K8s 底层依赖 Linux namespace/cgroup，本地调试更真实 |
+| **丰富的开发工具** | GCC/Clang、GDB、perf、strace 等原生支持                    |
+| **开源生态**       | 几乎所有开发工具都有 Linux 版本，且通常先在 Linux 上发布   |
 
 ## 🤔 为什么开发者需要 Linux
 
@@ -81,12 +82,12 @@ TensorFlow/PyTorch 的 GPU 加速在 Linux 上支持最完善。CUDA、cuDNN 等
 
 ### 主流发行版对比
 
-| 发行版家族 | 包管理器 | 发布节奏 | 适合场景 | 代表发行版 |
-|---|---|---|---|---|
-| **Debian 系** | apt/dpkg | 稳定版 2 年一次 | 服务器、初学者 | Ubuntu、Debian、Linux Mint |
-| **Red Hat 系** | dnf/rpm | 大版本 3-5 年 | 企业服务器 | RHEL、CentOS Stream、Fedora |
-| **Arch 系** | pacman | 滚动更新 | 桌面、爱好者 | Arch Linux、Manjaro |
-| **SUSE 系** | zypper/rpm | 稳定版周期长 | 欧洲企业 | SUSE Linux Enterprise |
+| 发行版家族     | 包管理器   | 发布节奏        | 适合场景       | 代表发行版                  |
+| -------------- | ---------- | --------------- | -------------- | --------------------------- |
+| **Debian 系**  | apt/dpkg   | 稳定版 2 年一次 | 服务器、初学者 | Ubuntu、Debian、Linux Mint  |
+| **Red Hat 系** | dnf/rpm    | 大版本 3-5 年   | 企业服务器     | RHEL、CentOS Stream、Fedora |
+| **Arch 系**    | pacman     | 滚动更新        | 桌面、爱好者   | Arch Linux、Manjaro         |
+| **SUSE 系**    | zypper/rpm | 稳定版周期长    | 欧洲企业       | SUSE Linux Enterprise       |
 
 ### 🎯 开发者推荐选择
 
@@ -123,12 +124,12 @@ TensorFlow/PyTorch 的 GPU 加速在 Linux 上支持最完善。CUDA、cuDNN 等
 
 <a id="system-requirements"></a>
 
-| 资源 | 最低要求 | 推荐配置 |
-|---|---|---|
-| CPU | x86_64 或 ARM64 | 4 核以上 |
-| 内存 | 2 GB | 8 GB 以上 |
-| 磁盘 | 25 GB | 50 GB 以上 |
-| 显卡 | 任意 | 有 GPU 更好（AI/图形开发） |
+| 资源 | 最低要求        | 推荐配置                   |
+| ---- | --------------- | -------------------------- |
+| CPU  | x86_64 或 ARM64 | 4 核以上                   |
+| 内存 | 2 GB            | 8 GB 以上                  |
+| 磁盘 | 25 GB           | 50 GB 以上                 |
+| 显卡 | 任意            | 有 GPU 更好（AI/图形开发） |
 
 ### 安装方式对比
 
@@ -158,6 +159,7 @@ TensorFlow/PyTorch 的 GPU 加速在 Linux 上支持最完善。CUDA、cuDNN 等
 WSL2 是 Windows 10/11 内置的 Linux 兼容层，性能接近裸机，和 Windows 文件系统无缝互通。
 
 安装命令（PowerShell 管理员权限）：
+
 ```powershell
 wsl --install -d Ubuntu-22.04
 ```
@@ -172,12 +174,12 @@ wsl --install -d Ubuntu-22.04
 
 **推荐工具对比：**
 
-| 工具 | 平台 | 性能 | 易用性 | 费用 |
-|---|---|---|---|---|
-| **VirtualBox** | Win/Mac/Linux | 中等 | ⭐⭐⭐⭐ | 免费 |
-| **VMware Workstation** | Win/Linux | 好 | ⭐⭐⭐⭐⭐ | 收费 |
-| **UTM** | macOS (M1/M2) | 好 | ⭐⭐⭐⭐ | 免费/开源 |
-| **Parallels** | macOS | 最好 | ⭐⭐⭐⭐⭐ | 收费 |
+| 工具                   | 平台          | 性能 | 易用性     | 费用      |
+| ---------------------- | ------------- | ---- | ---------- | --------- |
+| **VirtualBox**         | Win/Mac/Linux | 中等 | ⭐⭐⭐⭐   | 免费      |
+| **VMware Workstation** | Win/Linux     | 好   | ⭐⭐⭐⭐⭐ | 收费      |
+| **UTM**                | macOS (M1/M2) | 好   | ⭐⭐⭐⭐   | 免费/开源 |
+| **Parallels**          | macOS         | 最好 | ⭐⭐⭐⭐⭐ | 收费      |
 
 **VirtualBox 安装 Ubuntu 步骤：**
 

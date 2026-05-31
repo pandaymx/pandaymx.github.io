@@ -9,6 +9,7 @@ description: ps/top/htop 进程查看、信号管理、systemd 基础、日志�
 :::tip[开发者视角]
 
 本章**不深入**系统管理员内容：
+
 - 不教 `cron` 定时任务（开发者用 CI/CD 或 systemd timer）
 - 不教 `logrotate` 日志轮转（通常由云平台处理）
 - 不教内核参数调优 `sysctl`（除非做底层开发）
@@ -37,26 +38,26 @@ USER   PID  %CPU %MEM VSZ   RSS   TTY  STAT START  TIME COMMAND
 root  1234 2.3  1.5 123456 7890 ?    Sl   10:00  0:05 /usr/bin/nginx
 ```
 
-| 列 | 含义 |
-|---|---|
-| `USER` | 进程所属用户 |
-| `PID` | 进程 ID（杀死进程用这个） |
-| `%CPU` | CPU 使用率 |
-| `%MEM` | 内存使用率 |
-| `VSZ` | 虚拟内存大小（KB） |
-| `RSS` | 物理内存大小（KB） |
-| `STAT` | 进程状态（见下） |
-| `COMMAND` | 启动命令 |
+| 列        | 含义                      |
+| --------- | ------------------------- |
+| `USER`    | 进程所属用户              |
+| `PID`     | 进程 ID（杀死进程用这个） |
+| `%CPU`    | CPU 使用率                |
+| `%MEM`    | 内存使用率                |
+| `VSZ`     | 虚拟内存大小（KB）        |
+| `RSS`     | 物理内存大小（KB）        |
+| `STAT`    | 进程状态（见下）          |
+| `COMMAND` | 启动命令                  |
 
 **进程状态速查：**
 
-| 状态 | 含义 |
-|---|---|
-| `R` | Running（运行中） |
-| `S` | Sleeping（可中断睡眠） |
-| `D` | Disk sleep（不可中断，通常是 I/O 等待） |
-| `Z` | Zombie（僵尸进程，需处理） |
-| `T` | Stopped（被信号停止） |
+| 状态 | 含义                                    |
+| ---- | --------------------------------------- |
+| `R`  | Running（运行中）                       |
+| `S`  | Sleeping（可中断睡眠）                  |
+| `D`  | Disk sleep（不可中断，通常是 I/O 等待） |
+| `Z`  | Zombie（僵尸进程，需处理）              |
+| `T`  | Stopped（被信号停止）                   |
 
 ### top / htop — 实时监控
 
@@ -87,14 +88,14 @@ pgrep -f "node.*server"    # 按命令行匹配
 
 ### 常用信号
 
-| 信号 | 数字 | 含义 | 典型场景 |
-|---|---|---|---|
-| `SIGTERM` | 15 | 优雅终止（默认） | `kill PID` 发送这个 |
-| `SIGKILL` | 9 | 强制终止 | 进程无响应时用 |
-| `SIGHUP` | 1 | 挂起（重新加载配置） | `kill -HUP PID` 让服务重载配置 |
-| `SIGINT` | 2 | 中断（Ctrl+C） | 终端中终止前台进程 |
-| `SIGSTOP` | 19 | 暂停进程 | `kill -STOP PID` |
-| `SIGCONT` | 18 | 继续运行 | `kill -CONT PID` |
+| 信号      | 数字 | 含义                 | 典型场景                       |
+| --------- | ---- | -------------------- | ------------------------------ |
+| `SIGTERM` | 15   | 优雅终止（默认）     | `kill PID` 发送这个            |
+| `SIGKILL` | 9    | 强制终止             | 进程无响应时用                 |
+| `SIGHUP`  | 1    | 挂起（重新加载配置） | `kill -HUP PID` 让服务重载配置 |
+| `SIGINT`  | 2    | 中断（Ctrl+C）       | 终端中终止前台进程             |
+| `SIGSTOP` | 19   | 暂停进程             | `kill -STOP PID`               |
+| `SIGCONT` | 18   | 继续运行             | `kill -CONT PID`               |
 
 ### 发送信号
 
@@ -117,6 +118,7 @@ pkill -f "node.*api" # 杀死命令行匹配 "node.*api" 的进程
 `kill -9` 不给进程清理机会（不执行退出处理、不关闭文件）。只在 `kill`（SIGTERM）无效时使用。
 
 正确顺序：
+
 1. `kill PID`（等 5 秒）
 2. `kill -9 PID`（还不行才用）
 
@@ -201,15 +203,15 @@ sudo journalctl -p err -b
 
 ### 传统日志文件（/var/log/）
 
-| 日志文件 | 含义 |
-|---|---|
-| `/var/log/syslog` | 系统全局日志（Ubuntu） |
-| `/var/log/messages` | 系统全局日志（RHEL） |
-| `/var/log/auth.log` | 认证日志（SSH 登录等） |
-| `/var/log/kern.log` | 内核日志 |
-| `/var/log/dpkg.log` | 包管理日志 |
-| `/var/log/nginx/access.log` | Nginx 访问日志 |
-| `/var/log/nginx/error.log` | Nginx 错误日志 |
+| 日志文件                    | 含义                   |
+| --------------------------- | ---------------------- |
+| `/var/log/syslog`           | 系统全局日志（Ubuntu） |
+| `/var/log/messages`         | 系统全局日志（RHEL）   |
+| `/var/log/auth.log`         | 认证日志（SSH 登录等） |
+| `/var/log/kern.log`         | 内核日志               |
+| `/var/log/dpkg.log`         | 包管理日志             |
+| `/var/log/nginx/access.log` | Nginx 访问日志         |
+| `/var/log/nginx/error.log`  | Nginx 错误日志         |
 
 ### 高效查看日志
 

@@ -137,7 +137,7 @@ fi
 [ ! -f "$file" ]                        # NOT
 ```
 
-:::tip[[[  vs [[[
+:::tip[[[ vs [[[
 
 - `[` 是 POSIX 标准，兼容所有 shell
 - `[[` 是 Bash 扩展，支持正则 `=~`、无需引号包裹变量
@@ -384,10 +384,10 @@ echo "🧹 已清理 7 天前的旧备份"
 for file in *.log; do
   # 跳过已经重命名的文件
   [[ "$file" =~ ^[0-9]{8}_ ]] && continue
-  
+
   date_prefix=$(stat -c %y "$file" | cut -d' ' -f1 | tr -d '-')
   new_name="${date_prefix}_${file}"
-  
+
   mv "$file" "$new_name"
   echo "✅ $file → $new_name"
 done

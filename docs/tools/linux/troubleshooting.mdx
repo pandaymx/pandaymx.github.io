@@ -9,6 +9,7 @@ description: 日志分析技巧、性能监控工具（top/iostat/netstat/ss）�
 :::tip[排查哲学]
 
 出问题了，不要瞎猜！按这个顺序：
+
 1. **看日志**（错误信息最直接）
 2. **看资源**（CPU/内存/磁盘是否耗尽）
 3. **看网络**（端口/防火墙/DNS 是否正常）
@@ -83,13 +84,13 @@ top - 02:15:30 up 10 days,  3:22,  2 users,  load average: 0.52, 0.38, 0.25
                                 1.0 = 1 核满载，4 核=4.0
 ```
 
-| 指标 | 含义 | 正常值 |
-|---|---|---|
-| `load average` | CPU 队列长度 | < CPU 核心数 |
-| `%Cpu(s): us` | 用户态 CPU 使用率 | < 70% |
-| `%Cpu(s): sy` | 内核态 CPU 使用率 | < 30% |
-| `%Cpu(s): wa` | I/O 等待（磁盘慢） | < 10% |
-| `KiB Mem : used` | 已用内存 | 不要 100%（有 cache 正常） |
+| 指标             | 含义               | 正常值                     |
+| ---------------- | ------------------ | -------------------------- |
+| `load average`   | CPU 队列长度       | < CPU 核心数               |
+| `%Cpu(s): us`    | 用户态 CPU 使用率  | < 70%                      |
+| `%Cpu(s): sy`    | 内核态 CPU 使用率  | < 30%                      |
+| `%Cpu(s): wa`    | I/O 等待（磁盘慢） | < 10%                      |
+| `KiB Mem : used` | 已用内存           | 不要 100%（有 cache 正常） |
 
 ### iostat — 磁盘 I/O 分析
 
@@ -270,17 +271,7 @@ I/O 瓶颈排查：
 ### 宕机/无响应检查清单
 
 ```markdown
-□ 服务器是否在线？（ping / SSH）
-□ CPU 是否 100%？（top）
-□ 内存是否耗尽？（free -h）
-□ 磁盘是否满了？（df -h）
-□ 进程是否崩溃？（systemctl status / journalctl）
-□ 端口是否监听？（ss -tulnp）
-□ 防火墙是否放行？（sudo ufw status）
-□ DNS 是否解析？（dig）
-□ 日志有没有错误？（journalctl -p err）
-□ 最近有没有变更？（git log --since="1 day ago"）
-□ 依赖服务是否正常？（数据库/Redis/消息队列）
+□ 服务器是否在线？（ping / SSH）□ CPU 是否 100%？（top）□ 内存是否耗尽？（free -h）□ 磁盘是否满了？（df -h）□ 进程是否崩溃？（systemctl status / journalctl）□ 端口是否监听？（ss -tulnp）□ 防火墙是否放行？（sudo ufw status）□ DNS 是否解析？（dig）□ 日志有没有错误？（journalctl -p err）□ 最近有没有变更？（git log --since="1 day ago"）□ 依赖服务是否正常？（数据库/Redis/消息队列）
 ```
 
 ## 📚 下一步

@@ -9,6 +9,7 @@ description: 文件权限与 sudo、SSH 密钥管理、secrets 处理（.env/密
 :::tip[开发者视角]
 
 本章**不深入**企业安全运维：
+
 - 不教 SELinux/AppArmor 策略编写
 - 不教入侵检测系统（IDS/IPS）
 - 不教渗透测试（Pentest）
@@ -255,7 +256,7 @@ docker run -p 3000:3000 myapp
 
 ```javascript
 // ❌ 硬编码密钥
-const apiKey = "sk_live_51abc123...";
+const apiKey = 'sk_live_51abc123...';
 
 // ✅ 从环境变量读取
 const apiKey = process.env.STRIPE_API_KEY;

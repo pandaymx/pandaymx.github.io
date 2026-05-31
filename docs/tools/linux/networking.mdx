@@ -9,6 +9,7 @@ description: IP/路由/DNS 配置、SSH 高级用法、curl/wget 调试、防火
 :::tip[开发者视角]
 
 本章**不深入**网络工程师内容：
+
 - 不教 VLAN/VxLAN 配置
 - 不教 BGP/OSPF 路由协议
 - 不教 iptables 复杂规则
@@ -122,11 +123,11 @@ ssh -D 1080 user@server.com
 
 :::tip[SSH 隧道实战场景]
 
-| 场景 | 命令 |
-|---|---|
-| 访问服务器上的数据库 | `ssh -L 3306:localhost:3306 user@server` |
+| 场景                     | 命令                                          |
+| ------------------------ | --------------------------------------------- |
+| 访问服务器上的数据库     | `ssh -L 3306:localhost:3306 user@server`      |
 | 本地开发环境暴露给同事看 | `ssh -R 80:localhost:3000 user@public-server` |
-| 绕过公司防火墙访问外网 | `ssh -D 1080 user@home-server` |
+| 绕过公司防火墙访问外网   | `ssh -D 1080 user@home-server`                |
 
 :::
 
@@ -235,6 +236,7 @@ sudo firewall-cmd --reload
 最悲剧的事：改了防火墙规则 → SSH 断开 → 再也连不上 → 只能去机房/控制台手动修复
 
 安全做法：
+
 1. 开两个 SSH 终端
 2. 一个改防火墙，另一个马上测试 SSH 还能连
 3. 或者先设定时任务 5 分钟后自动恢复防火墙

@@ -200,15 +200,15 @@ wc -l           ← 统计行数（= nginx 进程数）
 
 ### 重定向 — 输入输出控制
 
-| 符号 | 含义 | 示例 |
-|---|---|---|
-| `>` | 输出覆盖写 | `ls > files.txt` |
-| `>>` | 输出追加写 | `echo "new line" >> log.txt` |
-| `2>` | 错误输出重定向 | `cmd 2> error.log` |
-| `&>` | 标准+错误都重定向 | `cmd &> output.log` |
-| `<` | 输入重定向 | `wc -l < file.txt` |
-| `<<<` | Here String | `grep "error" <<< "$var"` |
-| `<<EOF` | Here Document | 多行输入（见下） |
+| 符号    | 含义              | 示例                         |
+| ------- | ----------------- | ---------------------------- |
+| `>`     | 输出覆盖写        | `ls > files.txt`             |
+| `>>`    | 输出追加写        | `echo "new line" >> log.txt` |
+| `2>`    | 错误输出重定向    | `cmd 2> error.log`           |
+| `&>`    | 标准+错误都重定向 | `cmd &> output.log`          |
+| `<`     | 输入重定向        | `wc -l < file.txt`           |
+| `<<<`   | Here String       | `grep "error" <<< "$var"`    |
+| `<<EOF` | Here Document     | 多行输入（见下）             |
 
 **Here Document 实战：**
 
